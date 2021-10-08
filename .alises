@@ -1,0 +1,2 @@
+alias ez='vim ~/.zshrc'
+alias copypub='cat ~/.ssh/id_rsa.pub | pbcopy'
