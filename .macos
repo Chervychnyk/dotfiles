@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+# Thanks to Mathias Bynens!
+# ~/.macos — https://mths.be/macos
+
+# Close any open System Preferences panes, to prevent them from overriding
+# settings we’re about to change
+osascript -e 'tell application "System Preferences" to quit'
+
+# Save to disk (not to iCloud) by default
+sudo defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+
+# Set language and text formats
+# Note: if you’re in the US, replace `EUR` with `USD`, `Centimeters` with
+# `Inches`, `en_GB` with `en_US`, and `true` with `false`.
+defaults write NSGlobalDomain AppleLanguages -array "en" "ru" "ua"
+defaults write NSGlobalDomain AppleLocale -string "en_US@currency=UAH"
+defaults write NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
+defaults write NSGlobalDomain AppleMetricUnits -bool true
+
+# Set the timezone; see `sudo systemsetup -listtimezones` for other values
+sudo systemsetup -settimezone "Europe/Kiev" > /dev/null
+
+###############################################################################
+# Energy saving                                                               #
+###############################################################################
+
+# Sleep the display after 15 minutes
+sudo pmset -a displaysleep 15
+
+# Disable machine sleep while charging
+sudo pmset -c sleep 0
+
+###############################################################################
+# Dock                                                                        #
+###############################################################################
+
+# Show indicator lights for open applications in the Dock
+defaults write com.apple.dock show-process-indicators -bool true
+
+# Don’t animate opening applications from the Dock
+defaults write com.apple.dock launchanim -bool false
+
+# Automatically hide and show the Dock
+defaults write com.apple.dock autohide -bool true
+
+# Make Dock icons of hidden applications translucent
+defaults write com.apple.dock showhidden -bool true
+
+# No bouncing icons
+defaults write com.apple.dock no-bouncing -bool true
+
+# Don't show recently used applications in the Dock
+defaults write com.Apple.Dock show-recents -bool false
+
+###############################################################################
+# Calendar                                                                    #
+###############################################################################
+
+# Week starts on monday
+defaults write com.apple.iCal "first day of week" -int 1
+
+#"Disabling OS X Gate Keeper"
+#"(You'll be able to install any app you want from here on, not just Mac App Store apps)"
+sudo spctl --master-disable

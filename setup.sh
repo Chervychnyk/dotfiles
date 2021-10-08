@@ -57,9 +57,9 @@ fi
 
 echo "Setting some Mac settings..."
 
-#"Disabling OS X Gate Keeper"
-#"(You'll be able to install any app you want from here on, not just Mac App Store apps)"
-sudo spctl --master-disable
+# Set macOS preferences - we will run this last because this will reload the shell
+echo "Setting some Mac settings..."
+source .macos
 
 # Create a Sites directory
 mkdir $HOME/Sites
