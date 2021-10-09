@@ -62,6 +62,6 @@ echo "Setting some Mac settings..."
 source .macos
 
 # Create a Sites directory
-mkdir $HOME/Sites
+mkdir $HOME/Projects
 
 echo "Done!"
