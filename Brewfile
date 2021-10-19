@@ -38,6 +38,7 @@ cask "font-source-code-pro"
 cask "fork"
 cask "google-chrome"
 cask "iterm2"
+cask "muzzle"
 cask "notion"
 cask "postman"
 cask "qlcolorcode"
@@ -55,5 +56,5 @@ mas "Monosnap", id: 540348655
 mas "Numbers", id: 409203825
 mas "Pages", id: 409201541
 mas "Telegram", id: 747648890
-mas "TIme Out", id: 402592703
+mas "Time Out", id: 402592703
 mas "WeChat", id: 836500024

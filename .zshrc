@@ -1,16 +1,21 @@
-# Place where aliases located
-source $HOME/.aliases
+# Load custom executable functions
+for function in ~/.zsh/functions/*; do
+  source $function
+done
+
+# Aliases
+[[ -f ~/.aliases ]] && source ~/.aliases
 
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH=/Users/artemchervichnik/.oh-my-zsh
+export ZSH=/Users/$USER/.oh-my-zsh
 
 # Set name of the theme to load. Optionally, if you set this to "random"
 # it'll load a random theme each time that oh-my-zsh is loaded.
 # See https://github.com/robbyrussell/oh-my-zsh/wiki/Themes
-ZSH_THEME="macovsky"
+ZSH_THEME="itchy"
 
 # Uncomment the following line to change how often to auto-update (in days).
 export UPDATE_ZSH_DAYS=7
@@ -48,17 +53,17 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 export PATH="$PATH:$HOME/.yarn/bin"
-export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
 
 bindkey "[D" backward-word
 bindkey "[C" forward-word
 bindkey "^[a" beginning-of-line
 bindkey "^[e" end-of-line]]]]
 
-export ANDROID_HOME=/Users/$USER/Library/Android/sdk
-export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$PATH
-export PATH=$PATH:$HOME/codespace/flutter/bin
+# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
+# export ANDROID_HOME=/Users/$USER/Library/Android/sdk
+# export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+# export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$PATH
+# export PATH=$PATH:$HOME/flutter/bin
 
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$PATH:$HOME/.rvm/bin"
@@ -66,7 +71,23 @@ export PATH="/usr/local/sbin:$PATH"
 
 export ASDF_DIR="$HOME/.asdf"
 export ERL_AFLAGS="-kernel shell_history enabled"
+. $(brew --prefix asdf)/libexec/asdf.sh
 
-source /usr/local/opt/asdf/asdf.sh
 export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
 export PKG_CONFIG_PATH=/usr/local/opt/openssl/lib/pkgconfig
+
+SSH_ENV="$HOME/.ssh/agent-environment"
+
+# Source SSH settings, if applicable
+
+if [ -f "${SSH_ENV}" ]; then
+    . "${SSH_ENV}" > /dev/null
+    #ps ${SSH_AGENT_PID} doesn't work under cywgin
+    ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
+        start_agent;
+    }
+else
+    start_agent;
+fi
+
+export PATH="/usr/local/opt/postgresql@13/bin:$PATH"
