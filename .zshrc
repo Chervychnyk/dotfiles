@@ -31,7 +31,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-plugins=(git bundler osx jump tmux sudo brew rvm rails vscode zsh-autosuggestions)
+plugins=(git bundler macos jump tmux sudo brew rvm rails vscode zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -39,6 +39,7 @@ source $ZSH/oh-my-zsh.sh
 
 # You may need to manually set your language environment
 export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
 
 export TERM="xterm-256color"
 
@@ -53,6 +54,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 export PATH="$PATH:$HOME/.yarn/bin"
+
+# Call `nvm use` automatically in a directory with a `.nvmrc` file
+autoload -U add-zsh-hook
+type -a nvm > /dev/null && add-zsh-hook chpwd load_nvmrc
+type -a nvm > /dev/null && load_nvmrc
 
 bindkey "[D" backward-word
 bindkey "[C" forward-word
@@ -79,10 +85,9 @@ export PKG_CONFIG_PATH=/usr/local/opt/openssl/lib/pkgconfig
 SSH_ENV="$HOME/.ssh/agent-environment"
 
 # Source SSH settings, if applicable
-
 if [ -f "${SSH_ENV}" ]; then
     . "${SSH_ENV}" > /dev/null
-    #ps ${SSH_AGENT_PID} doesn't work under cywgin
+
     ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
         start_agent;
     }

@@ -1,2 +1,12 @@
 alias ez='vim ~/.zshrc'
 alias copypub='cat ~/.ssh/id_rsa.pub | pbcopy'
+
+# IP addresses
+alias ip="curl https://ipinfo.io/ip"
+alias localip="ipconfig getifaddr en0"
+
+# Recursively delete `.DS_Store` files
+alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+
+# Reload the shell (i.e. invoke as a login shell)
+alias reload="exec ${SHELL} -l"
