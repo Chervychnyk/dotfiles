@@ -79,9 +79,6 @@ export ASDF_DIR="$HOME/.asdf"
 export ERL_AFLAGS="-kernel shell_history enabled"
 . $(brew --prefix asdf)/libexec/asdf.sh
 
-export PATH="/usr/local/opt/openssl@1.1/bin:$PATH"
-export PKG_CONFIG_PATH=/usr/local/opt/openssl/lib/pkgconfig
-
 SSH_ENV="$HOME/.ssh/agent-environment"
 
 # Source SSH settings, if applicable
@@ -96,3 +93,4 @@ else
 fi
 
 export PATH="/usr/local/opt/postgresql@13/bin:$PATH"
+export PATH="/usr/local/opt/openssl@1.0/bin:$PATH"
