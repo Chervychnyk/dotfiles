@@ -28,9 +28,12 @@ brew "speedtest-cli"
 brew "stripe/stripe-cli/stripe"
 brew "tmux"
 brew "vim"
+brew "wget"
+brew "xquartz"
 brew "zlib" # Needed for Memcached
 
 cask "alfred"
+cask "appcleaner"
 cask "chromium"
 cask "docker"
 cask "figma"
@@ -57,6 +60,7 @@ cask "visual-studio-code"
 cask "wechatwebdevtools"
 cask "zoom"
 
+mas "Amphetamine", id: 937984704
 mas "Bitwarden", id: 1352778147
 mas "Flow", id: 1423210932
 mas "Monosnap", id: 540348655

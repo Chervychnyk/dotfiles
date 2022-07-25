@@ -4,7 +4,7 @@ xcode-select --install
 # Check for Homebrew, and then install it
 if test ! "$(which brew)"; then
     echo "Installing homebrew..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh 
     echo "Homebrew installed successfully"
 else
     echo "Homebrew already installed!"
@@ -55,13 +55,11 @@ else
 	echo "NVM/Node already installed. Skipping."
 fi
 
-echo "Setting some Mac settings..."
-
 # Set macOS preferences - we will run this last because this will reload the shell
-echo "Setting some Mac settings..."
-source .macos
+# echo "Setting some Mac settings..."
+# source .macos
 
-# Create a Sites directory
+# Create a Projects directory
 mkdir $HOME/Projects
 
 echo "Done!"

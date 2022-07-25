@@ -1,6 +1,15 @@
+require("options")
 require("mappings")
 require("plugins")
+require("user.cmp")
+require("lsp")
 require("treesitter")
+require("user.gitsigns")
+require("user.nvim-tree")
 require("statusline")
+require("user.impatient")
+require("user.whichkey")
+
+vim.api.nvim_set_option("clipboard", "unnamed")
 
 vim.cmd("colorscheme nightfox")

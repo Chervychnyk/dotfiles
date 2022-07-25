@@ -1,5 +1,5 @@
 alias ez='vim ~/.zshrc'
-alias copypub='cat ~/.ssh/id_rsa.pub | pbcopy'
+alias copypub='cat ~/.ssh/id_ed25519.pub | pbcopy'
 
 # IP addresses
 alias ip="curl https://ipinfo.io/ip"

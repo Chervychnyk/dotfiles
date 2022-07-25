@@ -63,22 +63,30 @@ return require('packer').startup(function(use)
   }
 
   use {
+    'kyazdani42/nvim-tree.lua',
+    requires = {
+        'kyazdani42/nvim-web-devicons', -- optional, for file icons
+    }
+  }
+
+  use {
     'nvim-lualine/lualine.nvim',
     requires = { 'kyazdani42/nvim-web-devicons', opt = true }
   }
 
+  use { "lewis6991/impatient.nvim" }
+
   use {
-	"lewis6991/gitsigns.nvim",
-	requires = {
-    	    'nvim-lua/plenary.nvim'
- 	},
-        config = function()
-            require("gitsigns").setup()
-        end,
+    "lewis6991/gitsigns.nvim",
+    requires = {
+            'nvim-lua/plenary.nvim'
+    }
   }
 
+  use "folke/which-key.nvim"
+
   -- colorschemes
-  use({"EdenEast/nightfox.nvim"})
+  use "EdenEast/nightfox.nvim"
 
 
   -- Automatically set up your configuration after cloning packer.nvim
