@@ -6,11 +6,6 @@ end
 local setup = {
   plugins = {
     marks = true, -- shows a list of your marks on ' and `
-    registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
-    spelling = {
-      enabled = true, -- enabling this will show WhichKey when pressing z= to select spelling suggestions
-      suggestions = 20, -- how many suggestions should be shown in the list?
-    },
     presets = {
       operators = false,
       motions = true,
@@ -20,7 +15,11 @@ local setup = {
       z = true,
       g = true,
     },
-    spelling = { enabled = true, suggestions = 20 },
+    registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
+    spelling = {
+      enabled = true, -- enabling this will show WhichKey when pressing z= to select spelling suggestions
+      suggestions = 20, -- how many suggestions should be shown in the list?
+    },
   },
   icons = {
     breadcrumb = "»",
@@ -59,15 +58,26 @@ local opts = {
 -- NOTE: Prefer using : over <cmd> as the latter avoids going back in normal-mode.
 -- see https://neovim.io/doc/user/map.html#:map-cmd
 local mappings = {
-	["e"] = { ":NvimTreeToggle <cr>", "Toogle File Tree" },
-  ["f"] = { ":Telescope current_buffer_fuzzy_find <cr>", "Find in File" },
+  ["e"] = { ":NvimTreeToggle <cr>", "Toogle File Tree" },
+  ["f"] = { ":Telescope grep_string <cr>", "Find Word" },
   ["F"] = { ":Telescope live_grep theme=ivy <cr>", "Find Text" },
   ["o"] = {
     "<cmd>lua require('telescope.builtin').find_files(require('telescope.themes').get_dropdown{previewer = false})<cr>",
     "Find Files",
   },
+  ["P"] = { "<cmd>lua require('telescope').extensions.projects.projects()<cr>", "Projects" },
   ["w"] = { "<cmd>w!<CR>", "Save" },
   ["q"] = { "<cmd>q!<CR>", "Quit" },
+  b = {
+    name = "Buffer",
+    l = { "<cmd>lua require('telescope.builtin').buffers(require('telescope.themes').get_dropdown{previewer = false})<cr>", "List Buffers" },
+    b = { ":b#<cr>", "Previous" },
+    d = { ":bd<cr>", "Delete" },
+    n = { ":bn<cr>", "Next" },
+    p = { ":bp<cr>", "Previous" },
+    m = { "<cmd>TZFocus<cr>", "Maximize Current Buffer" },
+    z = { "<cmd>TZAtaraxis<cr>", "Toggle Zen Mode" }
+  },
   g = {
     name = "Git",
     j = { "<cmd>lua require 'gitsigns'.next_hunk()<cr>", "Next Hunk" },
@@ -114,7 +124,7 @@ local mappings = {
     },
     f = { ":lua vim.lsp.buf.formatting()<cr>", "Format" },
     i = { ":LspInfo<cr>", "Info" },
-    I = { ":LspInstallInfo<cr>", "Installer Info" },
+    I = { ":Mason<cr>", "Installer Info" },
     r = { ":lua vim.lsp.buf.rename()<cr>", "Rename" },
   },
   s = {

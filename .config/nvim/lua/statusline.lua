@@ -1,6 +1,6 @@
 local status_ok, lualine = pcall(require, "lualine")
 if not status_ok then
-	return
+  return
 end
 
 local conditions = {
@@ -18,88 +18,103 @@ local conditions = {
 }
 
 local branch = {
-	"branch",
-	icons_enabled = true,
-	icon = "",
+  "branch",
+  icons_enabled = true,
+  icon = "",
 }
 
 local diagnostics = {
   'diagnostics',
-
-  -- Table of diagnostic sources, available sources are:
-  --   'nvim_lsp', 'nvim_diagnostic', 'coc', 'ale', 'vim_lsp'.
-  -- or a function that returns a table as such:
-  --   { error=error_cnt, warn=warn_cnt, info=info_cnt, hint=hint_cnt }
   sources = { 'nvim_diagnostic', 'nvim_lsp' },
   symbols = { error = ' ', warn = ' ', info = ' ' },
-  colored = true,           -- Displays diagnostics status in color if set to true.
+  colored = true, -- Displays diagnostics status in color if set to true.
   update_in_insert = false, -- Update diagnostics in insert mode.
-  always_visible = false,   -- Show diagnostics even if there are none.
+  always_visible = false, -- Show diagnostics even if there are none.
 }
 
 local diff = {
-	"diff",
-	colored = true,
-	symbols = { added = " ", modified = " ", removed = " " }, -- changes diff symbols
+  "diff",
+  colored = true,
+  symbols = { added = " ", modified = " ", removed = " " }, -- changes diff symbols
   cond = conditions.hide_in_width
 }
 
-local lsp_status = { 
-	function()
-    local msg = 'No Active Lsp'
-    local buf_ft = vim.api.nvim_buf_get_option(0, 'filetype')
-    local clients = vim.lsp.get_active_clients()
-    if next(clients) == nil then
-        return msg
-    end
-    for _, client in ipairs(clients) do
-        local filetypes = client.config.filetypes
-        if filetypes and vim.fn.index(filetypes, buf_ft) ~= -1 then
-          return client.name
-        end
+local function lsp_name(msg)
+  msg = msg or "Inactive"
+  local buf_clients = vim.lsp.buf_get_clients()
+  if next(buf_clients) == nil then
+    if type(msg) == "boolean" or #msg == 0 then
+      return "Inactive"
     end
     return msg
-	end,
-	icon = ' LSP:',
-  cond = conditions.hide_in_width
-}
+  end
+  local buf_client_names = {}
+
+  for _, client in pairs(buf_clients) do
+    if client.name ~= "null-ls" then
+      table.insert(buf_client_names, client.name)
+    end
+  end
+
+  return table.concat(buf_client_names, ", ")
+end
+
+local function lsp_progress(_)
+  local result = vim.lsp.util.get_progress_messages()[1]
+
+  if result then
+    local msg = result.message or ""
+    local percentage = result.percentage or 0
+    local title = result.title or ""
+
+    local spinners = { "", "", "" }
+    local success_icon = { "", "", "" }
+
+    local ms = vim.loop.hrtime() / 1000000
+    local frame = math.floor(ms / 120) % #spinners
+
+    if percentage >= 70 then
+      return string.format(" %%<%s %s %s (%s%%%%) ", success_icon[frame + 1], title, msg, percentage)
+    end
+
+    return string.format(" %%<%s %s %s (%s%%%%) ", spinners[frame + 1], title, msg, percentage)
+  end
+
+  return ""
+end
 
 lualine.setup({
   options = {
-		icons_enabled = true,
-		theme = "nightfly",
-		component_separators = { left = "", right = "" },
-		section_separators = { left = "", right = "" },
-		disabled_filetypes = { "alpha", "dashboard", "NvimTree", "Outline" },
-		always_divide_middle = true,
-	},
+    icons_enabled = true,
+    theme = "auto",
+    globalstatus = true,
+    component_separators = { left = "", right = "" },
+    section_separators = { left = "", right = "" },
+    disabled_filetypes = { "alpha", "dashboard", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
+    always_divide_middle = true,
+  },
   sections = {
     lualine_a = { 'mode' },
-    lualine_b = { 
-      branch, 
-      diagnostics,
+    lualine_b = {
+      branch,
+      diff,
+    },
+    lualine_c = {
+      { "filetype", icon_only = true, padding = { left = 1, right = 0 }, separator = " " },
       {
         'filename',
-        cond = conditions.buffer_not_empty,      
+        cond = conditions.buffer_not_empty,
       },
     },
-    lualine_c = {},
     lualine_x = {
-      diff,
-      'encoding',
-      'filetype'
-
+      diagnostics,
+      {
+        lsp_name,
+        icon = "",
+        color = { gui = "none" },
+      }
     },
-    lualine_y = { "location" },
-    lualine_z = { "progress" }
+    lualine_y = { lsp_progress, "progress" },
+    lualine_z = { "location" },
   },
-  inactive_sections = {
-		lualine_a = {},
-		lualine_b = {},
-		lualine_c = { "filename" },
-		lualine_x = { "location" },
-		lualine_y = {},
-		lualine_z = {},
-	},
-  extensions = { "nvim-tree" },
 })

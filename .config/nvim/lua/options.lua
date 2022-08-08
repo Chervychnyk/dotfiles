@@ -1,5 +1,7 @@
 local opt = vim.opt
 
+opt.clipboard = "unnamedplus"
+
 -- Indenting
 opt.expandtab = true
 opt.shiftwidth = 2

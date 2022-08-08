@@ -3,6 +3,7 @@ tap "homebrew/cask"
 tap "homebrew/cask-fonts"
 tap "homebrew/cask-versions"
 
+brew "ansible"
 brew "asdf"
 brew "coreutils" # Those that come with macOS are outdated
 brew "curl"
