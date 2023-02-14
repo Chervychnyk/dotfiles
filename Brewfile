@@ -21,7 +21,7 @@ brew "mas"
 brew "mysql@5.7", restart_service: true, link: true, conflicts_with: ["mysql"]
 brew "neovim"
 brew "postgresql@9.6"
-brew "postgresql", restart_service: true
+brew "postgresql@14", restart_service: true
 brew "protobuf"
 brew "readline"
 brew "redis"
@@ -36,7 +36,9 @@ brew "zlib" # Needed for Memcached
 cask "alfred"
 cask "appcleaner"
 cask "chromium"
+cask "cyberduck"
 cask "docker"
+cask "element"
 cask "figma"
 cask "firefox"
 cask "font-fira-code"
@@ -47,12 +49,16 @@ cask "fork"
 cask "google-drive"
 cask "iterm2"
 cask "keepassxc"
+cask "kitty"
+cask "microsoft-teams"
+cask "ngrock"
 cask "notion"
+cask "obsidian"
+cask "optimage"
 cask "postman"
 cask "qlcolorcode"
 cask "rubymine"
 cask "slack"
-cask "skype"
 cask "spotify"
 cask "transmission"
 cask "the-unarchiver"
@@ -71,4 +77,4 @@ mas "Telegram", id: 747648890
 mas "TickTick", id: 966085870
 mas "Twitter", id: 1482454543
 mas "WeChat", id: 836500024
-mas "WeChat", id: 836500024
+

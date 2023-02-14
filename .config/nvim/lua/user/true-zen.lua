@@ -3,16 +3,16 @@ if not status_ok then
   return
 end
 
-local lualine_ok, lualine = pcall(require, "lualine")
+local lualine_status_ok, lualine = pcall(require, "lualine")
 
 local function open_cb()
-  if lualine_ok then
+  if lualine_status_ok then
     lualine.hide()
   end
 end
 
 local function close_cb()
-  if lualine_ok then
+  if lualine_status_ok then
     lualine.hide { unhide = true }
   end
 end

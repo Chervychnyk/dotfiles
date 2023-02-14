@@ -28,3 +28,10 @@ opt.undofile = true
 
 -- interval for writing swap file to disk, also used by gitsigns
 opt.updatetime = 250
+opt.completeopt = "menuone,noselect"
+
+vim.cmd [[
+autocmd BufRead,BufNewFile *.wpy set filetype=vue
+]]
+
+vim.cmd('command! ReloadConfig lua require("utils").ReloadConfig()')

@@ -4,6 +4,7 @@ if not status_ok then
 end
 
 local actions = require "telescope.actions"
+local action_state = require('telescope.actions.state')
 local previewers = require('telescope.previewers')
 local previewers_utils = require('telescope.previewers.utils')
 
@@ -106,9 +107,43 @@ telescope.setup {
     -- Now the picker_config_key will be applied every time you call this
     -- builtin picker
     find_files = {
+      theme = 'dropdown',
       find_command = { 'rg', '--files', '--hidden', '--smart-case', '-g', '!.git' },
       previewer = false
-    }
+    },
+    git_branches = {
+      theme = 'dropdown',
+      pattern = '--sort=-committerdate',
+    },
+    git_commits = {
+      theme = "ivy",
+      mappings = {
+        i = {
+          ["<C-o>"] = function(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            local value = action_state.get_selected_entry().value
+            vim.cmd('DiffviewOpen ' .. value .. '~1..' .. value)
+          end,
+        }
+      }
+    },
+    git_stash = {
+      theme = 'ivy',
+      mappings = {
+        i = {
+          ['<C-o>'] = function(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            local value = action_state.get_selected_entry().value
+            vim.api.nvim_command('vertical G stash show -p ' .. value)
+          end,
+          ['<C-x>'] = function(prompt_bufnr)
+            actions.close(prompt_bufnr)
+            local value = action_state.get_selected_entry().value
+            vim.api.nvim_command('G stash pop ' .. value)
+          end,
+        },
+      },
+    },
   },
   extensions = {
     -- Your extension configuration goes here:

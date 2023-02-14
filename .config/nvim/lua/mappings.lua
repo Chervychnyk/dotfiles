@@ -19,10 +19,10 @@ map("n", "<C-j>", "<C-w>j", { desc = " window down" })
 map("n", "<C-k>", "<C-w>k", { desc = " window up" })
 
 -- Resize with arrows
-map("n", "<C-Up>", ":resize -2<CR>")
-map("n", "<C-Down>", ":resize +2<CR>")
-map("n", "<C-Left>", ":vertical resize -2<CR>")
-map("n", "<C-Right>", ":vertical resize +2<CR>")
+map("n", "<A-Up>", ":resize -2<CR>")
+map("n", "<A-Down>", ":resize +2<CR>")
+map("n", "<A-Left>", ":vertical resize -2<CR>")
+map("n", "<A-Right>", ":vertical resize +2<CR>")
 
 -- Navigate buffers
 map("n", "<S-l>", ":bnext<CR>")

@@ -84,19 +84,21 @@ return require('packer').startup(function(use)
 
   -- Git
   use "lewis6991/gitsigns.nvim"
-  use {
-    'akinsho/git-conflict.nvim',
-    config = function()
-      require('git-conflict').setup()
-    end
-  }
+  use "sindrets/diffview.nvim"
 
   -- Colorschemes
   use "EdenEast/nightfox.nvim"
-  use { "catppuccin/nvim", as = "catppuccin" }
   use "rebelot/kanagawa.nvim"
+  use { "catppuccin/nvim", as = "catppuccin" }
+  use { 'projekt0n/github-nvim-theme' }
 
   use { "Pocco81/true-zen.nvim" }
+  use {
+    'NvChad/nvim-colorizer.lua',
+    config = function()
+      require 'colorizer'.setup()
+    end
+  }
 
 
   -- Automatically set up your configuration after cloning packer.nvim

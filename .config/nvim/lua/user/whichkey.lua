@@ -13,7 +13,7 @@ local setup = {
       windows = true,
       nav = true,
       z = true,
-      g = true,
+      g = false,
     },
     registers = true, -- shows your registers on " in NORMAL or <C-r> in INSERT mode
     spelling = {
@@ -62,7 +62,7 @@ local mappings = {
   ["f"] = { ":Telescope grep_string <cr>", "Find Word" },
   ["F"] = { ":Telescope live_grep theme=ivy <cr>", "Find Text" },
   ["o"] = {
-    "<cmd>lua require('telescope.builtin').find_files(require('telescope.themes').get_dropdown{previewer = false})<cr>",
+    "<cmd>lua require('telescope.builtin').find_files()<cr>",
     "Find Files",
   },
   ["P"] = { "<cmd>lua require('telescope').extensions.projects.projects()<cr>", "Projects" },
@@ -122,7 +122,7 @@ local mappings = {
       ":Telescope lsp_dynamic_workspace_symbols<cr>",
       "Workspace Symbols"
     },
-    f = { ":lua vim.lsp.buf.formatting()<cr>", "Format" },
+    f = { ":lua vim.lsp.buf.format()<cr>", "Format" },
     i = { ":LspInfo<cr>", "Info" },
     I = { ":Mason<cr>", "Installer Info" },
     r = { ":lua vim.lsp.buf.rename()<cr>", "Rename" },

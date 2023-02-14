@@ -1,4 +1,4 @@
-alias ez='vim ~/.zshrc'
+alias ez='nvim ~/.zshrc'
 alias copypub='cat ~/.ssh/id_ed25519.pub | pbcopy'
 
 # IP addresses
@@ -10,3 +10,6 @@ alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
 
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
+
+# Run Rails commands inside Docker
+alias docked='docker run --rm -it -v ${PWD}:/rails -v ruby-bundle-cache:/bundle -p 3000:3000 ghcr.io/rails/cli'

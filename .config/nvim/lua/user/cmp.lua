@@ -1,16 +1,21 @@
 local cmp_status_ok, cmp = pcall(require, "cmp")
-if not cmp_status_ok then
-  return
-end
-
 local snip_status_ok, luasnip = pcall(require, "luasnip")
-if not snip_status_ok then
+if not (cmp_status_ok and snip_status_ok) then
   return
 end
 
-require("luasnip/loaders/from_vscode").lazy_load()
-
-luasnip.filetype_extend("ruby", { "rails" })
+local function border(hl_name)
+  return {
+    { "╭", hl_name },
+    { "─", hl_name },
+    { "╮", hl_name },
+    { "│", hl_name },
+    { "╯", hl_name },
+    { "─", hl_name },
+    { "╰", hl_name },
+    { "│", hl_name },
+  }
+end
 
 local check_backspace = function()
   local col = vim.fn.col "." - 1
@@ -21,6 +26,22 @@ local icons = require("user.utils").kind_icons
 
 -- completion setup
 cmp.setup({
+  duplicates = {
+    nvim_lsp = 1,
+    luasnip = 1,
+    cmp_tabnine = 1,
+    buffer = 1,
+    path = 1,
+  },
+  window = {
+    completion = {
+      border = border "CmpBorder",
+      winhighlight = "Normal:CmpPmenu,CursorLine:PmenuSel,Search:None",
+    },
+    documentation = {
+      border = border "CmpDocBorder",
+    },
+  },
   snippet = {
     expand = function(args)
       -- vim.fn["vsnip#anonymous"](args.body)
@@ -68,27 +89,21 @@ cmp.setup({
     }),
   },
   formatting = {
-    fields = { "kind", "abbr", "menu" },
-    format = function(entry, vim_item)
+    -- fields = { "kind", "abbr", "menu" },
+    format = function(_, vim_item)
       -- Kind icons
-      vim_item.kind = string.format("%s", icons[vim_item.kind])
-      -- vim_item.kind = string.format('%s %s', icons[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
-      vim_item.menu = ({
-        nvim_lsp = "[LSP]",
-        luasnip = "[Snippet]",
-        buffer = "[Buffer]",
-        path = "[Path]",
-      })[entry.source.name]
+      -- vim_item.kind = string.format("%s", icons[vim_item.kind])
+      vim_item.kind = string.format('%s %s', icons[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
       return vim_item
     end,
   },
   sources = {
-    { name = "nvim_lsp" },
     { name = "luasnip" },
     -- { name = "ultisnips" },
     -- { name = "vsnip" },
-    { name = "nvim_lua" },
+    { name = "nvim_lsp" },
     { name = "buffer" },
+    { name = "nvim_lua" },
     { name = "path" },
   },
 })
