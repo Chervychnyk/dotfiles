@@ -15,7 +15,7 @@ export ZSH=/Users/$USER/.oh-my-zsh
 # Set name of the theme to load. Optionally, if you set this to "random"
 # it'll load a random theme each time that oh-my-zsh is loaded.
 # See https://github.com/robbyrussell/oh-my-zsh/wiki/Themes
-ZSH_THEME="lukerandall"
+# ZSH_THEME="agnoster"
 
 # Uncomment the following line to change how often to auto-update (in days).
 export UPDATE_ZSH_DAYS=7
@@ -31,7 +31,7 @@ COMPLETION_WAITING_DOTS="true"
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 
-plugins=(git bundler macos jump tmux sudo brew rvm rails vscode zsh-autosuggestions)
+plugins=(git bundler macos jump tmux sudo brew rvm rails vscode zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -47,13 +47,8 @@ export TERM="xterm-256color"
 if [[ -n $SSH_CONNECTION ]]; then
   export EDITOR='vim'
 else
-  export EDITOR='code'
+  export EDITOR='nvim'
 fi
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
-
-export PATH="$PATH:$HOME/.yarn/bin"
 
 # Call `nvm use` automatically in a directory with a `.nvmrc` file
 autoload -U add-zsh-hook
@@ -71,14 +66,6 @@ bindkey "^[e" end-of-line]]]]
 # export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$PATH
 # export PATH=$PATH:$HOME/flutter/bin
 
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-export PATH="$PATH:$HOME/.rvm/bin"
-export PATH="/usr/local/sbin:$PATH"
-
-export ASDF_DIR="$HOME/.asdf"
-export ERL_AFLAGS="-kernel shell_history enabled"
-. $(brew --prefix asdf)/libexec/asdf.sh
-
 SSH_ENV="$HOME/.ssh/agent-environment"
 
 # Source SSH settings, if applicable
@@ -92,5 +79,44 @@ else
     start_agent;
 fi
 
-export PATH="/usr/local/opt/postgresql@13/bin:$PATH"
-export PATH="/usr/local/opt/openssl@1.0/bin:$PATH"
+# Homebrew
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="/opt/homebrew/sbin:$PATH"
+
+# OpenSSL
+export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
+# export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib"
+# export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@1.1/lib/pkgconfig:$PKG_CONFIG_PATH"
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=/opt/homebrew/opt/openssl@1.1"
+
+# Libffi
+export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
+export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH"
+
+# Python
+export PATH="/opt/homebrew/opt/python@3.10/bin:$PATH"
+
+# ASDF version manager
+export ASDF_DIR="$HOME/.asdf"
+export ERL_AFLAGS="-kernel shell_history enabled"
+export PATH="$HOME/.asdf/installs/elixir/1.12/.mix/escripts:$PATH"
+. $(brew --prefix asdf)/libexec/asdf.sh
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$PATH:$HOME/.rvm/bin"
+
+# Version manager for Node.js
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+export PATH="$PATH:$HOME/.yarn/bin"
+
+# For PDF generation with puppeteer
+export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_EXECUTABLE_PATH=`which chromium`
+
+export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
+export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
+
+eval "$(starship init zsh)"

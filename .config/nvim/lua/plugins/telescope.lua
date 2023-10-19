@@ -1,0 +1,169 @@
+return {
+  {
+    "nvim-telescope/telescope.nvim",
+    cmd = "Telescope",
+    version = false, -- telescope did only one release, so use HEAD for now
+    dependencies = {
+      {
+        "nvim-telescope/telescope-fzf-native.nvim",
+        build = "make",
+        enabled = vim.fn.executable("make") == 1,
+        config = function()
+          require("telescope").load_extension("fzf")
+        end,
+      },
+    },
+    opts = function()
+      local actions = require("telescope.actions")
+      local action_state = require('telescope.actions.state')
+      local previewers = require('telescope.previewers')
+      local previewers_utils = require('telescope.previewers.utils')
+
+      local max_size = 100000
+      local truncate_large_files = function(filepath, bufnr, opts)
+        opts = opts or {}
+
+        filepath = vim.fn.expand(filepath)
+
+        vim.loop.fs_stat(filepath, function(_, stat)
+          if not stat then return end
+          if stat.size > max_size then
+            local cmd = { "head", "-c", max_size, filepath }
+            previewers_utils.job_maker(cmd, bufnr, opts)
+          else
+            previewers.buffer_previewer_maker(filepath, bufnr, opts)
+          end
+        end)
+      end
+
+      return {
+        defaults = {
+          buffer_previewer_maker = truncate_large_files,
+
+          prompt_prefix = " ",
+          selection_caret = " ",
+          path_display = { "absolute" },
+
+          mappings = {
+            i = {
+              ["<C-n>"] = actions.cycle_history_next,
+              ["<C-p>"] = actions.cycle_history_prev,
+
+              ["<C-j>"] = actions.move_selection_next,
+              ["<C-k>"] = actions.move_selection_previous,
+
+              ["<C-c>"] = actions.close,
+
+              ["<Down>"] = actions.move_selection_next,
+              ["<Up>"] = actions.move_selection_previous,
+
+              ["<CR>"] = actions.select_default,
+              ["<C-x>"] = actions.select_horizontal,
+              ["<C-v>"] = actions.select_vertical,
+              ["<C-t>"] = actions.select_tab,
+
+              ["<C-u>"] = actions.preview_scrolling_up,
+              ["<C-d>"] = actions.preview_scrolling_down,
+
+              ["<PageUp>"] = actions.results_scrolling_up,
+              ["<PageDown>"] = actions.results_scrolling_down,
+
+              ["<Tab>"] = actions.toggle_selection + actions.move_selection_worse,
+              ["<S-Tab>"] = actions.toggle_selection + actions.move_selection_better,
+              ["<C-q>"] = actions.send_to_qflist + actions.open_qflist,
+              ["<M-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
+              ["<C-l>"] = actions.complete_tag,
+              ["<C-_>"] = actions.which_key, -- keys from pressing <C-/>
+            },
+
+            n = {
+              ["<esc>"] = actions.close,
+              ["<CR>"] = actions.select_default,
+              ["<C-x>"] = actions.select_horizontal,
+              ["<C-v>"] = actions.select_vertical,
+              ["<C-t>"] = actions.select_tab,
+
+              ["<Tab>"] = actions.toggle_selection + actions.move_selection_worse,
+              ["<S-Tab>"] = actions.toggle_selection + actions.move_selection_better,
+              ["<C-q>"] = actions.send_to_qflist + actions.open_qflist,
+              ["<M-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
+
+              ["j"] = actions.move_selection_next,
+              ["k"] = actions.move_selection_previous,
+              ["H"] = actions.move_to_top,
+              ["M"] = actions.move_to_middle,
+              ["L"] = actions.move_to_bottom,
+
+              ["<Down>"] = actions.move_selection_next,
+              ["<Up>"] = actions.move_selection_previous,
+              ["gg"] = actions.move_to_top,
+              ["G"] = actions.move_to_bottom,
+
+              ["<C-u>"] = actions.preview_scrolling_up,
+              ["<C-d>"] = actions.preview_scrolling_down,
+
+              ["<PageUp>"] = actions.results_scrolling_up,
+              ["<PageDown>"] = actions.results_scrolling_down,
+
+              ["?"] = actions.which_key,
+            },
+          },
+        },
+        pickers = {
+          -- Default configuration for builtin pickers goes here:
+          -- picker_name = {
+          --   picker_config_key = value,
+          --   ...
+          -- }
+          -- Now the picker_config_key will be applied every time you call this
+          -- builtin picker
+          find_files = {
+            theme = 'dropdown',
+            find_command = { 'rg', '--files', '--hidden', '--smart-case', '-g', '!.git' },
+            previewer = false
+          },
+          git_branches = {
+            theme = 'dropdown',
+            pattern = '--sort=-committerdate',
+          },
+          git_commits = {
+            theme = "ivy",
+            mappings = {
+              i = {
+                ["<C-o>"] = function(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  local value = action_state.get_selected_entry().value
+                  vim.cmd('DiffviewOpen ' .. value .. '~1..' .. value)
+                end,
+              }
+            }
+          },
+          git_stash = {
+            theme = 'ivy',
+            mappings = {
+              i = {
+                ['<C-o>'] = function(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  local value = action_state.get_selected_entry().value
+                  vim.api.nvim_command('vertical G stash show -p ' .. value)
+                end,
+                ['<C-x>'] = function(prompt_bufnr)
+                  actions.close(prompt_bufnr)
+                  local value = action_state.get_selected_entry().value
+                  vim.api.nvim_command('G stash pop ' .. value)
+                end,
+              },
+            },
+          },
+        },
+        extensions = {
+          -- Your extension configuration goes here:
+          -- extension_name = {
+          --   extension_config_key = value,
+          -- }
+          -- please take a look at the readme of the extension you want to configure
+        },
+      }
+    end
+  },
+}

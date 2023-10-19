@@ -1,8 +1,3 @@
-local status_ok, lualine = pcall(require, "lualine")
-if not status_ok then
-  return
-end
-
 local conditions = {
   buffer_not_empty = function()
     return vim.fn.empty(vim.fn.expand('%:t')) ~= 1
@@ -83,38 +78,42 @@ local function lsp_progress(_)
   return ""
 end
 
-lualine.setup({
-  options = {
-    icons_enabled = true,
-    theme = "auto",
-    globalstatus = true,
-    component_separators = { left = "", right = "" },
-    section_separators = { left = "", right = "" },
-    disabled_filetypes = { "alpha", "dashboard", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
-    always_divide_middle = true,
-  },
-  sections = {
-    lualine_a = { 'mode' },
-    lualine_b = {
-      branch,
-      diff,
+return {
+  "nvim-lualine/lualine.nvim",
+  opts = {
+    options = {
+      icons_enabled = true,
+      theme = "auto",
+      globalstatus = true,
+      component_separators = { left = "", right = "" },
+      section_separators = { left = "", right = "" },
+      disabled_filetypes = { "alpha", "dashboard", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
+      always_divide_middle = true,
     },
-    lualine_c = {
-      { "filetype", icon_only = true, padding = { left = 1, right = 0 }, separator = " " },
-      {
-        'filename',
-        cond = conditions.buffer_not_empty,
+    sections = {
+      lualine_a = { 'mode' },
+      lualine_b = {
+        branch,
+        diff,
       },
+      lualine_c = {
+        { "filetype", icon_only = true, padding = { left = 1, right = 0 }, separator = " " },
+        {
+          'filename',
+          cond = conditions.buffer_not_empty,
+        },
+      },
+      lualine_x = {
+        diagnostics,
+        {
+          lsp_name,
+          icon = "",
+          color = { gui = "none" },
+        }
+      },
+      lualine_y = { lsp_progress, "progress" },
+      lualine_z = { "location" },
     },
-    lualine_x = {
-      diagnostics,
-      {
-        lsp_name,
-        icon = "",
-        color = { gui = "none" },
-      }
-    },
-    lualine_y = { lsp_progress, "progress" },
-    lualine_z = { "location" },
-  },
-})
+
+  }
+}
