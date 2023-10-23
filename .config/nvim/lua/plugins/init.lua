@@ -1,19 +1,42 @@
 return {
   -- My plugins here
   "nvim-lua/plenary.nvim",
-  "lewis6991/impatient.nvim",
-  "folke/which-key.nvim",
+  {
+    "RRethy/vim-illuminate",
+    event = "VeryLazy",
+    config = function()
+      require("illuminate").configure {
+        filetypes_denylist = {
+          "mason",
+          "qf",
+          "minifiles",
+          "alpha",
+          "NvimTree",
+          "lazy",
+          "Trouble",
+          "netrw",
+          "DiffviewFiles",
+          "Outline",
+          "TelescopePrompt",
+        },
+      }
+    end
+  },
 
   -- Git
-  "sindrets/diffview.nvim",
+  {
+    "sindrets/diffview.nvim",
+    event = "VeryLazy",
+    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewToggleFiles", "DiffviewFocusFiles" },
+  },
 
   -- Colorschemes
   "EdenEast/nightfox.nvim",
   "rebelot/kanagawa.nvim",
-  { "catppuccin/nvim", name = "catppuccin" },
-  { 'projekt0n/github-nvim-theme' },
+  'projekt0n/github-nvim-theme',
+  { "catppuccin/nvim",  name = "catppuccin" },
+  { 'rose-pine/neovim', name = 'rose-pine' },
 
-  { "Pocco81/true-zen.nvim" },
   {
     'NvChad/nvim-colorizer.lua',
     config = function()

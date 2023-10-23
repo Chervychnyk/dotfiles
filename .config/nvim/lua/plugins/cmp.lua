@@ -1,16 +1,3 @@
-local function border(hl_name)
-  return {
-    { "╭", hl_name },
-    { "─", hl_name },
-    { "╮", hl_name },
-    { "│", hl_name },
-    { "╯", hl_name },
-    { "─", hl_name },
-    { "╰", hl_name },
-    { "│", hl_name },
-  }
-end
-
 local check_backspace = function()
   local col = vim.fn.col "." - 1
   return col == 0 or vim.fn.getline("."):sub(col, col):match "%s"
@@ -18,60 +5,34 @@ end
 
 
 return {
-  -- snippets
-  {
-    "L3MON4D3/LuaSnip",
-    dependencies = {
-      "rafamadriz/friendly-snippets",
-    },
-    config = function()
-      local luasnip = require "luasnip"
-      luasnip.filetype_extend("ruby", { "rails" })
-
-      local loader_status_ok, loader = pcall(require, "luasnip/loaders/from_vscode")
-
-      if not loader_status_ok then return end
-      loader.lazy_load()
-    end
-  },
-
   -- cmp plugins
   {
     "hrsh7th/nvim-cmp", -- The completion plugin
     dependencies = {
-      "hrsh7th/cmp-buffer", -- buffer completions
-      "hrsh7th/cmp-path", -- path completions
-      "hrsh7th/cmp-cmdline", -- cmdline completions
       "hrsh7th/cmp-nvim-lsp",
+      "hrsh7th/cmp-buffer",  -- buffer completions
+      "hrsh7th/cmp-path",    -- path completions
+      "hrsh7th/cmp-cmdline", -- cmdline completions
+      "saadparwaiz1/cmp_luasnip",
+      {
+        "L3MON4D3/LuaSnip",
+        dependencies = {
+          "rafamadriz/friendly-snippets",
+        },
+      },
       "hrsh7th/cmp-nvim-lua",
-      "saadparwaiz1/cmp_luasnip"
     },
-    opts = function()
+    event = "InsertEnter",
+    config = function()
       local cmp = require "cmp"
-      local snip_status_ok, luasnip = pcall(require, "luasnip")
-      if not snip_status_ok then
-        return
-      end
+      local luasnip = require "luasnip"
+      require("luasnip/loaders/from_vscode").lazy_load()
 
-      local icons = require("user.utils").kind_icons
+      luasnip.filetype_extend("ruby", { "rails" })
 
-      return {
-        duplicates = {
-          nvim_lsp = 1,
-          luasnip = 1,
-          cmp_tabnine = 1,
-          buffer = 1,
-          path = 1,
-        },
-        window = {
-          completion = {
-            border = border "CmpBorder",
-            winhighlight = "Normal:CmpPmenu,CursorLine:PmenuSel,Search:None",
-          },
-          documentation = {
-            border = border "CmpDocBorder",
-          },
-        },
+      local icons = require("user.icons")
+
+      cmp.setup({
         snippet = {
           expand = function(args)
             -- vim.fn["vsnip#anonymous"](args.body)
@@ -79,9 +40,11 @@ return {
             -- vim.fn["UltiSnips#Anon"](args.body)
           end,
         },
-        mapping = {
-          ["<C-k>"] = cmp.mapping.select_prev_item(),
-          ["<C-j>"] = cmp.mapping.select_next_item(),
+        mapping = cmp.mapping.preset.insert {
+          ["<C-k>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
+          ["<C-j>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
+          ["<Down>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
+          ["<Up>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
           ["<C-b>"] = cmp.mapping(cmp.mapping.scroll_docs(-1), { "i", "c" }),
           ["<C-f>"] = cmp.mapping(cmp.mapping.scroll_docs(1), { "i", "c" }),
           ["<C-Space>"] = cmp.mapping.complete(),
@@ -119,24 +82,61 @@ return {
           }),
         },
         formatting = {
-          -- fields = { "kind", "abbr", "menu" },
+          fields = { "kind", "abbr", "menu" },
           format = function(_, vim_item)
             -- Kind icons
             -- vim_item.kind = string.format("%s", icons[vim_item.kind])
-            vim_item.kind = string.format('%s %s', icons[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
+            vim_item.kind = string.format('%s %s', icons.kind[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
             return vim_item
           end,
         },
         sources = {
+          {
+            name = "nvim_lsp",
+            entry_filter = function(entry, ctx)
+              local kind = require("cmp.types.lsp").CompletionItemKind[entry:get_kind()]
+              if kind == "Snippet" and ctx.prev_context.filetype == "java" then
+                return false
+              end
+
+              if ctx.prev_context.filetype == "markdown" then
+                return true
+              end
+
+              if kind == "Text" then
+                return false
+              end
+
+              return true
+            end,
+          },
           { name = "luasnip" },
           -- { name = "ultisnips" },
           -- { name = "vsnip" },
-          { name = "nvim_lsp" },
-          { name = "buffer" },
           { name = "nvim_lua" },
+          { name = "buffer" },
           { name = "path" },
-        }
-      }
+          { name = "treesitter" }
+        },
+        confirm_opts = {
+          behavior = cmp.ConfirmBehavior.Replace,
+          select = false,
+        },
+        window = {
+          completion = {
+            border = "rounded",
+            winhighlight = "Normal:Pmenu,CursorLine:PmenuSel,FloatBorder:FloatBorder,Search:None",
+            col_offset = -3,
+            side_padding = 1,
+            scrollbar = false,
+            scrolloff = 8,
+          },
+          documentation = {
+            border = "rounded",
+            winhighlight = "Normal:Pmenu,FloatBorder:FloatBorder,Search:None",
+          },
+        },
+      })
     end
   }
 }

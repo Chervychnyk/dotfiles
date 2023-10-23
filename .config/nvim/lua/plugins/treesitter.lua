@@ -2,8 +2,7 @@ return {
   {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
-    event = "VeryLazy",
-    cmd = { "TSUpdateSync", "TSUpdate", "TSInstall" },
+    event = { "BufReadPost", "BufNewFile" },
     opts = {
       ensure_installed = {
         "bash", "css", "dockerfile", "eex", "elixir", "erlang",
@@ -13,7 +12,7 @@ return {
       sync_install = false,
       highlight = {
         enable = true,
-        additional_vim_regex_highlighting = false,
+        disable = function(_, bufnr) return vim.b[bufnr].large_buf end,
       },
       context_commentstring = {
         enable = true,
@@ -29,8 +28,10 @@ return {
       autotag = { enable = true },
       incremental_selection = { enable = true },
       indent = { enable = true, disable = { "css" } },
-
-    }
+    },
+    config = function(_, opts)
+      require("nvim-treesitter.configs").setup(opts)
+    end
   },
 
   {

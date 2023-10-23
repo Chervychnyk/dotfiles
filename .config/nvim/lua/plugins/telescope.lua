@@ -1,6 +1,7 @@
 return {
   {
     "nvim-telescope/telescope.nvim",
+    lazy = true,
     cmd = "Telescope",
     version = false, -- telescope did only one release, so use HEAD for now
     dependencies = {
@@ -18,6 +19,7 @@ return {
       local action_state = require('telescope.actions.state')
       local previewers = require('telescope.previewers')
       local previewers_utils = require('telescope.previewers.utils')
+      local icons = require('user.icons')
 
       local max_size = 100000
       local truncate_large_files = function(filepath, bufnr, opts)
@@ -40,9 +42,25 @@ return {
         defaults = {
           buffer_previewer_maker = truncate_large_files,
 
-          prompt_prefix = " ",
-          selection_caret = " ",
+          prompt_prefix = icons.ui.Telescope .. " ",
+          selection_caret = icons.ui.Forward .. " ",
+          entry_prefix = "   ",
+          initial_mode = "insert",
+          selection_strategy = "reset",
           path_display = { "absolute" },
+          color_devicons = true,
+
+          vimgrep_arguments = {
+            "rg",
+            "--color=never",
+            "--no-heading",
+            "--with-filename",
+            "--line-number",
+            "--column",
+            "--smart-case",
+            "--hidden",
+            "--glob=!.git/",
+          },
 
           mappings = {
             i = {
@@ -110,16 +128,21 @@ return {
           },
         },
         pickers = {
-          -- Default configuration for builtin pickers goes here:
-          -- picker_name = {
-          --   picker_config_key = value,
-          --   ...
-          -- }
-          -- Now the picker_config_key will be applied every time you call this
-          -- builtin picker
+          buffers = {
+            theme = "dropdown",
+            previewer = false,
+            initial_mode = "normal",
+            mappings = {
+              i = {
+                ["<C-d>"] = actions.delete_buffer,
+              },
+              n = {
+                ["dd"] = actions.delete_buffer,
+              },
+            },
+          },
           find_files = {
             theme = 'dropdown',
-            find_command = { 'rg', '--files', '--hidden', '--smart-case', '-g', '!.git' },
             previewer = false
           },
           git_branches = {

@@ -30,8 +30,6 @@ opt.undofile = true
 opt.updatetime = 250
 opt.completeopt = "menuone,noselect"
 
-vim.cmd [[
-autocmd BufRead,BufNewFile *.wpy set filetype=vue
-]]
+vim.cmd('command! ReloadConfig lua require("user.utils").ReloadConfig()')
 
-vim.cmd('command! ReloadConfig lua require("utils").ReloadConfig()')
+vim.g.max_file = { size = 1024 * 100, lines = 10000 }

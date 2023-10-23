@@ -1,3 +1,5 @@
+local icons = require "user.icons"
+
 local conditions = {
   buffer_not_empty = function()
     return vim.fn.empty(vim.fn.expand('%:t')) ~= 1
@@ -12,26 +14,12 @@ local conditions = {
   end,
 }
 
-local branch = {
-  "branch",
-  icons_enabled = true,
-  icon = "",
-}
-
-local diagnostics = {
-  'diagnostics',
-  sources = { 'nvim_diagnostic', 'nvim_lsp' },
-  symbols = { error = ' ', warn = ' ', info = ' ' },
-  colored = true, -- Displays diagnostics status in color if set to true.
-  update_in_insert = false, -- Update diagnostics in insert mode.
-  always_visible = false, -- Show diagnostics even if there are none.
-}
+local branch = { 'b:gitsigns_head', icon = '' }
 
 local diff = {
   "diff",
   colored = true,
-  symbols = { added = " ", modified = " ", removed = " " }, -- changes diff symbols
-  cond = conditions.hide_in_width
+  symbols = { added = icons.git.LineAdded, modified = icons.git.LineModified, removed = icons.git.LineRemoved },   -- Changes the symbols used by the diff.
 }
 
 local function lsp_name(msg)
@@ -94,7 +82,7 @@ return {
       lualine_a = { 'mode' },
       lualine_b = {
         branch,
-        diff,
+        diff
       },
       lualine_c = {
         { "filetype", icon_only = true, padding = { left = 1, right = 0 }, separator = " " },
@@ -104,7 +92,7 @@ return {
         },
       },
       lualine_x = {
-        diagnostics,
+        "diagnostics",
         {
           lsp_name,
           icon = "",
@@ -113,7 +101,6 @@ return {
       },
       lualine_y = { lsp_progress, "progress" },
       lualine_z = { "location" },
-    },
-
+    }
   }
 }

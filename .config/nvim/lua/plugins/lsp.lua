@@ -3,37 +3,60 @@ return {
     "neovim/nvim-lspconfig",
     dependencies = {
       {
-        "williamboman/mason-lspconfig.nvim",
-        cmd = { "LspInstall", "LspUninstall" },
-        opts = {
-          ensure_installed = { "elixirls", "jsonls", "lua_ls", "tsserver", "volar" },
+        {
+          "williamboman/mason.nvim",
+          cmd = {
+            "Mason",
+            "MasonInstall",
+            "MasonUninstall",
+            "MasonUninstallAll",
+            "MasonLog",
+          },
+          build = ":MasonUpdate",
+          config = function()
+            require("mason").setup({
+              ui = {
+                icons = {
+                  package_installed = "✓",
+                  package_uninstalled = "✗",
+                  package_pending = "⟳",
+                },
+              },
+            })
+          end
         },
-        config = function(_, opts)
-          local mason_lspconfig = require "mason-lspconfig"
 
-          mason_lspconfig.setup(opts)
-
-          mason_lspconfig.setup_handlers({
-            -- The first entry (without a key) will be the default handler
-            -- and will be called for each installed server that doesn't have
-            -- a dedicated handler.
-            function(server_name) -- default handler (optional)
-              local server_opts = {
-                on_attach = require("user.lsp.handlers").on_attach,
-                capabilities = require("user.lsp.handlers").capabilities,
-              }
-              local has_custom_opts, server_custom_opts = pcall(require, "user.lsp.settings." .. server_name)
-              if has_custom_opts then
-                server_opts = vim.tbl_deep_extend("force", server_opts, server_custom_opts)
-              end
-              require("lspconfig")[server_name].setup(server_opts)
-            end,
-          })
-        end
-      },
+        {
+          "williamboman/mason-lspconfig.nvim",
+          cmd = { "LspInstall", "LspUninstall" },
+          config = function()
+            require("mason-lspconfig").setup({
+              ensure_installed = { "elixirls", "jsonls", "lua_ls", "tsserver", "volar" }
+            })
+          end
+        },
+      }
     },
     config = function()
+      local lspconfig = require "lspconfig"
+
       require("user.lsp.handlers").setup()
+
+      local servers = { "elixirls", "jsonls", "lexical", "lua_ls", "tsserver", "volar" }
+
+      for _, server in pairs(servers) do
+        local server_opts = {
+          on_attach = require("user.lsp.handlers").on_attach,
+          capabilities = require("user.lsp.handlers").capabilities(),
+        }
+
+        local has_custom_opts, server_custom_opts = pcall(require, "user.lsp.settings." .. server)
+        if has_custom_opts then
+          server_opts = vim.tbl_deep_extend("force", server_opts, server_custom_opts)
+        end
+
+        lspconfig[server].setup(server_opts)
+      end
     end
   },
   {
