@@ -10,6 +10,20 @@ M.map = function(mode, lhs, rhs, opts)
   vim.api.nvim_set_keymap(mode, lhs, rhs, options)
 end
 
+M.remove_duplicates = function(tbl)
+  local result = {}
+  local seen = {}
+
+  for _, value in ipairs(tbl) do
+    if not seen[value] then
+      table.insert(result, value)
+      seen[value] = true
+    end
+  end
+
+  return result
+end
+
 -- https://neovim.discourse.group/t/reload-init-lua-and-all-require-d-scripts/971/11
 M.ReloadConfig = function()
   local hls_status = vim.v.hlsearch

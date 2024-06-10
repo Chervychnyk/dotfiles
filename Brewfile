@@ -21,13 +21,14 @@ brew "libsodium"
 brew "libxml2"
 brew "libyaml"
 brew "mas"
-brew "mysql@5.7", restart_service: true, link: true, conflicts_with: ["mysql"]
 brew "neovim"
+brew "openssl@1.1"
 brew "postgresql@9.6"
 brew "postgresql@14", restart_service: true
 brew "protobuf"
 brew "readline"
 brew "redis"
+brew "ripgrep"
 brew "speedtest-cli"
 brew "starship"
 brew "stripe/stripe-cli/stripe"
@@ -37,9 +38,10 @@ brew "wget"
 brew "xquartz"
 brew "zlib" # Needed for Memcached
 
-cask "alfred"
+cask "anytype"
+cask "arc"
 cask "appcleaner"
-cask "brave"
+cask "calibre"
 cask "cyberduck"
 cask "docker"
 cask "element"
@@ -51,22 +53,23 @@ cask "font-source-code-pro"
 cask "fork"
 cask "google-drive"
 cask "keepassxc"
-cask "logseq"
 cask "microsoft-teams"
 cask "mullvadvpn"
 cask "ngrock"
+cask "notion-calendar"
+cask "obsidian"
 cask "optimage"
 cask "postman"
 cask "qlcolorcode"
+cask "raycast"
 cask "rubymine"
 cask "slack"
-cask "spotify"
 cask "transmission"
 cask "the-unarchiver"
 cask "via"
 cask "visual-studio-code"
 cask "wechatwebdevtools"
-cast "wezterm"
+cask "wezterm"
 cask "zoom"
 
 mas "Amphetamine", id: 937984704
@@ -76,7 +79,6 @@ mas "Monosnap", id: 540348655
 mas "Numbers", id: 409203825
 mas "Pages", id: 409201541
 mas "Telegram", id: 747648890
-mas "TickTick", id: 966085870
 mas "Twitter", id: 1482454543
 mas "WeChat", id: 836500024
 

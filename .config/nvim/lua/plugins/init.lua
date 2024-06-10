@@ -1,27 +1,6 @@
 return {
   -- My plugins here
   "nvim-lua/plenary.nvim",
-  {
-    "RRethy/vim-illuminate",
-    event = "VeryLazy",
-    config = function()
-      require("illuminate").configure {
-        filetypes_denylist = {
-          "mason",
-          "qf",
-          "minifiles",
-          "alpha",
-          "NvimTree",
-          "lazy",
-          "Trouble",
-          "netrw",
-          "DiffviewFiles",
-          "Outline",
-          "TelescopePrompt",
-        },
-      }
-    end
-  },
 
   -- Git
   {
@@ -29,33 +8,31 @@ return {
     event = "VeryLazy",
     cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewToggleFiles", "DiffviewFocusFiles" },
   },
-
-  -- Colorschemes
-  "EdenEast/nightfox.nvim",
-  "rebelot/kanagawa.nvim",
-  'projekt0n/github-nvim-theme',
-  { "catppuccin/nvim",  name = "catppuccin" },
-  { 'rose-pine/neovim', name = 'rose-pine' },
+  { 'akinsho/git-conflict.nvim', version = "*", config = true },
 
   {
     'NvChad/nvim-colorizer.lua',
+ event = { "BufReadPost", "BufNewFile" },
     config = function()
-      require('colorizer').setup()
+      require("colorizer").setup {
+        filetypes = {
+          "typescript",
+          "typescriptreact",
+          "javascript",
+          "javascriptreact",
+          "css",
+          "html",
+          "astro",
+          "lua",
+        },
+        user_default_options = {
+          names = false,
+          rgb_fn = true,
+          hsl_fn = true,
+          tailwind = "both",
+        },
+        buftypes = {},
+      }
     end
   },
-  {
-    "folke/todo-comments.nvim",
-    config = function()
-      require("todo-comments").setup()
-    end
-  },
-  {
-    "folke/trouble.nvim",
-    dependencies = {
-      "nvim-tree/nvim-web-devicons"
-    },
-    config = function()
-      require("trouble").setup()
-    end
-  }
 }

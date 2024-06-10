@@ -1,5 +1,7 @@
 return {
   "lewis6991/gitsigns.nvim",
+  event = "BufEnter",
+  cmd = "Gitsigns",
   opts = {
     signs = {
       add = { hl = "GitSignsAdd", text = "▎", numhl = "GitSignsAddNr", linehl = "GitSignsAddLn" },
@@ -42,6 +44,5 @@ return {
     yadm = {
       enable = false,
     },
-
   }
 }

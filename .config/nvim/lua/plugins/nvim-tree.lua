@@ -1,21 +1,28 @@
-local icons = require "user.icons"
+local icons = require "config.icons"
 
 return {
   "nvim-tree/nvim-tree.lua",
   event = "VeryLazy",
   opts = {
-    sync_root_with_cwd = true,
-    respect_buf_cwd = true,
+    disable_netrw = true,
+    hijack_netrw = true,
+    hijack_cursor = true,
+    hijack_unnamed_buffer_when_opening = false,
+    update_cwd = true,
     update_focused_file = {
       enable = true,
-      debounce_delay = 15,
-      update_root = true,
-      ignore_list = {},
+      update_root = false,
+    },
+    git = {
+      enable = true,
+      ignore = false,
+      show_on_dirs = false,
+      timeout = 300,
     },
     renderer = {
       add_trailing = false,
       group_empty = false,
-      highlight_git = false,
+      highlight_git = true,
       full_name = false,
       highlight_opened_files = "none",
       root_folder_label = ":t",
@@ -30,10 +37,14 @@ return {
           none = " ",
         },
       },
+      special_files = { "Gemfile", "mix.exs", "package.json", "README.md", "readme.md" },
       icons = {
-        git_placement = "before",
-        padding = " ",
-        symlink_arrow = " ➛ ",
+        show = {
+          file = true,
+          folder = true,
+          folder_arrow = true,
+          git = false,
+        },
         glyphs = {
           default = icons.ui.Text,
           symlink = icons.ui.FileSymlink,
@@ -59,7 +70,6 @@ return {
           },
         },
       },
-      symlink_destination = true,
     },
     diagnostics = {
       enable = true,
@@ -78,9 +88,15 @@ return {
       },
     },
     view = {
-      width = 30,
+      adaptive_size = false,
+      centralize_selection = false,
+      preserve_window_proportions = true,
       side = "left",
+      width = 38,
     },
-
+    filters = {
+      dotfiles = false,
+      custom = { ".idea", "^.git$", "^.DS_store$" },
+    },
   }
 }

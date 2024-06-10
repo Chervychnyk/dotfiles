@@ -9,6 +9,8 @@ autocmd({ "FileType" }, {
     "help",
     "man",
     "lspinfo",
+    "DressingSelect",
+    "query",
     "",
   },
   callback = function()
@@ -16,6 +18,20 @@ autocmd({ "FileType" }, {
       nnoremap <silent> <buffer> q :close<CR>
       set nobuflisted
     ]]
+  end,
+})
+
+autocmd({ "TextYankPost" }, {
+  callback = function()
+    vim.highlight.on_yank { higroup = "Visual", timeout = 40 }
+  end,
+})
+
+autocmd({ "FileType" }, {
+  pattern = { "gitcommit", "markdown", "NeogitCommitMessage" },
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.spell = true
   end,
 })
 

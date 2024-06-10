@@ -2,7 +2,7 @@ return {
   "goolord/alpha-nvim",
   opts = function()
     local dashboard = require("alpha.themes.dashboard")
-    local icons = require "user.icons"
+    local icons = require "config.icons"
 
     local function button(sc, txt, keybind, keybind_opts)
       local b = dashboard.button(sc, txt, keybind, keybind_opts)
@@ -41,7 +41,27 @@ return {
     dashboard.opts.opts.noautocmd = true
     return dashboard
   end,
+
   config = function(_, dashboard)
     require("alpha").setup(dashboard.config)
+
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "LazyVimStarted",
+      callback = function()
+        local stats = require("lazy").stats()
+        local ms = (math.floor(stats.startuptime * 100 + 0.5) / 100)
+        dashboard.section.footer.val = "Loaded " .. stats.count .. " plugins in " .. ms .. "ms"
+        pcall(vim.cmd.AlphaRedraw)
+      end,
+    })
+
+    vim.api.nvim_create_autocmd({ "User" }, {
+      pattern = { "AlphaReady" },
+      callback = function()
+        vim.cmd [[
+          set laststatus=0 | autocmd BufUnload <buffer> set laststatus=3
+        ]]
+      end,
+    })
   end
 }

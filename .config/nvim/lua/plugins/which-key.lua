@@ -2,8 +2,7 @@
 -- see https://neovim.io/doc/user/map.html#:map-cmd
 local mappings = {
   ["q"] = { "<cmd>confirm q<CR>", "Quit" },
-  ["h"] = { "<cmd>nohlsearch<CR>", "No Highlight" },
-  ["e"] = { "<cmd>NvimTreeToggle<CR>", "Explorer" },
+  ["nh"] = { "<cmd>nohlsearch<CR>", "No Highlight" },
   b = {
     name = "Buffer",
     l = {
@@ -13,8 +12,13 @@ local mappings = {
     d = { ":bd<cr>", "Delete" },
     n = { ":bn<cr>", "Next" },
     p = { ":bp<cr>", "Previous" },
-    m = { "<cmd>TZFocus<cr>", "Maximize Current Buffer" },
-    z = { "<cmd>TZAtaraxis<cr>", "Toggle Zen Mode" }
+  },
+  e = {
+    name = "Explorer",
+    e = { "<cmd>NvimTreeToggle<CR>", "Toggle flie explorer" },
+    f = { "<cmd>NvimTreeFindFileToggle<CR>", "Toggle flie explorer on current file" },
+    c = { "<cmd>NvimTreeCollapse<CR>", "Collapse flie explorer" },
+    r = { "<cmd>NvimTreeRefresh<CR>", "Refresh flie explorer" }
   },
   f = {
     name = "Find",
@@ -23,6 +27,7 @@ local mappings = {
     f = { "<cmd>Telescope find_files<cr>", "Find files" },
     p = { "<cmd>lua require('telescope').extensions.projects.projects()<cr>", "Projects" },
     t = { "<cmd>Telescope live_grep<cr>", "Find Text" },
+    T = { "<cmd>TodoTelescope<cr>", "Find todos" },
     s = { "<cmd>Telescope grep_string<cr>", "Find String" },
     h = { "<cmd>Telescope help_tags<cr>", "Help" },
     H = { "<cmd>Telescope highlights<cr>", "Highlights" },
@@ -35,6 +40,7 @@ local mappings = {
   },
   g = {
     name = "Git",
+    g = { "<cmd>Neogit<cr>", "Neogit" },
     j = { "<cmd>lua require 'gitsigns'.next_hunk({navigation_message = false})<cr>", "Next Hunk" },
     k = { "<cmd>lua require 'gitsigns'.prev_hunk({navigation_message = false})<cr>", "Prev Hunk" },
     l = { "<cmd>lua require 'gitsigns'.blame_line()<cr>", "Blame" },
@@ -63,7 +69,7 @@ local mappings = {
     a = { "<cmd>lua vim.lsp.buf.code_action()<cr>", "Code Action" },
     d = { "<cmd>Telescope diagnostics bufnr=0 theme=get_ivy<cr>", "Buffer Diagnostics" },
     w = { "<cmd>Telescope diagnostics<cr>", "Diagnostics" },
-    f = { "<cmd>lua vim.lsp.buf.format({timeout_ms = 5000})<cr>", "Format" },
+    f = { "<cmd>lua vim.lsp.buf.format({async = true})<cr>", "Format" },
     i = { "<cmd>LspInfo<cr>", "Info" },
     I = { "<cmd>Mason<cr>", "Mason Info" },
     j = {
@@ -114,6 +120,7 @@ local opts = {
 
 return {
   "folke/which-key.nvim",
+  event = "VeryLazy",
   opts = {
     plugins = {
       marks = true, -- shows a list of your marks on ' and `

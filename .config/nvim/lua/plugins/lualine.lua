@@ -1,4 +1,5 @@
-local icons = require "user.icons"
+local icons = require "config.icons"
+local remove_duplicates = require("config.utils").remove_duplicates
 
 local conditions = {
   buffer_not_empty = function()
@@ -19,51 +20,40 @@ local branch = { 'b:gitsigns_head', icon = '' }
 local diff = {
   "diff",
   colored = true,
-  symbols = { added = icons.git.LineAdded, modified = icons.git.LineModified, removed = icons.git.LineRemoved },   -- Changes the symbols used by the diff.
+  symbols = { added = icons.git.LineAdded, modified = icons.git.LineModified, removed = icons.git.LineRemoved }, -- Changes the symbols used by the diff.
 }
 
-local function lsp_name(msg)
-  msg = msg or "Inactive"
-  local buf_clients = vim.lsp.buf_get_clients()
+local function lsp_servers()
+  local buf_clients = vim.lsp.get_clients({ bufnr = 0 })
+
   if next(buf_clients) == nil then
-    if type(msg) == "boolean" or #msg == 0 then
-      return "Inactive"
-    end
-    return msg
+    return "Inactive"
   end
+
+  local null_ls_installed, null_ls = pcall(require, "null-ls")
   local buf_client_names = {}
 
   for _, client in pairs(buf_clients) do
-    if client.name ~= "null-ls" then
+    if client.name == "null-ls" then
+      if null_ls_installed then
+        for _, source in ipairs(null_ls.get_source({ filetype = vim.bo.filetype })) do
+          table.insert(buf_client_names, source.name)
+        end
+      end
+    else
       table.insert(buf_client_names, client.name)
     end
   end
 
-  return table.concat(buf_client_names, ", ")
+  return table.concat(remove_duplicates(buf_client_names), ", ")
 end
 
-local function lsp_progress(_)
-  local result = vim.lsp.util.get_progress_messages()[1]
+local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
 
-  if result then
-    local msg = result.message or ""
-    local percentage = result.percentage or 0
-    local title = result.title or ""
-
-    local spinners = { "", "", "" }
-    local success_icon = { "", "", "" }
-
-    local ms = vim.loop.hrtime() / 1000000
-    local frame = math.floor(ms / 120) % #spinners
-
-    if percentage >= 70 then
-      return string.format(" %%<%s %s %s (%s%%%%) ", success_icon[frame + 1], title, msg, percentage)
-    end
-
-    return string.format(" %%<%s %s %s (%s%%%%) ", spinners[frame + 1], title, msg, percentage)
-  end
-
-  return ""
+if has_nvim_10 then
+  vim.api.nvim_create_autocmd({ 'LspProgress' }, {
+    command = 'redrawstatus'
+  })
 end
 
 return {
@@ -94,12 +84,13 @@ return {
       lualine_x = {
         "diagnostics",
         {
-          lsp_name,
+          lsp_servers,
           icon = "",
           color = { gui = "none" },
-        }
+        },
+        'tabnine'
       },
-      lualine_y = { lsp_progress, "progress" },
+      lualine_y = { "progress" },
       lualine_z = { "location" },
     }
   }

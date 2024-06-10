@@ -30,7 +30,7 @@ return {
 
       luasnip.filetype_extend("ruby", { "rails" })
 
-      local icons = require("user.icons")
+      local icons = require("config.icons")
 
       cmp.setup({
         snippet = {
@@ -83,7 +83,7 @@ return {
         },
         formatting = {
           fields = { "kind", "abbr", "menu" },
-          format = function(_, vim_item)
+          format = function(_entry, vim_item)
             -- Kind icons
             -- vim_item.kind = string.format("%s", icons[vim_item.kind])
             vim_item.kind = string.format('%s %s', icons.kind[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
@@ -111,8 +111,6 @@ return {
             end,
           },
           { name = "luasnip" },
-          -- { name = "ultisnips" },
-          -- { name = "vsnip" },
           { name = "nvim_lua" },
           { name = "buffer" },
           { name = "path" },

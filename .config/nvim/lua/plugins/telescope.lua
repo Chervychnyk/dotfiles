@@ -13,13 +13,24 @@ return {
           require("telescope").load_extension("fzf")
         end,
       },
+      "folke/todo-comments.nvim"
     },
     opts = function()
       local actions = require("telescope.actions")
       local action_state = require('telescope.actions.state')
       local previewers = require('telescope.previewers')
       local previewers_utils = require('telescope.previewers.utils')
-      local icons = require('user.icons')
+      local icons = require('config.icons')
+
+
+      local function filename_first(_, path)
+        local tail = vim.fs.basename(path)
+        local parent = vim.fs.dirname(path)
+        if parent == "." then
+          return tail
+        end
+        return string.format("%s\t\t%s", tail, parent)
+      end
 
       local max_size = 100000
       local truncate_large_files = function(filepath, bufnr, opts)
@@ -46,9 +57,15 @@ return {
           selection_caret = icons.ui.Forward .. " ",
           entry_prefix = "   ",
           initial_mode = "insert",
-          selection_strategy = "reset",
-          path_display = { "absolute" },
+          select_strategy = "reset",
+          sorting_strategy = "ascending",
           color_devicons = true,
+          set_env = { ["COLORTERM"] = "truecolor" }, -- default = nil,
+          layout_config = {
+            prompt_position = "top",
+            preview_cutoff = 120,
+          },
+          path_display = { "absolute" },
 
           vimgrep_arguments = {
             "rg",
@@ -141,14 +158,23 @@ return {
               },
             },
           },
-          find_files = {
-            theme = 'dropdown',
-            previewer = false
+
+          colorscheme = {
+            enable_preview = true,
           },
+
+          find_files = {
+            find_command = { 'rg', '--files', '--hidden', '-g', '!.git/' },
+            theme = 'dropdown',
+            previewer = false,
+            path_display = filename_first
+          },
+
           git_branches = {
             theme = 'dropdown',
             pattern = '--sort=-committerdate',
           },
+
           git_commits = {
             theme = "ivy",
             mappings = {
@@ -156,11 +182,13 @@ return {
                 ["<C-o>"] = function(prompt_bufnr)
                   actions.close(prompt_bufnr)
                   local value = action_state.get_selected_entry().value
-                  vim.cmd('DiffviewOpen ' .. value .. '~1..' .. value)
+                  require("gitsigns").diffthis(value)
+                  -- vim.cmd('DiffviewOpen ' .. value .. '~1..' .. value)
                 end,
               }
             }
           },
+
           git_stash = {
             theme = 'ivy',
             mappings = {
@@ -177,6 +205,26 @@ return {
                 end,
               },
             },
+          },
+
+          lsp_references = {
+            theme = "dropdown",
+            initial_mode = "normal",
+          },
+
+          lsp_definitions = {
+            theme = "dropdown",
+            initial_mode = "normal",
+          },
+
+          lsp_declarations = {
+            theme = "dropdown",
+            initial_mode = "normal",
+          },
+
+          lsp_implementations = {
+            theme = "dropdown",
+            initial_mode = "normal",
           },
         },
         extensions = {
