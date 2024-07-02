@@ -32,6 +32,8 @@ return {
 
       local icons = require("config.icons")
 
+      vim.api.nvim_set_hl(0, "CmpItemKindSupermaven", { fg = "#44BDFF" })
+
       cmp.setup({
         snippet = {
           expand = function(args)
@@ -91,6 +93,7 @@ return {
           end,
         },
         sources = {
+          { name = "supermaven" },
           {
             name = "nvim_lsp",
             entry_filter = function(entry, ctx)

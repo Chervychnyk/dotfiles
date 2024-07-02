@@ -48,6 +48,13 @@ local function lsp_servers()
   return table.concat(remove_duplicates(buf_client_names), ", ")
 end
 
+local function supermaven_status()
+  local enabled = require("supermaven-nvim.api").is_running()
+  local icon = enabled and "●" or "○"
+
+  return icon .. " Supermaven"
+end
+
 local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
 
 if has_nvim_10 then
@@ -65,7 +72,7 @@ return {
       globalstatus = true,
       component_separators = { left = "", right = "" },
       section_separators = { left = "", right = "" },
-      disabled_filetypes = { "alpha", "dashboard", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
+      disabled_filetypes = { "alpha", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
       always_divide_middle = true,
     },
     sections = {
@@ -88,7 +95,7 @@ return {
           icon = "",
           color = { gui = "none" },
         },
-        'tabnine'
+        supermaven_status
       },
       lualine_y = { "progress" },
       lualine_z = { "location" },
