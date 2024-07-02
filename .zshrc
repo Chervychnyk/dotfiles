@@ -1,47 +1,123 @@
-# Load custom executable functions
-for function in ~/.zsh/functions/*; do
-  source $function
-done
+# Set the directory we want to store Zinit and plugins
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 
-# Aliases
+# Download Zinit if it is not there yet
+if [ ! -d "$ZINIT_HOME" ]; then
+  mkdir -p "$(dirname $ZINIT_HOME)"
+  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+fi
+
+# Source/Load Zinit
+source "${ZINIT_HOME}/zinit.zsh" \
+  && autoload -Uz _zinit \
+  && (( ${+_comps} )) \
+  && _comps[zinit]=_zinit
+
+# Prompt
+zinit ice as"command" from"gh-r" \
+          atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
+          atpull"%atclone" src"init.zsh"
+zinit light starship/starship
+
+setopt promptsubst
+
+# Snippets
+zinit wait lucid for \
+  OMZL::clipboard.zsh \
+  OMZL::compfix.zsh \
+  OMZL::completion.zsh \
+  OMZL::correction.zsh \
+  atinit"
+    zstyle ':omz:alpha:lib:git' async-prompt no
+  " \
+  OMZL::git.zsh \
+  OMZP::aws \
+  OMZP::command-not-found \
+  OMZP::docker-compose \
+  OMZP::git \
+  OMZP::fzf \
+  OMZP::kubectl \
+  atload"
+    zstyle ':omz:plugins:nvm' autoload yes
+    zstyle ':omz:plugins:nvm' silent-autoload yes 
+  " \
+  OMZP::nvm \
+  atload"
+    zstyle ':omz:plugins:ssh-agent' quiet yes
+    export SHORT_HOST='local'
+  " \
+  OMZP::ssh-agent \
+  OMZP::sudo
+
+# Plugins
+zinit ice wait"2" as"command" from"gh-r" lucid \
+  mv"zoxide* -> zoxide" \
+  atclone"./zoxide init zsh > init.zsh" \
+  atpull"%atclone" src"init.zsh" nocompile'!'
+zinit light ajeetdsouza/zoxide
+
+zinit wait lucid for \
+    light-mode atinit"ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20" atload"_zsh_autosuggest_start" \
+  zsh-users/zsh-autosuggestions \
+    light-mode atinit"
+      typeset -gA FAST_HIGHLIGHT; FAST_HIGHLIGHT[git-cmsg-len]=100;
+      zpcompinit; zpcdreplay" \
+  zdharma-continuum/fast-syntax-highlighting \
+    atpull'zinit creinstall -q .' \
+    atinit"
+      zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+      zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+      zstyle ':completion:*' menu no" \
+    blockf light-mode \
+  zsh-users/zsh-completions \
+    atinit"
+      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
+      zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'" \
+  Aloxaf/fzf-tab
+ 
+# Load aliases
 [[ -f ~/.aliases ]] && source ~/.aliases
 
-# If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:/usr/local/bin:$PATH
+# Install completions
+# command -v bw >/dev/null && bw completion --shell zsh > ~/.local/share/zsh/completions/_bw
+# command -v flux >/dev/null && flux completion zsh > ~/.local/share/zsh/completions/_flux
+# command -v ngrok >/dev/null && ngrok completion zsh > ~/.local/share/zsh/completions/_ngrok
+#
+# zinit creinstall -Q ~/.local/share/zsh/completions 
 
-# Path to your oh-my-zsh installation.
-export ZSH=/Users/$USER/.oh-my-zsh
+# Keybindings
+bindkey '^l' autosuggest-accept
+bindkey '^p' history-search-backward
+bindkey '^n' history-search-forward
+bindkey "^[a" beginning-of-line
+bindkey "^[e" end-of-line
 
-# Set name of the theme to load. Optionally, if you set this to "random"
-# it'll load a random theme each time that oh-my-zsh is loaded.
-# See https://github.com/robbyrussell/oh-my-zsh/wiki/Themes
-# ZSH_THEME="agnoster"
+# History
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=$HISTSIZE
+HISTDUP=erase
+setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_space
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_ignore_dups
+setopt hist_find_no_dups
 
-# Uncomment the following line to change how often to auto-update (in days).
-export UPDATE_ZSH_DAYS=7
-
-# Uncomment the following line to enable command auto-correction.
-ENABLE_CORRECTION="true"
-
-# Uncomment the following line to display red dots whilst waiting for completion.
-COMPLETION_WAITING_DOTS="true"
-
-# Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
-# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-# Add wisely, as too many plugins slow down shell startup.
-
-plugins=(git bundler macos jump tmux sudo brew rvm rails vscode zsh-autosuggestions zsh-syntax-highlighting)
-
-source $ZSH/oh-my-zsh.sh
+# Soho vibes for fzf
+export FZF_DEFAULT_OPTS="
+	--color=fg:#908caa,bg:#191724,hl:#ebbcba
+	--color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba
+	--color=border:#403d52,header:#31748f,gutter:#191724
+	--color=spinner:#f6c177,info:#9ccfd8,separator:#403d52
+	--color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
 
 # User configuration
-
-# You may need to manually set your language environment
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-
 export TERM="xterm-256color"
+export DISPLAY=:0.0
 
 # Preferred editor for local and remote sessions
 if [[ -n $SSH_CONNECTION ]]; then
@@ -50,73 +126,53 @@ else
   export EDITOR='nvim'
 fi
 
-# Call `nvm use` automatically in a directory with a `.nvmrc` file
-autoload -U add-zsh-hook
-type -a nvm > /dev/null && add-zsh-hook chpwd load_nvmrc
-type -a nvm > /dev/null && load_nvmrc
-
-bindkey "[D" backward-word
-bindkey "[C" forward-word
-bindkey "^[a" beginning-of-line
-bindkey "^[e" end-of-line]]]]
-
 # export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
 # export ANDROID_HOME=/Users/$USER/Library/Android/sdk
 # export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 # export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$PATH
 # export PATH=$PATH:$HOME/flutter/bin
 
-SSH_ENV="$HOME/.ssh/agent-environment"
-
-# Source SSH settings, if applicable
-if [ -f "${SSH_ENV}" ]; then
-    . "${SSH_ENV}" > /dev/null
-
-    ps -ef | grep ${SSH_AGENT_PID} | grep ssh-agent$ > /dev/null || {
-        start_agent;
-    }
-else
-    start_agent;
-fi
+export ASDF_DIR="$HOME/.asdf"
+export ERL_AFLAGS="-kernel shell_history enabled"
+export KERL_CONFIGURE_OPTIONS="--disable-debug --disable-silent-rules --enable-dynamic-ssl-lib --enable-gettimeofday-as-os-system-time --enable-kernel-poll --without-javac --without-wx --without-odbc"
+. "$HOME/.asdf/asdf.sh"
 
 # Homebrew
 export PATH="/opt/homebrew/bin:$PATH"
 export PATH="/opt/homebrew/sbin:$PATH"
 
+export PATH="$HOME/.asdf/installs/elixir/1.12/.mix/escripts:$PATH"
+export PATH="$HOME/.yarn/bin:$PATH"
+
 # OpenSSL
 export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
-# export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib"
-# export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include"
+# export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib:$LDFLAGS"
+export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@1.1/lib/pkgconfig:$PKG_CONFIG_PATH"
-export RUBY_CONFIGURE_OPTS="--with-openssl-dir=/opt/homebrew/opt/openssl@1.1"
+export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
+export optflags="-Wno-error=implicit-function-declaration"
+
+# Readline
+# export LDFLAGS="-L/opt/homebrew/opt/readline/lib:$LDFLAGS"
+export CPPFLAGS="-I/opt/homebrew/opt/readline/include:$CPPFLAGS"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/readline/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 # Libffi
 export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
-export CPPFLAGS="-I/opt/homebrew/opt/libffi/include"
+export CPPFLAGS="-I/opt/homebrew/opt/libffi/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 # Python
-export PATH="/opt/homebrew/opt/python@3.10/bin:$PATH"
+export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
 
-# ASDF version manager
-export ASDF_DIR="$HOME/.asdf"
-export ERL_AFLAGS="-kernel shell_history enabled"
-export PATH="$HOME/.asdf/installs/elixir/1.12/.mix/escripts:$PATH"
-. $(brew --prefix asdf)/libexec/asdf.sh
-
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-export PATH="$PATH:$HOME/.rvm/bin"
-
-# Version manager for Node.js
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
-export PATH="$PATH:$HOME/.yarn/bin"
-
-# For PDF generation with puppeteer
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PUPPETEER_EXECUTABLE_PATH=`which chromium`
 
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$HOME/.rvm/bin:$PATH"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
+export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 
-eval "$(starship init zsh)"
+export TAGLIB_DIR="/opt/homebrew/Cellar/taglib/1.13.1"
+export KUBECONFIG=$HOME/.kube/config.ovh.products:$HOME/.kube/config
