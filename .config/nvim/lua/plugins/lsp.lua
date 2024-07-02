@@ -2,22 +2,47 @@ return {
   {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
+    dependencies = {
+      "williamboman/mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+    },
     config = function()
-      local lspconfig = require "lspconfig"
-
       require("config.lsp.handlers").setup()
 
+      require("mason").setup({
+        ui = {
+          icons = {
+            package_installed = "✓",
+            package_uninstalled = "✗",
+            package_pending = "⟳",
+          },
+        },
+      })
+
       local servers = {
+        "basedpyright",
+        "cssls",
         "dockerls",
         "docker_compose_language_service",
         "elixirls",
+        "emmet_ls",
         -- "gitlab_ci_ls",
         "jsonls",
+        "lemminx",
+        -- "lexical",
         "lua_ls",
+        "marksman",
         "ruby_lsp",
         "tsserver",
         "volar",
       }
+
+
+      require("mason-lspconfig").setup({
+        ensure_installed = servers
+      })
+
+      local lspconfig = require "lspconfig"
 
       for _, server in pairs(servers) do
         local server_opts = {

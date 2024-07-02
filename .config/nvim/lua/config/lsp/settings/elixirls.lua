@@ -1,4 +1,5 @@
 return {
+  cmd = vim.stdpath("data") .. "/mason/bin/elixir-ls",
   flags = {
     debounce_text_changes = 150,
   },

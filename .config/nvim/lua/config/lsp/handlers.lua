@@ -28,8 +28,8 @@ M.setup = function()
 
   vim.diagnostic.config(config)
 
-  vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
-  vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
+  -- vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
+  -- vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
   require("lspconfig.ui.windows").default_options.border = "rounded"
 end
 
@@ -67,18 +67,19 @@ local function lsp_keymaps(bufnr)
   map("n", "gd", vim.lsp.buf.definition, { desc = "go to definition" })
   map("n", "K", vim.lsp.buf.hover)
   map("n", "<C-k>", vim.lsp.buf.signature_help)
-  map("n", "<space>rn", vim.lsp.buf.rename, { desc = "varialbe rename" })
+  map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "rename symbol" })
   map("n", "gr", vim.lsp.buf.references, { desc = "show references" })
   map("n", "[d", vim.diagnostic.goto_prev, { desc = "previous diagnostic" })
   map("n", "]d", vim.diagnostic.goto_next, { desc = "next diagnostic" })
+  map("n", "<leader>d", vim.diagnostic.open_float, { desc = "open diagnostics in float" })
   -- this puts diagnostics from opened files to quickfix
-  map("n", "<space>qw", vim.diagnostic.setqflist, { desc = "put window diagnostics to qf" })
+  map("n", "<leader>qw", vim.diagnostic.setqflist, { desc = "put window diagnostics to qf" })
   -- this puts diagnostics from current buffer to quickfix
-  map("n", "<space>qb", function() set_qflist(bufnr) end, { desc = "put buffer diagnostics to qf" })
-  map({ "n", "v" }, "<space>ca", vim.lsp.buf.code_action, { desc = "LSP code action" })
-  map("n", "<space>wa", vim.lsp.buf.add_workspace_folder, { desc = "add workspace folder" })
-  map("n", "<space>wr", vim.lsp.buf.remove_workspace_folder, { desc = "remove workspace folder" })
-  map("n", "<space>wl", function()
+  map("n", "<leader>qb", function() set_qflist(bufnr) end, { desc = "put buffer diagnostics to qf" })
+  map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "LSP code actions" })
+  map("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "add workspace folder" })
+  map("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "remove workspace folder" })
+  map("n", "<leader>wl", function()
     vim.inspect(vim.lsp.buf.list_workspace_folders())
   end, { desc = "list workspace folder" })
   map('n', '<leader>lh', function()
