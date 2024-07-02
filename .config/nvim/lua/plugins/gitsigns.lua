@@ -2,47 +2,57 @@ return {
   "lewis6991/gitsigns.nvim",
   event = "BufEnter",
   cmd = "Gitsigns",
-  opts = {
-    signs = {
-      add = { hl = "GitSignsAdd", text = "▎", numhl = "GitSignsAddNr", linehl = "GitSignsAddLn" },
-      change = { hl = "GitSignsChange", text = "▎", numhl = "GitSignsChangeNr", linehl = "GitSignsChangeLn" },
-      delete = { hl = "GitSignsDelete", text = "删", numhl = "GitSignsDeleteNr", linehl = "GitSignsDeleteLn" },
-      topdelete = { hl = "GitSignsDelete", text = "删", numhl = "GitSignsDeleteNr", linehl = "GitSignsDeleteLn" },
-      changedelete = { hl = "GitSignsChange", text = "▎", numhl = "GitSignsChangeNr", linehl = "GitSignsChangeLn" },
-    },
-    signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-    numhl = false,     -- Toggle with `:Gitsigns toggle_numhl`
-    linehl = false,    -- Toggle with `:Gitsigns toggle_linehl`
-    word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
-    watch_gitdir = {
-      interval = 1000,
-      follow_files = true,
-    },
-    attach_to_untracked = true,
-    current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
-    current_line_blame_opts = {
-      virt_text = true,
-      virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
-      delay = 1000,
-      ignore_whitespace = false,
-    },
-    current_line_blame_formatter_opts = {
-      relative_time = false,
-    },
-    sign_priority = 6,
-    update_debounce = 100,
-    status_formatter = nil,
-    max_file_length = 40000,
-    preview_config = {
-      -- Options passed to nvim_open_win
-      border = "single",
-      style = "minimal",
-      relative = "cursor",
-      row = 0,
-      col = 1,
-    },
-    yadm = {
-      enable = false,
-    },
-  }
+  config = function()
+    local icons = require("config.icons")
+
+    require("gitsigns").setup {
+      signs = {
+        add = {
+          -- hl = "GitSignsAdd",
+          text = icons.ui.BoldLineMiddle,
+          -- numhl = "GitSignsAddNr",
+          -- linehl = "GitSignsAddLn",
+        },
+        change = {
+          -- hl = "GitSignsChange",
+          text = icons.ui.BoldLineDashedMiddle,
+          -- numhl = "GitSignsChangeNr",
+          -- linehl = "GitSignsChangeLn",
+        },
+        delete = {
+          -- hl = "GitSignsDelete",
+          text = icons.ui.TriangleShortArrowRight,
+          -- numhl = "GitSignsDeleteNr",
+          -- linehl = "GitSignsDeleteLn",
+        },
+        topdelete = {
+          -- hl = "GitSignsDelete",
+          text = icons.ui.TriangleShortArrowRight,
+          -- numhl = "GitSignsTopDeleteNr",
+          -- linehl = "GitSignsDeleteLn",
+        },
+        changedelete = {
+          -- hl = "GitSignsChange",
+          text = icons.ui.BoldLineMiddle,
+          -- numhl = "GitSignsChangeNr",
+          -- linehl = "GitSignsChangeLn",
+        },
+      },
+      watch_gitdir = {
+        interval = 1000,
+        follow_files = true,
+      },
+      attach_to_untracked = true,
+      current_line_blame_formatter = "<author>, <author_time:%Y-%m-%d> - <summary>",
+      update_debounce = 200,
+      max_file_length = vim.g.max_file.lines,
+      preview_config = {
+        border = "rounded",
+        style = "minimal",
+        relative = "cursor",
+        row = 0,
+        col = 1,
+      },
+    }
+  end
 }

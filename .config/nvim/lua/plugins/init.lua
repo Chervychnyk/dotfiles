@@ -12,7 +12,7 @@ return {
 
   {
     'NvChad/nvim-colorizer.lua',
- event = { "BufReadPost", "BufNewFile" },
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
       require("colorizer").setup {
         filetypes = {
@@ -23,6 +23,8 @@ return {
           "css",
           "html",
           "astro",
+          "markdown",
+          "markdown_inline",
           "lua",
         },
         user_default_options = {

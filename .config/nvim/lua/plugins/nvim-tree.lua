@@ -2,7 +2,7 @@ local icons = require "config.icons"
 
 return {
   "nvim-tree/nvim-tree.lua",
-  event = "VeryLazy",
+  cmd = { "NvimTreeToggle", "NvimTreeFocus", "NvimTreeOpen", "NvimTreeFindFile", "NvimTreeFindFileToggle" },
   opts = {
     disable_netrw = true,
     hijack_netrw = true,

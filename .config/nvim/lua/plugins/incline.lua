@@ -12,7 +12,7 @@ local function get_diagnostic_label(props)
   for severity, icon in pairs(diagnostic_icons) do
     local n = #vim.diagnostic.get(props.buf, { severity = vim.diagnostic.severity[string.upper(severity)] })
     if n > 0 then
-      table.insert(label, { icon .. n .. ' ', group = 'DiagnosticSign' .. severity })
+      table.insert(label, { ' ' .. icon .. ' ' .. n .. ' ', group = 'DiagnosticSign' .. severity })
     end
   end
 
@@ -44,7 +44,7 @@ return {
 
     require("incline").setup({
       hide = {
-        cursorline = false,
+        cursorline = true,
         focused_win = true,
         only_win = true,
       },

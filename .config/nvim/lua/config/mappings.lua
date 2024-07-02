@@ -31,14 +31,14 @@ map("n", "<C-j>", "<C-w>j", { desc = "Move window down" })
 map("n", "<C-k>", "<C-w>k", { desc = "Move window up" })
 
 -- Resize with vim navigation
-map("n", "<A-C-k>", ":resize -2<CR>", { silent = true })
-map("n", "<A-C-j>", ":resize +2<CR>", { silent = true })
-map("n", "<A-C-l>", ":vertical resize -2<CR>", { silent = true })
-map("n", "<A-C-h>", ":vertical resize +2<CR>", { silent = true })
+map("n", "<C-A-k>", ":resize -2<CR>", { silent = true })
+map("n", "<C-A-j>", ":resize +2<CR>", { silent = true })
+map("n", "<C-A-l>", ":vertical resize -2<CR>", { silent = true })
+map("n", "<C-A-h>", ":vertical resize +2<CR>", { silent = true })
 
 -- Navigate buffers
-map("n", "<S-l>", ":bnext<CR>")
-map("n", "<S-h>", ":bprevious<CR>")
+map("n", "<S-l>", ":bnext<CR>", { silent = true })
+map("n", "<S-h>", ":bprevious<CR>", { silent = true })
 
 -- Stay in indent mode
 -- Visual --
@@ -53,7 +53,7 @@ map("n", "<A-k>", "<Esc>:m .-2<CR>==gi")
 map("v", "<A-j>", ":m .+1<CR>==")
 map("v", "<A-k>", ":m .-2<CR>==")
 -- Visual Block --
-map("x", "J", ":move '>+1<CR>gv-gv")
-map("x", "K", ":move '<-2<CR>gv-gv")
-map("x", "<A-j>", ":move '>+1<CR>gv-gv")
-map("x", "<A-k>", ":move '<-2<CR>gv-gv")
+map("x", "J", ":move '>+1<CR>gv-gv", { silent = true })
+map("x", "K", ":move '<-2<CR>gv-gv", { silent = true })
+map("x", "<A-j>", ":move '>+1<CR>gv-gv", { silent = true })
+map("x", "<A-k>", ":move '<-2<CR>gv-gv", { silent = true })

@@ -1,6 +1,7 @@
 -- NOTE: Prefer using : over <cmd> as the latter avoids going back in normal-mode.
 -- see https://neovim.io/doc/user/map.html#:map-cmd
 local mappings = {
+  ["e"] = { "<cmd>NvimTreeFindFileToggle<CR>", "Toggle flie explorer" },
   ["q"] = { "<cmd>confirm q<CR>", "Quit" },
   ["nh"] = { "<cmd>nohlsearch<CR>", "No Highlight" },
   b = {
@@ -9,16 +10,9 @@ local mappings = {
       "<cmd>lua require('telescope.builtin').buffers(require('telescope.themes').get_dropdown{previewer = false})<cr>",
       "List Buffers" },
     b = { ":b#<cr>", "Previous" },
-    d = { ":bd<cr>", "Delete" },
+    d = { "<cmd>require('mini.bufremove').delete(0, false)<CR>", "Delete" },
     n = { ":bn<cr>", "Next" },
     p = { ":bp<cr>", "Previous" },
-  },
-  e = {
-    name = "Explorer",
-    e = { "<cmd>NvimTreeToggle<CR>", "Toggle flie explorer" },
-    f = { "<cmd>NvimTreeFindFileToggle<CR>", "Toggle flie explorer on current file" },
-    c = { "<cmd>NvimTreeCollapse<CR>", "Collapse flie explorer" },
-    r = { "<cmd>NvimTreeRefresh<CR>", "Refresh flie explorer" }
   },
   f = {
     name = "Find",
@@ -41,6 +35,7 @@ local mappings = {
   g = {
     name = "Git",
     g = { "<cmd>Neogit<cr>", "Neogit" },
+    h = { "<cmd>DiffviewFileHistory %<cr>", "File History" },
     j = { "<cmd>lua require 'gitsigns'.next_hunk({navigation_message = false})<cr>", "Next Hunk" },
     k = { "<cmd>lua require 'gitsigns'.prev_hunk({navigation_message = false})<cr>", "Prev Hunk" },
     l = { "<cmd>lua require 'gitsigns'.blame_line()<cr>", "Blame" },

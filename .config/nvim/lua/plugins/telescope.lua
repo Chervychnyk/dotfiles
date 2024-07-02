@@ -1,7 +1,6 @@
 return {
   {
     "nvim-telescope/telescope.nvim",
-    lazy = true,
     cmd = "Telescope",
     version = false, -- telescope did only one release, so use HEAD for now
     dependencies = {
@@ -32,11 +31,11 @@ return {
         return string.format("%s\t\t%s", tail, parent)
       end
 
-      local max_size = 100000
       local truncate_large_files = function(filepath, bufnr, opts)
+        filepath = vim.fn.expand(filepath)
         opts = opts or {}
 
-        filepath = vim.fn.expand(filepath)
+        local max_size = vim.g.max_file.size
 
         vim.loop.fs_stat(filepath, function(_, stat)
           if not stat then return end

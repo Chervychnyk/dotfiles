@@ -1,10 +1,11 @@
 return {
   "neogitorg/neogit",
-  event = "VeryLazy",
+  cmd = "Neogit",
   config = function()
     local icons = require "config.icons"
 
     require("neogit").setup {
+      auto_show_console = false,
       disable_signs = false,
       -- disable_hint = true,
       disable_context_highlighting = false,

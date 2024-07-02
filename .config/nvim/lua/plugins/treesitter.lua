@@ -16,9 +16,36 @@ return {
     },
     opts = {
       ensure_installed = {
-        "bash", "css", "dockerfile", "eex", "elixir", "erlang",
-        "go", "html", "javascript", "json", "lua", "markdown",
-        "proto", "pug", "ruby", "scss", "typescript", "vue", "yaml"
+        "bash",
+        "css",
+        "diff",
+        "dockerfile",
+        "eex",
+        "elixir",
+        "erlang",
+        "go",
+        "html",
+        "javascript",
+        "jsdoc",
+        "json",
+        "json5",
+        "jsonc",
+        "lua",
+        "luadoc",
+        "markdown",
+        "markdown_inline",
+        "proto",
+        "python",
+        "pug",
+        "query",
+        "regex",
+        "ruby",
+        "scss",
+        "typescript",
+        "vim",
+        "vimdoc",
+        "vue",
+        "yaml"
       },
       sync_install = false,
       highlight = {
@@ -27,7 +54,6 @@ return {
         additional_vim_regex_highlighting = false
       },
       autopairs = { enable = true },
-      autotag = { enable = true },
       incremental_selection = { enable = true },
       indent = { enable = true, disable = { "css" } },
       textobjects = {

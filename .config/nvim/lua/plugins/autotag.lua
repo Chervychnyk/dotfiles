@@ -1,30 +1,12 @@
 return {
   "windwp/nvim-ts-autotag",
+  event = "InsertEnter",
   config = function()
     require("nvim-ts-autotag").setup {
-      enable = true,
-      enable_rename = true,
-      enable_close = false,
-      enable_close_on_slash = false,
-
-      filetypes = {
-        "html",
-        "javascript",
-        "typescript",
-        "javascriptreact",
-        "typescriptreact",
-        "svelte",
-        "vue",
-        "tsx",
-        "jsx",
-        "rescript",
-        "xml",
-        "php",
-        "markdown",
-        "astro",
-        "glimmer",
-        "handlebars",
-        "hbs",
+      opts = {
+        enable_close = false,          -- Auto close tags
+        enable_close_on_slash = false, -- Auto close on trailing </
+        enable_rename = true,          -- Auto rename pairs of tags
       },
     }
   end

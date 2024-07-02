@@ -21,10 +21,34 @@ autocmd({ "FileType" }, {
   end,
 })
 
+autocmd({ "BufWinEnter" }, {
+  pattern = { "*" },
+  callback = function()
+    vim.cmd "checktime"
+  end,
+})
+
+autocmd({ "BufWinEnter" }, {
+  pattern = { "*" },
+  callback = function()
+    local dirname = vim.fn.getcwd():match "([^/]+)$"
+    vim.opt.titlestring = dirname
+  end,
+})
+
 autocmd({ "TextYankPost" }, {
   callback = function()
     vim.highlight.on_yank { higroup = "Visual", timeout = 40 }
   end,
+})
+
+autocmd({ "FileType" }, {
+  desc = "Disable folding in alpha buffers",
+  group = augroup("alpha", { clear = true }),
+  pattern = { "alpha" },
+  callback = function()
+    vim.opt_local.nofoldenable = true
+  end
 })
 
 autocmd({ "FileType" }, {
@@ -33,6 +57,15 @@ autocmd({ "FileType" }, {
     vim.opt_local.wrap = true
     vim.opt_local.spell = true
   end,
+})
+
+autocmd({ "FileType" }, {
+  desc = "Disable cmp in certain filetypes",
+  group = augroup("cmp_disable", { clear = true }),
+  pattern = { "gitcommit", "gitrebase", "NeogitCommitMessage", "TelescopePrompt", "text" },
+  callback = function()
+    require("cmp").setup.buffer { enabled = false }
+  end
 })
 
 autocmd({ "BufRead", "BufNewFile" }, {
