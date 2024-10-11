@@ -41,6 +41,7 @@ return {
         "regex",
         "ruby",
         "scss",
+        "sql",
         "typescript",
         "vim",
         "vimdoc",

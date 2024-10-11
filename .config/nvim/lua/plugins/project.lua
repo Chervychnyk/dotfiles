@@ -9,7 +9,7 @@ return {
     manual_mode = false,
 
     detection_methods = { "pattern" },
-    patterns = { ".git", ".obsidian", "_darcs", ".hg", ".bzr", ".svn", "Makefile", "Gemfile", "package.json", "mix.exs",
+    patterns = { ".git", ".obsidian", ".svn", "Makefile", "Gemfile", "package.json", ".nvmrc", "mix.exs",
       ".tool-versions", "!=.ruby-lsp", "!^deps", "!^node_modules" },
 
     show_hidden = false,

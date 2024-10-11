@@ -43,18 +43,6 @@ local function lsp_highlight_document(client)
   -- end
 end
 
--- set quickfix list from diagnostics in a certain buffer, not the whole workspace
-local set_qflist = function(buf_num, severity)
-  local diagnostics = nil
-  diagnostics = vim.diagnostic.get(buf_num, { severity = severity })
-
-  local qf_items = vim.diagnostic.toqflist(diagnostics)
-  vim.fn.setqflist({}, ' ', { title = 'Diagnostics', items = qf_items })
-
-  -- open quickfix by default
-  vim.cmd [[copen]]
-end
-
 local function lsp_keymaps(bufnr)
   -- Mappings.
   local map = function(mode, l, r, opts)
@@ -64,27 +52,19 @@ local function lsp_keymaps(bufnr)
     vim.keymap.set(mode, l, r, opts)
   end
 
-  map("n", "gd", vim.lsp.buf.definition, { desc = "go to definition" })
+  map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
   map("n", "K", vim.lsp.buf.hover)
-  map("n", "<C-k>", vim.lsp.buf.signature_help)
-  map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "rename symbol" })
-  map("n", "gr", vim.lsp.buf.references, { desc = "show references" })
-  map("n", "[d", vim.diagnostic.goto_prev, { desc = "previous diagnostic" })
-  map("n", "]d", vim.diagnostic.goto_next, { desc = "next diagnostic" })
-  map("n", "<leader>d", vim.diagnostic.open_float, { desc = "open diagnostics in float" })
-  -- this puts diagnostics from opened files to quickfix
-  map("n", "<leader>qw", vim.diagnostic.setqflist, { desc = "put window diagnostics to qf" })
-  -- this puts diagnostics from current buffer to quickfix
-  map("n", "<leader>qb", function() set_qflist(bufnr) end, { desc = "put buffer diagnostics to qf" })
-  map({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "LSP code actions" })
-  map("n", "<leader>wa", vim.lsp.buf.add_workspace_folder, { desc = "add workspace folder" })
-  map("n", "<leader>wr", vim.lsp.buf.remove_workspace_folder, { desc = "remove workspace folder" })
-  map("n", "<leader>wl", function()
-    vim.inspect(vim.lsp.buf.list_workspace_folders())
-  end, { desc = "list workspace folder" })
+  map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
+  map("n", "gr", vim.lsp.buf.references, { desc = "Show references" })
+  map('n', 'gi', vim.lsp.buf.implementation, { desc = "Go to implementation" })
+  map('n', 'gD', vim.lsp.buf.type_definition, { desc = "Go to type definition" })
+  map("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })
+  map("n", "]d", vim.diagnostic.goto_next, { desc = "Next diagnostic" })
+  map("n", "sd", vim.diagnostic.open_float, { desc = "Open diagnostics in float" })
+  map({ "n", "v" }, "<leader>la", vim.lsp.buf.code_action, { desc = "Code actions" })
   map('n', '<leader>lh', function()
     vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled {})
-  end, { desc = 'LSP inlay hints' })
+  end, { desc = 'Toggle inlay hints' })
 end
 
 M.on_attach = function(client, bufnr)
@@ -97,11 +77,6 @@ M.on_attach = function(client, bufnr)
 end
 
 function M.capabilities()
-  local status_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
-  if status_ok then
-    return cmp_nvim_lsp.default_capabilities()
-  end
-
   local capabilities = vim.lsp.protocol.make_client_capabilities()
   capabilities.textDocument.completion.completionItem.snippetSupport = true
   capabilities.textDocument.completion.completionItem.resolveSupport = {
@@ -116,7 +91,16 @@ function M.capabilities()
     lineFoldingOnly = true,
   }
 
-  return capabilities
+  capabilities.workspace.didChangeWatchedFiles = {
+    dynamicRegistration = false,
+  }
+
+  local status_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+  if not status_ok then
+    return capabilities
+  end
+
+  return vim.tbl_deep_extend("force", capabilities, cmp_nvim_lsp.default_capabilities())
 end
 
 return M

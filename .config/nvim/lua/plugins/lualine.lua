@@ -65,40 +65,42 @@ end
 
 return {
   "nvim-lualine/lualine.nvim",
-  opts = {
-    options = {
-      icons_enabled = true,
-      theme = "auto",
-      globalstatus = true,
-      component_separators = { left = "", right = "" },
-      section_separators = { left = "", right = "" },
-      disabled_filetypes = { "alpha", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults" },
-      always_divide_middle = true,
-    },
-    sections = {
-      lualine_a = { 'mode' },
-      lualine_b = {
-        branch,
-        diff
+  config = function()
+    require("lualine").setup({
+      options = {
+        icons_enabled = true,
+        theme = "auto",
+        globalstatus = true,
+        component_separators = { left = "", right = "" },
+        section_separators = { left = "", right = "" },
+        disabled_filetypes = { "alpha", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults", "Trouble" },
+        always_divide_middle = true,
       },
-      lualine_c = {
-        { "filetype", icon_only = true, padding = { left = 1, right = 0 }, separator = " " },
-        {
-          'filename',
-          cond = conditions.buffer_not_empty,
+      sections = {
+        lualine_a = { 'mode' },
+        lualine_b = {
+          branch,
+          diff
         },
-      },
-      lualine_x = {
-        "diagnostics",
-        {
-          lsp_servers,
-          icon = "",
-          color = { gui = "none" },
+        lualine_c = {
+          { "filetype", icon_only = true, padding = { left = 1, right = 0 } },
+          {
+            'filename',
+            cond = conditions.buffer_not_empty,
+          },
         },
-        supermaven_status
-      },
-      lualine_y = { "progress" },
-      lualine_z = { "location" },
-    }
-  }
+        lualine_x = {
+          "diagnostics",
+          {
+            lsp_servers,
+            icon = "",
+            color = { gui = "none" },
+          },
+          supermaven_status
+        },
+        lualine_y = { "progress" },
+        lualine_z = { "location" },
+      }
+    })
+  end
 }

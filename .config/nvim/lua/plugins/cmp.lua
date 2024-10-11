@@ -25,38 +25,41 @@ return {
     event = "InsertEnter",
     config = function()
       local cmp = require "cmp"
+      local icons = require "config.icons"
       local luasnip = require "luasnip"
-      require("luasnip/loaders/from_vscode").lazy_load()
 
+      require("luasnip/loaders/from_vscode").lazy_load()
       luasnip.filetype_extend("ruby", { "rails" })
 
-      local icons = require("config.icons")
 
       vim.api.nvim_set_hl(0, "CmpItemKindSupermaven", { fg = "#44BDFF" })
 
       cmp.setup({
+        enabled = function()
+          -- disables in comments
+          local context = require("cmp.config.context")
+          if vim.api.nvim_get_mode().mode == "c" then
+            return true
+          else
+            return not context.in_treesitter_capture("comment") and not context.in_syntax_group("Comment")
+          end
+        end,
         snippet = {
           expand = function(args)
-            -- vim.fn["vsnip#anonymous"](args.body)
-            luasnip.lsp_expand(args.body) -- For `luasnip` users.
-            -- vim.fn["UltiSnips#Anon"](args.body)
+            luasnip.lsp_expand(args.body)
           end,
         },
         mapping = cmp.mapping.preset.insert {
-          ["<C-k>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
-          ["<C-j>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
-          ["<Down>"] = cmp.mapping(cmp.mapping.select_next_item(), { "i", "c" }),
-          ["<Up>"] = cmp.mapping(cmp.mapping.select_prev_item(), { "i", "c" }),
-          ["<C-b>"] = cmp.mapping(cmp.mapping.scroll_docs(-1), { "i", "c" }),
-          ["<C-f>"] = cmp.mapping(cmp.mapping.scroll_docs(1), { "i", "c" }),
-          ["<C-Space>"] = cmp.mapping.complete(),
-          ["<C-e>"] = cmp.mapping.close(),
+          ["<C-k>"] = cmp.mapping.scroll_docs(-4),
+          ["<C-j>"] = cmp.mapping.scroll_docs(4),
+          ["<C-i>"] = cmp.mapping.complete(),
+          ["<C-c>"] = cmp.mapping.abort(),
           -- Accept currently selected item. If none selected, `select` first item.
           -- Set `select` to `false` to only confirm explicitly selected items.
-          ["<CR>"] = cmp.mapping.confirm { select = true },
+          ["<CR>"] = cmp.mapping.confirm({ select = true }),
           ["<Tab>"] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              cmp.select_next_item()
+              cmp.select_next_item({ behavior = cmp.SelectBehavior.Select })
             elseif luasnip.expandable() then
               luasnip.expand()
             elseif luasnip.expand_or_jumpable() then
@@ -72,7 +75,7 @@ return {
           }),
           ["<S-Tab>"] = cmp.mapping(function(fallback)
             if cmp.visible() then
-              cmp.select_prev_item()
+              cmp.select_prev_item({ behavior = cmp.SelectBehavior.Select })
             elseif luasnip.jumpable(-1) then
               luasnip.jump(-1)
             else
@@ -87,55 +90,25 @@ return {
           fields = { "kind", "abbr", "menu" },
           format = function(_entry, vim_item)
             -- Kind icons
-            -- vim_item.kind = string.format("%s", icons[vim_item.kind])
             vim_item.kind = string.format('%s %s', icons.kind[vim_item.kind], vim_item.kind) -- This concatonates the icons with the name of the item kind
             return vim_item
           end,
         },
         sources = {
           { name = "supermaven" },
-          {
-            name = "nvim_lsp",
-            entry_filter = function(entry, ctx)
-              local kind = require("cmp.types.lsp").CompletionItemKind[entry:get_kind()]
-              if kind == "Snippet" and ctx.prev_context.filetype == "java" then
-                return false
-              end
-
-              if ctx.prev_context.filetype == "markdown" then
-                return true
-              end
-
-              if kind == "Text" then
-                return false
-              end
-
-              return true
-            end,
-          },
-          { name = "luasnip" },
+          { name = "nvim_lsp" },
           { name = "nvim_lua" },
+          { name = "luasnip" },
           { name = "buffer" },
-          { name = "path" },
-          { name = "treesitter" }
+          { name = "path",      option = { trailing_slash = true } },
         },
         confirm_opts = {
           behavior = cmp.ConfirmBehavior.Replace,
           select = false,
         },
         window = {
-          completion = {
-            border = "rounded",
-            winhighlight = "Normal:Pmenu,CursorLine:PmenuSel,FloatBorder:FloatBorder,Search:None",
-            col_offset = -3,
-            side_padding = 1,
-            scrollbar = false,
-            scrolloff = 8,
-          },
-          documentation = {
-            border = "rounded",
-            winhighlight = "Normal:Pmenu,FloatBorder:FloatBorder,Search:None",
-          },
+          completion = cmp.config.window.bordered(),
+          documentation = cmp.config.window.bordered(),
         },
       })
     end

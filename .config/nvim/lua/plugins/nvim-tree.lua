@@ -3,6 +3,9 @@ local icons = require "config.icons"
 return {
   "nvim-tree/nvim-tree.lua",
   cmd = { "NvimTreeToggle", "NvimTreeFocus", "NvimTreeOpen", "NvimTreeFindFile", "NvimTreeFindFileToggle" },
+  keys = {
+    { "<leader>e", "<cmd>NvimTreeFindFileToggle<CR>", desc = "Toggle flie explorer", nowait = true, remap = false },
+  },
   opts = {
     disable_netrw = true,
     hijack_netrw = true,
@@ -81,10 +84,10 @@ return {
         max = vim.diagnostic.severity.ERROR,
       },
       icons = {
-        hint = "",
-        info = "",
-        warning = "",
-        error = "",
+        hint = icons.diagnostics.BoldHint,
+        info = icons.diagnostics.BoldInformation,
+        warning = icons.diagnostics.BoldWarning,
+        error = icons.diagnostics.BoldError,
       },
     },
     view = {

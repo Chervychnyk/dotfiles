@@ -1,6 +1,9 @@
 return {
   "neogitorg/neogit",
   cmd = "Neogit",
+  keys = {
+    { "<leader>gg", "<cmd>Neogit<cr>", desc = "Neogit" }
+  },
   config = function()
     local icons = require "config.icons"
 

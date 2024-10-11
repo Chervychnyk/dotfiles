@@ -12,6 +12,11 @@ vim.g.maplocalleader = ","
 --   term_mode = "t",
 --   command_mode = "c",
 
+-- Navigate buffers
+map("n", "<leader>bn", ":bn<cr>", { desc = "Next buffer" })
+map("n", "<leader>bp", ":bp<cr>", { desc = "Previous buffer" })
+map("n", "<leader>bd", "<cmd>require('mini.bufremove').delete(0, false)<CR>", { desc = "Delete buffer" })
+
 -- Window management
 map("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" })                   -- split window vertically
 map("n", "<leader>sh", "<C-w>s", { desc = "Split window horizontally" })                 -- split window horizontally
@@ -36,10 +41,6 @@ map("n", "<C-A-j>", ":resize +2<CR>", { silent = true })
 map("n", "<C-A-l>", ":vertical resize -2<CR>", { silent = true })
 map("n", "<C-A-h>", ":vertical resize +2<CR>", { silent = true })
 
--- Navigate buffers
-map("n", "<S-l>", ":bnext<CR>", { silent = true })
-map("n", "<S-h>", ":bprevious<CR>", { silent = true })
-
 -- Stay in indent mode
 -- Visual --
 map("v", "<", "<gv")
@@ -57,3 +58,5 @@ map("x", "J", ":move '>+1<CR>gv-gv", { silent = true })
 map("x", "K", ":move '<-2<CR>gv-gv", { silent = true })
 map("x", "<A-j>", ":move '>+1<CR>gv-gv", { silent = true })
 map("x", "<A-k>", ":move '<-2<CR>gv-gv", { silent = true })
+
+map("n","<leader>nh", "<cmd>nohlsearch<CR>", { desc = "No Highlight", silent = true })

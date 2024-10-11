@@ -1,0 +1,18 @@
+# Function to unlock Bitwarden and set BW_SESSION
+unlock_bitwarden() {
+  # Check if Bitwarden is already unlocked
+  if ! bw unlock --check >/dev/null 2>&1; then
+    echo "Unlocking Bitwarden..."
+    # Prompt for the master password
+    BW_SESSION=$(bw unlock --raw)
+    if [ $? -eq 0 ]; then
+      export BW_SESSION
+      echo "Bitwarden unlocked successfully."
+    else
+      echo "Failed to unlock Bitwarden."
+    fi
+  else
+    echo "Bitwarden is already unlocked."
+  fi
+}
+

@@ -10,6 +10,7 @@ autocmd({ "FileType" }, {
     "man",
     "lspinfo",
     "DressingSelect",
+    "Trouble",
     "query",
     "",
   },

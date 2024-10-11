@@ -24,7 +24,9 @@ config.initial_rows = 40
 
 config.native_macos_fullscreen_mode = true
 config.use_dead_keys = false
-config.scrollback_lines = 10000
+
+config.enable_scroll_bar = true
+config.scrollback_lines = 20000
 
 config.keys = {
   {

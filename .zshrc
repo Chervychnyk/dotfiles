@@ -146,19 +146,19 @@ export PATH="$HOME/.yarn/bin:$PATH"
 
 # OpenSSL
 export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
-# export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib:$LDFLAGS"
+export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib:$LDFLAGS"
 export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@1.1/lib/pkgconfig:$PKG_CONFIG_PATH"
 export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
 export optflags="-Wno-error=implicit-function-declaration"
 
 # Readline
-# export LDFLAGS="-L/opt/homebrew/opt/readline/lib:$LDFLAGS"
+export LDFLAGS="-L/opt/homebrew/opt/readline/lib:$LDFLAGS"
 export CPPFLAGS="-I/opt/homebrew/opt/readline/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/readline/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 # Libffi
-export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
+export LDFLAGS="-L/opt/homebrew/opt/libffi/lib:$LDFLAGS"
 export CPPFLAGS="-I/opt/homebrew/opt/libffi/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH"
 
@@ -168,11 +168,25 @@ export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PUPPETEER_EXECUTABLE_PATH=`which chromium`
 
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-export PATH="$HOME/.rvm/bin:$PATH"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
 export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 
+# Add pyenv to PATH and initialize with pyenv-virtualenv
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
+export PATH="$HOME/.rvm/bin:$PATH"
+
 export TAGLIB_DIR="/opt/homebrew/Cellar/taglib/1.13.1"
 export KUBECONFIG=$HOME/.kube/config.ovh.products:$HOME/.kube/config
+
+export BITWARDENCLI_APPDATA_DIR=~/.bw/
+
+# Load custom functions
+fpath=(~/.zsh/functions $fpath)
+autoload -Uz unlock_bitwarden
+

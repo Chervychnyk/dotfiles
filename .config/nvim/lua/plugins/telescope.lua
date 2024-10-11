@@ -3,6 +3,31 @@ return {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
     version = false, -- telescope did only one release, so use HEAD for now
+    keys = {
+      { "<leader>bl", "<cmd>lua require('telescope.builtin').buffers(require('telescope.themes').get_dropdown{previewer = false})<cr>", desc = "List Buffers",                      nowait = true, remap = false },
+      { "<leader>f",  group = "Find",                                                                                                   nowait = true,                              remap = false },
+      { "<leader>fC", "<cmd>Telescope commands<cr>",                                                                                    desc = "Commands",                          nowait = true, remap = false },
+      { "<leader>fH", "<cmd>Telescope highlights<cr>",                                                                                  desc = "Highlights",                        nowait = true, remap = false },
+      { "<leader>fM", "<cmd>Telescope man_pages<cr>",                                                                                   desc = "Man Pages",                         nowait = true, remap = false },
+      { "<leader>fR", "<cmd>Telescope registers<cr>",                                                                                   desc = "Registers",                         nowait = true, remap = false },
+      { "<leader>fS", "<cmd>Telescope session-lens<cr>",                                                                                desc = "Search sessions",                   nowait = true, remap = false },
+      { "<leader>fT", "<cmd>TodoTelescope<cr>",                                                                                         desc = "Find todos",                        nowait = true, remap = false },
+      { "<leader>fb", "<cmd>Telescope git_branches<cr>",                                                                                desc = "Checkout branch",                   nowait = true, remap = false },
+      { "<leader>fc", "<cmd>Telescope colorscheme<cr>",                                                                                 desc = "Colorscheme",                       nowait = true, remap = false },
+      { "<leader>ff", "<cmd>Telescope find_files<cr>",                                                                                  desc = "Find files",                        nowait = true, remap = false },
+      { "<leader>fh", "<cmd>Telescope help_tags<cr>",                                                                                   desc = "Help",                              nowait = true, remap = false },
+      { "<leader>fk", "<cmd>Telescope keymaps<cr>",                                                                                     desc = "Keymaps",                           nowait = true, remap = false },
+      { "<leader>fl", "<cmd>Telescope resume<cr>",                                                                                      desc = "Last Search",                       nowait = true, remap = false },
+      { "<leader>fp", "<cmd>lua require('telescope').extensions.projects.projects()<cr>",                                               desc = "Projects",                          nowait = true, remap = false },
+      { "<leader>fr", "<cmd>Telescope oldfiles<cr>",                                                                                    desc = "Recent File",                       nowait = true, remap = false },
+      { "<leader>fs", "<cmd>Telescope grep_string<cr>",                                                                                 desc = "Find String",                       nowait = true, remap = false },
+      { "<leader>ft", "<cmd>Telescope live_grep<cr>",                                                                                   desc = "Find Text",                         nowait = true, remap = false },
+      { "<leader>g",  group = "Git",                                                                                                    nowait = true,                              remap = false },
+      { "<leader>gC", "<cmd>Telescope git_bcommits<cr>",                                                                                desc = "Checkout commit(for current file)", nowait = true, remap = false },
+      { "<leader>gb", "<cmd>Telescope git_branches<cr>",                                                                                desc = "Checkout branch",                   nowait = true, remap = false },
+      { "<leader>gc", "<cmd>Telescope git_commits<cr>",                                                                                 desc = "Checkout commit",                   nowait = true, remap = false },
+      { "<leader>go", "<cmd>Telescope git_status<cr>",                                                                                  desc = "Open changed file",                 nowait = true, remap = false },
+    },
     dependencies = {
       {
         "nvim-telescope/telescope-fzf-native.nvim",
@@ -204,6 +229,11 @@ return {
                 end,
               },
             },
+          },
+
+          diagnostics = {
+            theme = "ivy",
+            initial_mode = "normal",
           },
 
           lsp_references = {

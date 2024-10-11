@@ -1,25 +1,31 @@
 return {
-  {
-    "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    dependencies = {
-      "williamboman/mason.nvim",
-      "williamboman/mason-lspconfig.nvim",
-    },
-    config = function()
-      require("config.lsp.handlers").setup()
+  "neovim/nvim-lspconfig",
+  dependencies = {
+    "williamboman/mason.nvim",
+    "williamboman/mason-lspconfig.nvim",
+    "WhoIsSethDaniel/mason-tool-installer.nvim",
+  },
 
-      require("mason").setup({
-        ui = {
-          icons = {
-            package_installed = "✓",
-            package_uninstalled = "✗",
-            package_pending = "⟳",
-          },
+  event = { "BufReadPre", "BufNewFile" },
+  config = function()
+    local mason = require("mason")
+    local mason_lspconfig = require("mason-lspconfig")
+    local mason_tool_installer = require("mason-tool-installer")
+
+    -- enable mason and configure icons
+    mason.setup({
+      ui = {
+        icons = {
+          package_installed = "✓",
+          package_pending = "➜",
+          package_uninstalled = "✗",
         },
-      })
+      },
+    })
 
-      local servers = {
+    mason_lspconfig.setup({
+      -- list of servers for mason to install
+      ensure_installed = {
         "basedpyright",
         "cssls",
         "dockerls",
@@ -33,30 +39,40 @@ return {
         "lua_ls",
         "marksman",
         "ruby_lsp",
+        -- "solargraph",
         "tsserver",
         "volar",
-      }
+      },
+    })
 
+    mason_tool_installer.setup({
+      ensure_installed = {
+        "prettier", -- prettier formatter
+        "stylua",   -- lua formatter
+        "black",    -- python formatter
+        "ruff",     -- python formatter
+        "eslint_d",
+      },
+    })
 
-      require("mason-lspconfig").setup({
-        ensure_installed = servers
-      })
+    require("config.lsp.handlers").setup()
 
-      local lspconfig = require "lspconfig"
+    local lspconfig = require "lspconfig"
 
-      for _, server in pairs(servers) do
-        local server_opts = {
+    mason_lspconfig.setup_handlers({
+      function(server_name)
+        local opts = {
           on_attach = require("config.lsp.handlers").on_attach,
           capabilities = require("config.lsp.handlers").capabilities(),
         }
 
-        local has_custom_opts, server_custom_opts = pcall(require, "config.lsp.settings." .. server)
+        local has_custom_opts, server_custom_opts = pcall(require, "config.lsp.settings." .. server_name)
         if has_custom_opts then
-          server_opts = vim.tbl_deep_extend("force", server_opts, server_custom_opts)
+          opts = vim.tbl_deep_extend("force", opts, server_custom_opts)
         end
 
-        lspconfig[server].setup(server_opts)
-      end
-    end
-  }
+        lspconfig[server_name].setup(opts)
+      end,
+    })
+  end
 }

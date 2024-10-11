@@ -45,14 +45,6 @@ detect_files = ['mix.exs', 'mix.lock']
 symbol = " "
 version_format = '${raw}'
 
-[git_branch]
-format = "[$branch]($style) "
-style = "bright-black"
-
-[git_state]
-format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
-
 [git_status]
 ahead = ">"
 behind = "<"
@@ -77,8 +69,14 @@ format = '[$symbol($version)]($style) '
 symbol = " "
 version_format = '${raw}'
 
+[python]
+detect_files = ['requirements.txt', 'pyproject.toml']
+format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
+version_format = '${raw}'
+symbol = " "
+
 [ruby]
-format = '[$symbol($version )]($style) '
+format = '[$symbol($version )(\($gemset\) )]($style) '
 detect_files = ['Gemfile', 'Gemfile.lock', '.rvmrc', '.ruby-version']
 detect_variables = []
 symbol = " "

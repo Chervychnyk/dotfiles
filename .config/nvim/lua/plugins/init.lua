@@ -4,11 +4,11 @@ return {
 
   -- Git
   {
-    "sindrets/diffview.nvim",
-    event = "VeryLazy",
-    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewToggleFiles", "DiffviewFocusFiles" },
+    'akinsho/git-conflict.nvim',
+    version = "*",
+    event = { "BufReadPost", "BufNewFile" },
+    config = true
   },
-  { 'akinsho/git-conflict.nvim', version = "*", config = true },
 
   {
     'NvChad/nvim-colorizer.lua',
