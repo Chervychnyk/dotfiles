@@ -1,5 +1,4 @@
 local icons = require "config.icons"
-local remove_duplicates = require("config.utils").remove_duplicates
 
 local conditions = {
   buffer_not_empty = function()
@@ -30,29 +29,32 @@ local function lsp_servers()
     return "Inactive"
   end
 
-  local null_ls_installed, null_ls = pcall(require, "null-ls")
   local buf_client_names = {}
 
   for _, client in pairs(buf_clients) do
-    if client.name == "null-ls" then
-      if null_ls_installed then
-        for _, source in ipairs(null_ls.get_source({ filetype = vim.bo.filetype })) do
-          table.insert(buf_client_names, source.name)
-        end
-      end
-    else
-      table.insert(buf_client_names, client.name)
-    end
+    table.insert(buf_client_names, client.name)
   end
 
-  return table.concat(remove_duplicates(buf_client_names), ", ")
+  return table.concat(buf_client_names, ", ")
 end
 
-local function supermaven_status()
-  local enabled = require("supermaven-nvim.api").is_running()
-  local icon = enabled and "●" or "○"
+local copilot_status = function()
+  local disabled = require('copilot.client').is_disabled()
 
-  return icon .. " Supermaven"
+  if disabled then
+    return "%#CopilotDisabled# "
+  end
+
+  local auto_trigger_enabled = vim.b.copilot_suggestion_auto_trigger == nil and
+      require('copilot.config').get("suggestion").auto_trigger
+      or
+      vim.b.copilot_suggestion_auto_trigger
+
+  if auto_trigger_enabled then
+    return "%#CopilotEnabled# "
+  else
+    return "%#CopilotSleep# "
+  end
 end
 
 local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
@@ -73,7 +75,7 @@ return {
         globalstatus = true,
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
-        disabled_filetypes = { "alpha", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "TelescopePrompt", "TelescopeResults", "Trouble" },
+        disabled_filetypes = { "alpha", "Avante", "AvanteInput", "codecompanion", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "snacks_picker_input", "TelescopePrompt", "TelescopeResults", "Trouble" },
         always_divide_middle = true,
       },
       sections = {
@@ -96,7 +98,7 @@ return {
             icon = "",
             color = { gui = "none" },
           },
-          supermaven_status
+          copilot_status
         },
         lualine_y = { "progress" },
         lualine_z = { "location" },

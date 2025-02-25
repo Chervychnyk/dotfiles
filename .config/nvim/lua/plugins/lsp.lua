@@ -40,7 +40,7 @@ return {
         "marksman",
         "ruby_lsp",
         -- "solargraph",
-        "tsserver",
+        "ts_ls",
         "volar",
       },
     })

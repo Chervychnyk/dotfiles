@@ -21,6 +21,10 @@ zinit light starship/starship
 
 setopt promptsubst
 
+zinit lucid for \
+  atinit"HIST_STAMPS=dd.mm.yyyy" \
+  OMZL::history.zsh
+
 # Snippets
 zinit wait lucid for \
   OMZL::clipboard.zsh \
@@ -37,20 +41,40 @@ zinit wait lucid for \
   OMZP::git \
   OMZP::fzf \
   OMZP::kubectl \
-  atload"
-    zstyle ':omz:plugins:nvm' autoload yes
-    zstyle ':omz:plugins:nvm' silent-autoload yes 
-  " \
-  OMZP::nvm \
-  atload"
+  atinit"
     zstyle ':omz:plugins:ssh-agent' quiet yes
     export SHORT_HOST='local'
   " \
   OMZP::ssh-agent \
-  OMZP::sudo
+  OMZP::sudo \
+  OMZP::asdf \
+  atinit"
+    zstyle ':omz:plugins:nvm' lazy yes
+    zstyle ':omz:plugins:nvm' autoload yes
+    zstyle ':omz:plugins:nvm' silent-autoload yes 
+  " \
+  OMZP::nvm \
+  atinit'
+    export PYENV_ROOT="$HOME/.pyenv"
+    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init --path)"
+  ' \
+  OMZP::pyenv
 
 # Plugins
-zinit ice wait"2" as"command" from"gh-r" lucid \
+# Install and configure fzf
+zinit ice as"command" from"gh-r" 
+zinit light junegunn/fzf
+
+zinit ice as"command" from"gh-r" sbin
+zinit light zellij-org/zellij
+
+zinit ice wait lucid as"program" from"gh-r" \
+      mv"bat* -> bat" pick"bat/bat" \
+      atload"export BAT_THEME=base16"
+zinit light sharkdp/bat
+
+zinit ice wait as"command" from"gh-r" lucid \
   mv"zoxide* -> zoxide" \
   atclone"./zoxide init zsh > init.zsh" \
   atpull"%atclone" src"init.zsh" nocompile'!'
@@ -71,19 +95,19 @@ zinit wait lucid for \
     blockf light-mode \
   zsh-users/zsh-completions \
     atinit"
+      zstyle :history-search-multi-word page-size 10
+      zstyle :history-search-multi-word highlight-color fg=red,bold
+      zstyle :plugin:history-search-multi-word reset-prompt-protect 1" \
+    bindmap"^R -> ^H" \
+  zdharma-continuum/history-search-multi-word \
+    atinit"
+      zstyle ':fzf-tab:*' use-fzf-default-opts yes
       zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
       zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'" \
   Aloxaf/fzf-tab
  
 # Load aliases
 [[ -f ~/.aliases ]] && source ~/.aliases
-
-# Install completions
-# command -v bw >/dev/null && bw completion --shell zsh > ~/.local/share/zsh/completions/_bw
-# command -v flux >/dev/null && flux completion zsh > ~/.local/share/zsh/completions/_flux
-# command -v ngrok >/dev/null && ngrok completion zsh > ~/.local/share/zsh/completions/_ngrok
-#
-# zinit creinstall -Q ~/.local/share/zsh/completions 
 
 # Keybindings
 bindkey '^l' autosuggest-accept
@@ -92,28 +116,16 @@ bindkey '^n' history-search-forward
 bindkey "^[a" beginning-of-line
 bindkey "^[e" end-of-line
 
-# History
-HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=$HISTSIZE
-HISTDUP=erase
-setopt appendhistory
-setopt sharehistory
-setopt hist_ignore_space
-setopt hist_ignore_all_dups
-setopt hist_save_no_dups
-setopt hist_ignore_dups
-setopt hist_find_no_dups
-
 # Soho vibes for fzf
 export FZF_DEFAULT_OPTS="
 	--color=fg:#908caa,bg:#191724,hl:#ebbcba
 	--color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba
 	--color=border:#403d52,header:#31748f,gutter:#191724
-	--color=spinner:#f6c177,info:#9ccfd8,separator:#403d52
+	--color=spinner:#f6c177,info:#9ccfd8
 	--color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
 
 # User configuration
+export PATH="$HOME/.local/bin:$PATH"
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 export TERM="xterm-256color"
@@ -127,19 +139,13 @@ else
 fi
 
 # export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
-# export ANDROID_HOME=/Users/$USER/Library/Android/sdk
-# export PATH=${PATH}:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-# export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$PATH
-# export PATH=$PATH:$HOME/flutter/bin
+# export ANDROID_HOME=$HOME/Library/Android/sdk
+# export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH
+# export PATH=$HOME/flutter/bin:$PATH 
 
 export ASDF_DIR="$HOME/.asdf"
 export ERL_AFLAGS="-kernel shell_history enabled"
 export KERL_CONFIGURE_OPTIONS="--disable-debug --disable-silent-rules --enable-dynamic-ssl-lib --enable-gettimeofday-as-os-system-time --enable-kernel-poll --without-javac --without-wx --without-odbc"
-. "$HOME/.asdf/asdf.sh"
-
-# Homebrew
-export PATH="/opt/homebrew/bin:$PATH"
-export PATH="/opt/homebrew/sbin:$PATH"
 
 export PATH="$HOME/.asdf/installs/elixir/1.12/.mix/escripts:$PATH"
 export PATH="$HOME/.yarn/bin:$PATH"
@@ -162,9 +168,6 @@ export LDFLAGS="-L/opt/homebrew/opt/libffi/lib:$LDFLAGS"
 export CPPFLAGS="-I/opt/homebrew/opt/libffi/include:$CPPFLAGS"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-# Python
-export PATH="/opt/homebrew/opt/python@3.11/bin:$PATH"
-
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 export PUPPETEER_EXECUTABLE_PATH=`which chromium`
 
@@ -172,21 +175,14 @@ export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
 export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
 
-# Add pyenv to PATH and initialize with pyenv-virtualenv
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
 export PATH="$HOME/.rvm/bin:$PATH"
 
-export TAGLIB_DIR="/opt/homebrew/Cellar/taglib/1.13.1"
+export TAGLIB_DIR="$(brew --prefix taglib)"
 export KUBECONFIG=$HOME/.kube/config.ovh.products:$HOME/.kube/config
 
 export BITWARDENCLI_APPDATA_DIR=~/.bw/
 
 # Load custom functions
 fpath=(~/.zsh/functions $fpath)
-autoload -Uz unlock_bitwarden
-
+autoload -Uz unlock_bitwarden set_openrouter_key

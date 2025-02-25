@@ -14,6 +14,9 @@ return {
   },
   config = function()
     require("noice").setup {
+      notify = {
+        enabled = false
+      },
       messages = {
         view = "mini",
         view_search = "mini",
@@ -23,7 +26,7 @@ return {
         override = {
           ["vim.lsp.util.convert_input_to_markdown_lines"] = true,
           ["vim.lsp.util.stylize_markdown"] = true,
-          ["cmp.entry.get_documentation"] = true,
+          -- ["cmp.entry.get_documentation"] = true,
         },
 
         signature = {

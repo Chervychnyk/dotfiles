@@ -15,8 +15,8 @@ return {
     "ObsidianLinkNew"
   },
   opts = {
-    dir = vim.fn.expand("$HOME") .. "/Library/Mobile Documents/iCloud~md~obsidian/Documents/Core",
-    completion = { nvim_cmp = true },
+    dir = vim.fn.expand("$HOME") .. "/Library/Mobile Documents/iCloud~md~obsidian/Documents/Second Brain",
+    completion = { nvim_cmp = true, min_chars = 2 },
     daily_notes = {
       folder = "Journal",
       date_format = "%Y/%B/%d %B %Y",

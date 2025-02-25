@@ -2,6 +2,9 @@ return {
   "folke/todo-comments.nvim",
   event = { "BufReadPre", "BufNewFile" },
   dependencies = { "nvim-lua/plenary.nvim" },
+  keys = {
+    { "<leader>fT", function() Snacks.picker.todo_comments({ keywords = { "TODO", "FIX", "FIXME" } }) end, desc = "Todo/Fix/Fixme" },
+  },
   config = function()
     local todo_comments = require("todo-comments")
 

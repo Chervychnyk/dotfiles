@@ -53,7 +53,7 @@ return {
           symlink = icons.ui.FileSymlink,
           bookmark = icons.ui.BookMark,
           folder = {
-            arrow_closed = icons.ui.ChevronRight,
+            arrow_closed = icons.ui.ChevronShortRight,
             arrow_open = icons.ui.ChevronShortDown,
             default = icons.ui.Folder,
             open = icons.ui.FolderOpen,

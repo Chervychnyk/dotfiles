@@ -50,9 +50,9 @@ return {
       },
       window = {
         margin = {
-          horizontal = 0,
+          horizontal = 1,
+          vertical = 2,
         },
-        padding = 0,
         placement = {
           horizontal = "right",
           vertical = "top",

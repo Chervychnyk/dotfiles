@@ -15,7 +15,7 @@ M.setup = function()
       },
     },
     update_in_insert = false,
-    underline = true,
+    underline = false,
     severity_sort = true,
     float = {
       focusable = true,
@@ -33,16 +33,6 @@ M.setup = function()
   require("lspconfig.ui.windows").default_options.border = "rounded"
 end
 
-local function lsp_highlight_document(client)
-  -- Set autocommands conditional on server_capabilities
-  local status_ok, illuminate = pcall(require, "illuminate")
-  if not status_ok then
-    return
-  end
-  illuminate.on_attach(client)
-  -- end
-end
-
 local function lsp_keymaps(bufnr)
   -- Mappings.
   local map = function(mode, l, r, opts)
@@ -55,7 +45,7 @@ local function lsp_keymaps(bufnr)
   map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
   map("n", "K", vim.lsp.buf.hover)
   map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
-  map("n", "gr", vim.lsp.buf.references, { desc = "Show references" })
+  map("n", "gr", function() Snacks.picker.lsp_references() end, { desc = "Show references" })
   map('n', 'gi', vim.lsp.buf.implementation, { desc = "Go to implementation" })
   map('n', 'gD', vim.lsp.buf.type_definition, { desc = "Go to type definition" })
   map("n", "[d", vim.diagnostic.goto_prev, { desc = "Previous diagnostic" })
@@ -69,7 +59,6 @@ end
 
 M.on_attach = function(client, bufnr)
   lsp_keymaps(bufnr)
-  lsp_highlight_document(client)
 
   if client.supports_method "textDocument/inlayHint" then
     vim.lsp.inlay_hint.enable(true)
@@ -95,12 +84,12 @@ function M.capabilities()
     dynamicRegistration = false,
   }
 
-  local status_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
+  local status_ok, blink_cmp = pcall(require, "blink.cmp")
   if not status_ok then
     return capabilities
   end
 
-  return vim.tbl_deep_extend("force", capabilities, cmp_nvim_lsp.default_capabilities())
+  return vim.tbl_deep_extend("force", capabilities, blink_cmp.get_lsp_capabilities())
 end
 
 return M

@@ -196,7 +196,7 @@ augroup END
 if has('gui_running')
     " Set a custom font you have installed on your computer.
     " Syntax: set guifont=<font_name>\ <font_weight>\ <size>
-    set guifont=Roboto Mono\ Regular\ 14
+    set guifont=Fira Code\ 14
 
     " Display more of the file by default.
     " Hide the toolbar.

@@ -51,7 +51,6 @@ return {
       sync_install = false,
       highlight = {
         enable = true,
-        disable = function(_, bufnr) return vim.b[bufnr].large_buf end,
         additional_vim_regex_highlighting = false
       },
       autopairs = { enable = true },

@@ -9,6 +9,7 @@ return {
 
     require("neogit").setup {
       auto_show_console = false,
+      process_spinner = false,
       disable_signs = false,
       -- disable_hint = true,
       disable_context_highlighting = false,
@@ -32,8 +33,8 @@ return {
       -- customize displayed signs
       signs = {
         -- { CLOSED, OPENED }
-        section = { icons.ui.ChevronRight, icons.ui.ChevronShortDown },
-        item = { icons.ui.ChevronRight, icons.ui.ChevronShortDown },
+        section = { icons.ui.ChevronShortRight, icons.ui.ChevronShortDown },
+        item = { icons.ui.ChevronShortRight, icons.ui.ChevronShortDown },
         hunk = { "", "" },
       },
       integrations = {

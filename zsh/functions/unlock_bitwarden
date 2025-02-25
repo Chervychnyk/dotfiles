@@ -10,9 +10,9 @@ unlock_bitwarden() {
       echo "Bitwarden unlocked successfully."
     else
       echo "Failed to unlock Bitwarden."
+      return 1
     fi
   else
     echo "Bitwarden is already unlocked."
   fi
 }
-

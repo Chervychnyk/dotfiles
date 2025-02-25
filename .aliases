@@ -14,3 +14,5 @@ alias reload="exec ${SHELL} -l"
 
 # Run Rails commands inside Docker
 alias docked='docker run --rm -it -v ${PWD}:/rails -v ruby-bundle-cache:/bundle --network host -p 3000:3000 ghcr.io/rails/cli'
+
+alias set_openrouter_key='export OPENROUTER_API_KEY=$(bw get password --nointeraction OPENROUTER_API_KEY 2>/dev/null)'

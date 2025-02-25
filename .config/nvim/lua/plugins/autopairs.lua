@@ -13,7 +13,7 @@ return {
       javascript = { "string", "template_string" },
       java = false,
     },
-    disable_filetype = { "TelescopePrompt", "spectre_panel" },
+    disable_filetype = { "TelescopePrompt", "spectre_panel", "snacks_picker_input" },
     ignored_next_char = string.gsub([[ [%w%%%'%[%"%.] ]], "%s+", ""),
     enable_moveright = true,
     disable_in_macro = false,
@@ -33,14 +33,5 @@ return {
       highlight_grey = "Comment",
     },
   },
-  config = function(_, opts)
-    require("nvim-autopairs").setup(opts)
-
-    local cmp_autopairs = require "nvim-autopairs.completion.cmp"
-    local cmp_status_ok, cmp = pcall(require, "cmp")
-    if not cmp_status_ok then
-      return
-    end
-    cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done { map_char = { tex = "" } })
-  end
+  config = true
 }

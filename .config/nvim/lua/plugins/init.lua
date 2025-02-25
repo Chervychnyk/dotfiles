@@ -26,6 +26,7 @@ return {
           "markdown",
           "markdown_inline",
           "lua",
+          "yaml"
         },
         user_default_options = {
           names = false,
@@ -37,4 +38,14 @@ return {
       }
     end
   },
+
+  {
+    -- Make sure to set this up properly if you have lazy=true
+    'MeanderingProgrammer/render-markdown.nvim',
+    opts = {
+      file_types = { "markdown", "codecompanion", "Avante" },
+    },
+    ft = { "markdown", "codecompanion", "Avante" },
+  },
+
 }

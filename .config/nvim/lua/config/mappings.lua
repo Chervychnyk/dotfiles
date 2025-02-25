@@ -15,7 +15,6 @@ vim.g.maplocalleader = ","
 -- Navigate buffers
 map("n", "<leader>bn", ":bn<cr>", { desc = "Next buffer" })
 map("n", "<leader>bp", ":bp<cr>", { desc = "Previous buffer" })
-map("n", "<leader>bd", "<cmd>require('mini.bufremove').delete(0, false)<CR>", { desc = "Delete buffer" })
 
 -- Window management
 map("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" })                   -- split window vertically

@@ -18,6 +18,6 @@ return {
       }
     })
 
-    vim.api.nvim_set_keymap("n", "<leader>'", "siwj", { desc = "Surround with single quotes" })
+    vim.api.nvim_set_keymap("n", "<leader>'", "siw'", { desc = "Surround with single quotes" })
   end
 }
