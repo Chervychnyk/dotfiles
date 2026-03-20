@@ -36,7 +36,7 @@ After setup, run:
 
 - installs Homebrew if needed
 - installs formulae/casks from `Brewfile`
-- installs a custom Homebrew formula for legacy TagLib 1.13.1 (`taglib-legacy`)
+- installs TagLib 1.13.1 from the `$USER/versions` Homebrew tap
 - writes `~/.config/shell.local.env` with detected `HOMEBREW_PREFIX`
 - creates symlinks for tracked config files
 - installs Zim and NVM if missing
@@ -126,14 +126,47 @@ Examples of what belongs there:
 - API keys and tokens
 - custom `KUBECONFIG`
 
-## Custom Homebrew formulae
+## Custom Homebrew tap
 
-This repo vendors one custom formula:
+This setup expects a custom Homebrew tap for legacy formulae:
 
-- `homebrew/Formula/taglib-legacy.rb`
+- tap: `$USER/versions`
+- formula: `$USER/versions/taglib@1.13.1`
 
-It is installed by `setup.sh` as `taglib-legacy` and pinned so Homebrew does not upgrade it.
-`~/.zshrc` also prefers `TAGLIB_DIR` from `taglib-legacy` when available.
+`setup.sh` taps it, installs `taglib@1.13.1`, and pins it.
+`~/.zshrc` also prefers `TAGLIB_DIR` from `taglib@1.13.1` when available.
+
+### Creating or updating the tap
+
+If the tap does not exist yet:
+
+```bash
+brew tap-new $USER/versions
+cd "$(brew --repository $USER/versions)"
+mkdir -p Formula
+```
+
+Add the formula as:
+
+```text
+Formula/taglib@1.13.1.rb
+```
+
+If you already have the tap locally, open its checkout directly:
+
+```bash
+cd "$(brew --repository $USER/versions)"
+```
+
+Then add or edit formula files under `Formula/`, commit, and push the tap repo.
+
+You can try extracting the historical formula automatically first:
+
+```bash
+brew extract --version=1.13.1 taglib $USER/versions
+```
+
+If that does not work, create the formula file manually in the tap.
 
 ## Colima / Docker on the new machine
 
