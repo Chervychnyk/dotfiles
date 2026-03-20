@@ -1,20 +1,19 @@
 return {
-  -- Colorschemes
-  -- "EdenEast/nightfox.nvim",
-  -- "rebelot/kanagawa.nvim",
-  -- 'projekt0n/github-nvim-theme',
-  -- { "catppuccin/nvim", name = "catppuccin" },
   {
-    'rose-pine/neovim',
-    name = 'rose-pine',
+    "rebelot/kanagawa.nvim",
+    priority = 1000,
     config = function()
-      require("rose-pine").setup({
-        highlight_groups = {
-          CopilotDisabled = { fg = "muted" },
-          CopilotEnabled = { fg = "foam" },
-          CopilotSleep = { fg = "iris" },
-        },
+      require("kanagawa").setup({
+        theme = "wave",
+        transparent = true,
+        overrides = function(colors)
+          local theme = colors.theme
+          return {
+            FloatBorder = { fg = theme.ui.special, bg = "none" },
+            PmenuSel = { fg = "none", bg = theme.ui.bg_p2 },
+          }
+        end,
       })
-    end
+    end,
   },
 }

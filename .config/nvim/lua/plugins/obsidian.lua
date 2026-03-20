@@ -1,22 +1,11 @@
 return {
-  "epwalsh/obsidian.nvim",
+  "obsidian-nvim/obsidian.nvim",
   version = "*", -- recommended, use latest release instead of latest commit
-  cmd = {
-    "ObsidianNew",
-    "ObsidianWorkspace",
-    "ObsidianQuickSwitch",
-    "ObsidianFollowLink",
-    "ObsidianBacklinks",
-    "ObsidianToday",
-    "ObsidianYesterday",
-    "ObsidianTemplate",
-    "ObsidianSearch",
-    "ObsidianLink",
-    "ObsidianLinkNew"
-  },
+  lazy = true,
+  ft = "markdown",
   opts = {
     dir = vim.fn.expand("$HOME") .. "/Library/Mobile Documents/iCloud~md~obsidian/Documents/Second Brain",
-    completion = { nvim_cmp = true, min_chars = 2 },
+    completion = { nvim_cmp = false, blink = true, min_chars = 2 },
     daily_notes = {
       folder = "Journal",
       date_format = "%Y/%B/%d %B %Y",

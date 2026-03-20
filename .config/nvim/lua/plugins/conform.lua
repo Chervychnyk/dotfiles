@@ -1,3 +1,5 @@
+local docker = require("util.docker")
+
 return {
   "stevearc/conform.nvim",
   event = { "BufReadPre", "BufNewFile" },
@@ -7,7 +9,6 @@ return {
       function()
         require("conform").format({ async = true, lsp_format = "fallback" })
       end,
-      mode = "",
       desc = "Format buffer",
     },
   },
@@ -15,6 +16,8 @@ return {
   },
   config = function()
     local util = require("conform.util")
+
+    local has_docker, service = docker.detect()
 
     require("conform").setup({
       formatters_by_ft = {
@@ -24,7 +27,7 @@ return {
         typescriptreact = { "eslint", "prettier" },
         vue = { "eslint", "prettier" },
         python = { "black" },
-        ruby = { "rubocop" },
+        ruby = has_docker and { "docked_rubocop" } or { "rubocop" },
         eruby = { "erb_lint" },
         elixir = { "mix" },
       },
@@ -39,16 +42,28 @@ return {
         prettier = {
           prepend_args = { "--no-semi", "--single-quote", "--jsx-single-quote" },
         },
-        rubocop = {
-          command = "rubocop",
+        docked_rubocop = {
+          command = "docker",
           args = {
+            "compose",
+            "run",
+            "--rm",
+            service,
+            "bundle",
+            "exec",
+            "rubocop",
+            "--server",
             "-a",
             "-f",
             "quiet",
             "--stderr",
             "--stdin",
-            "$FILENAME",
+            "$RELATIVE_FILEPATH",
           },
+          cwd = util.root_file({
+            "Dockerfile",
+            "docker-compose.yml"
+          }),
           exit_codes = { 0, 1 },
         }
       },

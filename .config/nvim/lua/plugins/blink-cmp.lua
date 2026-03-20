@@ -2,20 +2,9 @@ local icons = require "config.icons"
 
 return {
   {
-    'saghen/blink.compat',
-    -- use the latest release, via version = '*', if you also use the latest release for blink.cmp
-    version = '*',
-    -- lazy.nvim will automatically load the plugin when it's required by blink.cmp
-    lazy = true,
-    -- make sure to set opts so that lazy.nvim calls blink.compat's setup
-    opts = {
-      impersonate_nvim_cmp = true,
-    },
-  },
-
-  {
     "saghen/blink.cmp",
     dependencies = {
+      'Kaiser-Yang/blink-cmp-avante',
       "rafamadriz/friendly-snippets",
     },
     event = "InsertEnter",
@@ -28,8 +17,8 @@ return {
 
       enabled = function()
         return not vim.tbl_contains(
-              { "DressingInput", "DressingSelect", "NvimTree", "TelescopePrompt", "snacks_picker_input" }, vim.bo
-              .filetype)
+              { "DressingInput", "DressingSelect", "neo-tree", "TelescopePrompt", "snacks_picker_input" },
+              vim.bo.filetype)
             and vim.bo.buftype ~= "prompt"
             and vim.b.completion ~= false
       end,
@@ -37,7 +26,6 @@ return {
       cmdline = {
         enabled = false
       },
-
 
       completion = {
         accept = { auto_brackets = { enabled = true } },
@@ -98,19 +86,14 @@ return {
       },
 
       sources = {
-        default = function(ctx)
-          local success, node = pcall(vim.treesitter.get_node)
-          if vim.bo.filetype == 'AvanteInput' then
-            return { "avante_commands", "avante_mentions", "avante_files", "buffer", "path" }
-          elseif vim.bo.filetype == 'markdown' then
-            return { "obsidian", "obsidian_new", "obsidian_tags", "buffer", "path" }
-          elseif success and node and vim.tbl_contains({ 'comment', 'line_comment', 'block_comment' }, node:type()) then
-            return { 'buffer' }
-          else
-            return { "lsp", "path", "snippets", "buffer", "codecompanion" }
-          end
-        end,
+        default = { "lsp", "path", "snippets", "buffer", "codecompanion" },
+        per_filetype = {
+          AvanteInput = { "avante", "buffer", "path" },
+          markdown = { "buffer", "path" },
+          sql = { 'snippets', 'dadbod', 'buffer' }
+        },
         providers = {
+          dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
           lsp = {
             min_keyword_length = 2, -- Number of characters to trigger porvider
             score_offset = 0,       -- Boost/penalize the score of the items
@@ -133,35 +116,12 @@ return {
             name = "CodeCompanion",
             module = "codecompanion.providers.completion.blink",
           },
-          avante_commands = {
-            name = "avante_commands",
-            module = "blink.compat.source",
-            score_offset = 90, -- show at a higher priority than lsp
-            opts = {},
-          },
-          avante_files = {
-            name = "avante_commands",
-            module = "blink.compat.source",
-            score_offset = 100, -- show at a higher priority than lsp
-            opts = {},
-          },
-          avante_mentions = {
-            name = "avante_mentions",
-            module = "blink.compat.source",
-            score_offset = 1000, -- show at a higher priority than lsp
-            opts = {},
-          },
-          obsidian = {
-            name = "obsidian",
-            module = "blink.compat.source",
-          },
-          obsidian_new = {
-            name = "obsidian_new",
-            module = "blink.compat.source",
-          },
-          obsidian_tags = {
-            name = "obsidian_tags",
-            module = "blink.compat.source",
+          avante = {
+            module = 'blink-cmp-avante',
+            name = 'Avante',
+            opts = {
+              -- options for blink-cmp-avante
+            }
           },
         },
       },

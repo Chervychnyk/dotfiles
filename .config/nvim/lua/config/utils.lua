@@ -27,15 +27,34 @@ end
 -- https://neovim.discourse.group/t/reload-init-lua-and-all-require-d-scripts/971/11
 M.ReloadConfig = function()
   local hls_status = vim.v.hlsearch
+  local unloaded = 0
+  local namespaces = { "^config", "^plugins", "^util" }
+
   for name, _ in pairs(package.loaded) do
-    if name:match("^cnull") then
-      package.loaded[name] = nil
+    for _, ns in ipairs(namespaces) do
+      if name:match(ns) then
+        package.loaded[name] = nil
+        unloaded = unloaded + 1
+        break
+      end
     end
   end
-  dofile(vim.env.MYVIMRC)
+
+  if vim.loader and vim.loader.reset then
+    pcall(vim.loader.reset)
+  end
+
+  local ok, err = pcall(dofile, vim.env.MYVIMRC)
+  if not ok then
+    vim.notify("Reload failed:\n" .. err, vim.log.levels.ERROR)
+    return
+  end
+
   if hls_status == 0 then
     vim.opt.hlsearch = false
   end
+
+  vim.notify(("Neovim config reloaded (%d modules)"):format(unloaded), vim.log.levels.INFO)
 end
 
 return M

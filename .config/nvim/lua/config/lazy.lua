@@ -3,7 +3,7 @@ local fn = vim.fn
 -- Automatically install lazy
 local lazypath = fn.stdpath("data") .. "/lazy/lazy.nvim"
 
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   fn.system({
     "git",
     "clone",
@@ -49,7 +49,7 @@ return lazy.setup({
         "gzip",
         -- "matchit",
         -- "matchparen",
-        -- "netrwPlugin",
+        "netrwPlugin",
         "tarPlugin",
         "tohtml",
         "tutor",

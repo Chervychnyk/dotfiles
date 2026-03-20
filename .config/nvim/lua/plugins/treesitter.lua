@@ -42,6 +42,7 @@ return {
         "ruby",
         "scss",
         "sql",
+        "toml",
         "typescript",
         "vim",
         "vimdoc",

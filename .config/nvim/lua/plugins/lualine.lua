@@ -14,12 +14,23 @@ local conditions = {
   end,
 }
 
-local branch = { 'b:gitsigns_head', icon = '' }
+local branch = { 'b:gitsigns_head', icon = icons.git.Branch }
 
 local diff = {
   "diff",
   colored = true,
-  symbols = { added = icons.git.LineAdded, modified = icons.git.LineModified, removed = icons.git.LineRemoved }, -- Changes the symbols used by the diff.
+  symbols = { added = icons.git.LineAdded, modified = icons.git.LineModified, removed = icons.git.LineRemoved },
+}
+
+local diagnostics = {
+  "diagnostics",
+  sources = { "nvim_diagnostic" },
+  symbols = {
+    error = icons.diagnostics.BoldError .. " ",
+    warn = icons.diagnostics.BoldWarning .. " ",
+    info = icons.diagnostics.BoldInformation .. " ",
+    hint = icons.diagnostics.BoldHint .. " ",
+  },
 }
 
 local function lsp_servers()
@@ -36,25 +47,6 @@ local function lsp_servers()
   end
 
   return table.concat(buf_client_names, ", ")
-end
-
-local copilot_status = function()
-  local disabled = require('copilot.client').is_disabled()
-
-  if disabled then
-    return "%#CopilotDisabled# "
-  end
-
-  local auto_trigger_enabled = vim.b.copilot_suggestion_auto_trigger == nil and
-      require('copilot.config').get("suggestion").auto_trigger
-      or
-      vim.b.copilot_suggestion_auto_trigger
-
-  if auto_trigger_enabled then
-    return "%#CopilotEnabled# "
-  else
-    return "%#CopilotSleep# "
-  end
 end
 
 local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
@@ -75,7 +67,7 @@ return {
         globalstatus = true,
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
-        disabled_filetypes = { "alpha", "Avante", "AvanteInput", "codecompanion", "qf", "lazy", "NeogitStatus", "NvimTree", "Outline", "snacks_picker_input", "TelescopePrompt", "TelescopeResults", "Trouble" },
+        disabled_filetypes = { "alpha", "Avante", "AvanteInput", "codecompanion", "qf", "lazy", "NeogitStatus", "neo-tree", "Outline", "snacks_picker_input", "snacks_picker_list", "TelescopePrompt", "TelescopeResults", "Trouble" },
         always_divide_middle = true,
       },
       sections = {
@@ -89,19 +81,27 @@ return {
           {
             'filename',
             cond = conditions.buffer_not_empty,
+            symbols = {
+              modified = icons.ui.Circle,
+              readonly = icons.ui.Lock,
+              unnamed = icons.ui.NewFile,
+            },
           },
         },
         lualine_x = {
-          "diagnostics",
+          diagnostics,
           {
             lsp_servers,
-            icon = "",
+            icon = icons.ui.Watches,
             color = { gui = "none" },
           },
-          copilot_status
         },
-        lualine_y = { "progress" },
-        lualine_z = { "location" },
+        lualine_y = {
+          { 'progress', icon = icons.ui.Target },
+        },
+        lualine_z = {
+          { 'location', icon = icons.ui.LineNumber },
+        },
       }
     })
   end

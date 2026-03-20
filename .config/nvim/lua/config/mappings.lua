@@ -1,4 +1,4 @@
-local map = require('config.utils').map
+local map = require("config.utils").map
 
 --- Map leader to space
 vim.g.mapleader = ","
@@ -17,28 +17,30 @@ map("n", "<leader>bn", ":bn<cr>", { desc = "Next buffer" })
 map("n", "<leader>bp", ":bp<cr>", { desc = "Previous buffer" })
 
 -- Window management
-map("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" })                   -- split window vertically
-map("n", "<leader>sh", "<C-w>s", { desc = "Split window horizontally" })                 -- split window horizontally
-map("n", "<leader>se", "<C-w>=", { desc = "Make splits equal size" })                    -- make split windows equal width & height
-map("n", "<leader>sx", "<cmd>close<CR>", { desc = "Close current split" })               -- close current split window
+map("n", "<leader>sv", "<C-w>v", { desc = "Split window vertically" }) -- split window vertically
+map("n", "<leader>sh", "<C-w>s", { desc = "Split window horizontally" }) -- split window horizontally
+map("n", "<leader>se", "<C-w>=", { desc = "Make splits equal size" }) -- make split windows equal width & height
+map("n", "<leader>sx", "<cmd>close<CR>", { desc = "Close current split" }) -- close current split window
 
-map("n", "<leader>to", "<cmd>tabnew<CR>", { desc = "Open new tab" })                     -- open new tab
-map("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close current tab" })              -- close current tab
-map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Go to next tab" })                     --  go to next tab
-map("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Go to previous tab" })                 --  go to previous tab
+map("n", "<leader>to", "<cmd>tabnew<CR>", { desc = "Open new tab" }) -- open new tab
+map("n", "<leader>tx", "<cmd>tabclose<CR>", { desc = "Close current tab" }) -- close current tab
+map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Go to next tab" }) --  go to next tab
+map("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Go to previous tab" }) --  go to previous tab
 map("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Open current buffer in new tab" }) --  move current buffer to new tab
 
 -- Switch between windows
-map("n", "<C-h>", "<C-w>h", { desc = "Move window left" })
-map("n", "<C-l>", "<C-w>l", { desc = "Move window right" })
-map("n", "<C-j>", "<C-w>j", { desc = "Move window down" })
-map("n", "<C-k>", "<C-w>k", { desc = "Move window up" })
+-- map("n", "<C-h>", "<C-w>h", { desc = "Move window left" })
+-- map("n", "<C-l>", "<C-w>l", { desc = "Move window right" })
+-- map("n", "<C-j>", "<C-w>j", { desc = "Move window down" })
+-- map("n", "<C-k>", "<C-w>k", { desc = "Move window up" })
 
 -- Resize with vim navigation
-map("n", "<C-A-k>", ":resize -2<CR>", { silent = true })
-map("n", "<C-A-j>", ":resize +2<CR>", { silent = true })
-map("n", "<C-A-l>", ":vertical resize -2<CR>", { silent = true })
-map("n", "<C-A-h>", ":vertical resize +2<CR>", { silent = true })
+-- map("n", "<C-A-k>", ":resize -2<CR>", { silent = true })
+-- map("n", "<C-A-j>", ":resize +2<CR>", { silent = true })
+-- map("n", "<C-A-l>", ":vertical resize -2<CR>", { silent = true })
+-- map("n", "<C-A-h>", ":vertical resize +2<CR>", { silent = true })
+
+map("t", "<leader><Esc>", "<C-\\><C-n>")
 
 -- Stay in indent mode
 -- Visual --
@@ -47,8 +49,8 @@ map("v", ">", ">gv")
 
 -- Move text up and down
 -- Normal
-map("n", "<A-j>", "<Esc>:m .+1<CR>==gi")
-map("n", "<A-k>", "<Esc>:m .-2<CR>==gi")
+map("n", "<leader>mj", "<Esc>:m .+1<CR>==gi", { desc = "Move line down" })
+map("n", "<leader>mk", "<Esc>:m .-2<CR>==gi", { desc = "Move line up" })
 -- Visual --
 map("v", "<A-j>", ":m .+1<CR>==")
 map("v", "<A-k>", ":m .-2<CR>==")
@@ -58,4 +60,4 @@ map("x", "K", ":move '<-2<CR>gv-gv", { silent = true })
 map("x", "<A-j>", ":move '>+1<CR>gv-gv", { silent = true })
 map("x", "<A-k>", ":move '<-2<CR>gv-gv", { silent = true })
 
-map("n","<leader>nh", "<cmd>nohlsearch<CR>", { desc = "No Highlight", silent = true })
+map("n", "<leader>nh", "<cmd>nohlsearch<CR>", { desc = "No Highlight", silent = true })

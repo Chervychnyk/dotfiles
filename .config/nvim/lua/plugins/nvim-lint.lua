@@ -3,49 +3,7 @@ return {
   event = { "BufReadPre", "BufNewFile" },
   config = function()
     local lint = require("lint")
-
-    -- Check for docker-compose files and get the first one that exists
-    local function get_docker_compose_file()
-      local root = vim.fn.getcwd()
-      local compose_files = {
-        "/docker-compose.yml",
-        "/docker-compose.yaml",
-      }
-
-      for _, file in ipairs(compose_files) do
-        if vim.fn.filereadable(root .. file) == 1 then
-          return root .. file
-        end
-      end
-      return nil
-    end
-
-    -- Get Rails service name from docker-compose file
-    local function get_rails_service_name()
-      local compose_file = get_docker_compose_file()
-      if not compose_file then return nil end
-
-      local handle = io.open(compose_file, "r")
-      if not handle then return "rails" end
-
-      local content = handle:read("*a")
-      handle:close()
-
-      -- Check for common service names in order of preference
-      local service_patterns = {
-        "%s*rails:", -- rails service
-        "%s*app:",   -- app service
-        "%s*web:",   -- web service
-      }
-
-      for _, pattern in ipairs(service_patterns) do
-        if content:match(pattern) then
-          return pattern:match("%%s%*(.+):")
-        end
-      end
-
-      return "rails" -- Default to 'rails' if no matching service found
-    end
+    local docker = require("util.docker")
 
     local rubocop = lint.linters.rubocop
 
@@ -53,6 +11,8 @@ return {
     lint.linters.rubocop = function()
       local current_file = vim.api.nvim_buf_get_name(0)
       local root = vim.fn.getcwd()
+
+      local has_docker, service = docker.detect(root)
 
       local cmd = "bundle"
       local args = {
@@ -63,15 +23,14 @@ return {
         current_file,
       }
 
-      if get_docker_compose_file() then
+      if has_docker then
         cmd = "docker"
-        local service_name = get_rails_service_name()
         args = {
           "compose",
           "run",
           "--no-deps",
           "--rm",
-          service_name,
+          service,
           "bundle",
           "exec",
           "rubocop",
