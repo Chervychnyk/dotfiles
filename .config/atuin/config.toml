@@ -46,7 +46,7 @@ history_filter = [
 ]
 
 # Statistics
-stats = true
+[stats]
 
 # Common prefixes to ignore
 common_prefix = ["sudo"]

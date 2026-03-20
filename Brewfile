@@ -1,4 +1,3 @@
-tap "homebrew/bundle"
 tap "meltylabs/tap"
 tap "sst/tap"
 tap "stripe/stripe-cli"
