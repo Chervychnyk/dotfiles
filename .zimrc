@@ -1,0 +1,18 @@
+# Zim modules
+# mise (asdf replacement) — activation is in .zshrc
+zmodule fzf
+zmodule magic-enter
+zmodule ruby
+
+# Removed ohmyzsh git and kubectl plugins to avoid compdef errors
+zmodule ohmyzsh/ohmyzsh --root plugins/git
+zmodule ohmyzsh/ohmyzsh --root plugins/nvm
+zmodule ohmyzsh/ohmyzsh --root plugins/pyenv
+zmodule ohmyzsh/ohmyzsh --root plugins/ssh-agent
+zmodule ohmyzsh/ohmyzsh --root plugins/sudo
+
+zmodule zsh-users/zsh-completions
+zmodule zsh-users/zsh-autosuggestions
+zmodule zdharma-continuum/fast-syntax-highlighting
+zmodule Aloxaf/fzf-tab
+zmodule kiesman99/zim-zoxide

@@ -1,10 +1,3 @@
-# Get editor completions based on the config schema
-"$schema" = 'https://starship.rs/config-schema.json'
-
-# Inserts a blank line between shell prompts
-add_newline = true
-scan_timeout = 100
-
 format = """
 $username\
 $hostname\
@@ -17,20 +10,20 @@ $line_break\
 $character"""
 
 [directory]
-style = "blue"
+style = "#7e9cd8"
 
 [character]
-success_symbol = "[❯](purple)"
-error_symbol = "[❯](red)"
-vimcmd_symbol = "[❮](green)"
+success_symbol = "[>](bold #98bb6c)"
+error_symbol = "[x](bold #e82424)"
+vimcmd_symbol = "[<](bold #7e9cd8)"
 
 [git_branch]
 format = "[$branch]($style)"
-style = "bright-black"
+style = "#727169"
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](purple) ($ahead_behind$stashed )]($style)"
-style = "cyan"
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](#e6c384) ($ahead_behind$stashed)]($style)"
+style = "#7e9cd8"
 conflicted = "​"
 untracked = "​"
 modified = "​"
@@ -45,4 +38,4 @@ style = "bright-black"
 
 [cmd_duration]
 format = "[$duration]($style) "
-style = "yellow"
+style = "#e6c384"

@@ -1,0 +1,61 @@
+## Atuin Configuration
+## https://docs.atuin.sh/configuration/config/
+
+# Use fzf-style search interface
+style = "compact"
+
+# Show search results inline (fzf-like experience)
+inline_height = 20
+
+# Show context (directory, time) in results
+show_preview = true
+
+# Enable fuzzy search by default
+search_mode = "fuzzy"
+
+# Filter mode - global searches across all sessions
+filter_mode = "global"
+
+# Show help text
+show_help = true
+
+# Sync is disabled by default (enable if you want to sync across machines)
+sync_address = ""
+sync_frequency = "0"
+
+# Update check
+update_check = false
+
+# Search for commands as you type
+enter_accept = true
+
+# Use Ctrl+N/Ctrl+P for navigation (consistent with your existing bindings)
+keymap_mode = "vim-normal"
+
+# History settings
+max_preview_height = 4
+exit_mode = "return-original"
+
+# Filtering
+history_filter = [
+    "^ls$",
+    "^cd$",
+    "^pwd$",
+    "^exit$",
+    "^clear$",
+]
+
+# Statistics
+stats = true
+
+# Common prefixes to ignore
+common_prefix = ["sudo"]
+
+# Store additional context
+store_failed = true
+
+# Dialect for better SQL compatibility
+dialect = "us"
+
+# UI customization
+tab_size = 4
