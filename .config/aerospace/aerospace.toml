@@ -52,10 +52,6 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 on-focus-changed = ['exec-and-forget sketchybar --trigger aerospace_window_change']
 
 [[on-window-detected]]
-if.app-id="com.mitchellh.ghostty"
-run= "layout floating"
-
-[[on-window-detected]]
 if.app-name-regex-substring = 'finder'
 run = 'layout floating'
 
@@ -138,14 +134,8 @@ outer.right =      0
 
 # All possible commands: https://nikitabobko.github.io/AeroSpace/commands
 
-# See: https://nikitabobko.github.io/AeroSpace/commands#exec-and-forget
-# You can uncomment the following lines to open up terminal with alt + enter shortcut (like in i3)
-# alt-enter = '''exec-and-forget osascript -e '
-# tell application "Terminal"
-#     do script
-#     activate
-# end tell'
-# '''
+# Launch terminal
+alt-enter = 'exec-and-forget open -a Ghostty'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
 alt-slash = 'layout tiles horizontal vertical'
@@ -184,7 +174,18 @@ alt-shift-right = 'focus-monitor right'
 # Enter resize mode
 alt-r = 'mode resize'
 
-# See: https://nikitabobko.github.io/AeroSpace/commands#workspace
+# Quick reload while tuning config
+alt-shift-r = 'reload-config'
+
+# Workspaces
+# 1 = calendar
+# 5 = notes
+# 6 = design
+# B = browser
+# C = personal chat
+# D = development
+# T = terminal
+# W = work chat
 alt-1 = 'workspace 1'
 alt-2 = 'workspace 2'
 alt-3 = 'workspace 3'
@@ -328,6 +329,11 @@ run = "move-node-to-workspace D"
 # IntelliJ IDEA
 [[on-window-detected]]
 if.app-id = 'com.jetbrains.intellij'
+run = "move-node-to-workspace D"
+
+# RubyMine
+[[on-window-detected]]
+if.app-id = 'com.jetbrains.rubymine'
 run = "move-node-to-workspace D"
 
 # Zed
