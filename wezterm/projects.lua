@@ -1,22 +1,51 @@
 local wezterm = require 'wezterm'
 local module = {}
 
--- The directory that contains all your projects.
-local project_dir = wezterm.home_dir .. "/Projects"
+local function split_words(input)
+  local result = {}
+  for word in string.gmatch(input or '', '%S+') do
+    table.insert(result, word)
+  end
+  return result
+end
 
-local function project_dirs()
-  -- Start with your home directory as a project, 'cause you might want
-  -- to jump straight to it sometimes.
-  local projects = { wezterm.home_dir .. "/dotfiles" }
+local function uniq_paths(paths)
+  local seen = {}
+  local result = {}
+  for _, path in ipairs(paths) do
+    if path ~= '' and not seen[path] then
+      seen[path] = true
+      table.insert(result, path)
+    end
+  end
+  return result
+end
 
-  -- WezTerm comes with a glob function! Let's use it to get a lua table
-  -- containing all subdirectories of your project folder.
-  for _, dir in ipairs(wezterm.glob(project_dir .. '/*')) do
-    -- ... and add them to the projects table.
-    table.insert(projects, dir)
+local function project_roots()
+  local configured = os.getenv('PROJECT_PATHS')
+  if configured and configured ~= '' then
+    return split_words(configured)
   end
 
-  return projects
+  return {
+    wezterm.home_dir .. '/projects',
+    wezterm.home_dir .. '/code',
+    wezterm.home_dir .. '/work',
+  }
+end
+
+local function project_dirs()
+  local projects = {
+    wezterm.home_dir .. '/dotfiles',
+  }
+
+  for _, root in ipairs(project_roots()) do
+    for _, dir in ipairs(wezterm.glob(root .. '/*')) do
+      table.insert(projects, dir)
+    end
+  end
+
+  return uniq_paths(projects)
 end
 
 function module.choose_project()
@@ -26,22 +55,14 @@ function module.choose_project()
   end
 
   return wezterm.action.InputSelector {
-    title = "Projects",
+    title = 'Projects',
     choices = choices,
     fuzzy = true,
     action = wezterm.action_callback(function(child_window, child_pane, id, label)
-      -- "label" may be empty if nothing was selected. Don't bother doing anything
-      -- when that happens.
       if not label then return end
 
-      -- The SwitchToWorkspace action will switch us to a workspace if it already exists,
-      -- otherwise it will create it for us.
       child_window:perform_action(wezterm.action.SwitchToWorkspace {
-        -- We'll give our new workspace a nice name, like the last path segment
-        -- of the directory we're opening up.
-        name = label:match("([^/]+)$"),
-        -- Here's the meat. We'll spawn a new terminal with the current working
-        -- directory set to the directory that was picked.
+        name = label:match('([^/]+)$'),
         spawn = { cwd = label },
       }, child_pane)
     end),

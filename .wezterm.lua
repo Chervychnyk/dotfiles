@@ -39,17 +39,24 @@ wezterm.on(
   end
 )
 
+local function add_battery_charge(cells)
+  for _, b in ipairs(wezterm.battery_info()) do
+    table.insert(cells, string.format('%.0f%%', b.state_of_charge * 100))
+  end
+end
+
 local function segments_for_right_status(window)
   return {
     window:active_workspace(),
-    wezterm.strftime('%a %b %-d %H:%M'),
-    wezterm.hostname(),
+    wezterm.strftime('%A, %d %b %Y %H:%M'),
+    wezterm.hostname()
   }
 end
 
 wezterm.on('update-status', function(window, _)
   local SOLID_LEFT_ARROW = utf8.char(0xe0b2)
   local segments = segments_for_right_status(window)
+  add_battery_charge(segments)
 
   local color_scheme = window:effective_config().resolved_palette
   -- Note the use of wezterm.color.parse here, this returns
@@ -112,9 +119,9 @@ end
 -- This is where you actually apply your config choices
 
 -- For example, changing the color scheme:
-config.color_scheme = 'Rosé Pine (Gogh)'
+config.color_scheme = 'Kanagawa (Gogh)'
 config.font = wezterm.font "Hack Nerd Font Mono"
-config.font_size = 14
+config.font_size = 16
 config.line_height = 1.2
 config.adjust_window_size_when_changing_font_size = false
 config.hide_tab_bar_if_only_one_tab = true
@@ -128,8 +135,17 @@ config.use_dead_keys = false
 config.enable_scroll_bar = true
 config.scrollback_lines = 20000
 
+local homebrew_prefix = os.getenv('HOMEBREW_PREFIX')
+if not homebrew_prefix or homebrew_prefix == '' then
+  if wezterm.target_triple and wezterm.target_triple:find('apple') then
+    homebrew_prefix = '/opt/homebrew'
+  else
+    homebrew_prefix = '/usr/local'
+  end
+end
+
 config.set_environment_variables = {
-  PATH = '/opt/homebrew/bin:' .. os.getenv('PATH')
+  PATH = homebrew_prefix .. '/bin:' .. os.getenv('PATH')
 }
 
 config.leader = { key = 'a', mods = 'CTRL', timeout_milliseconds = 1000 }
@@ -181,7 +197,7 @@ config.keys = {
     action = wezterm.action.ShowLauncherArgs { flags = 'FUZZY|WORKSPACES' },
   },
   {
-    key = 'p',
+    key = 's',
     mods = 'LEADER',
     action = wezterm.action.PaneSelect
   },

@@ -1,20 +1,56 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "Generating a new SSH key for GitHub..."
+SSH_DIR="$HOME/.ssh"
+KEY_NAME="${1:-id_ed25519}"
+KEY_PATH="$SSH_DIR/$KEY_NAME"
+CONFIG_PATH="$SSH_DIR/config"
 
-# Generating a new SSH key
-# https://docs.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key
-mkdir -p ~/.ssh && ssh-keygen -t ed25519 -o -a 100 -f ~/.ssh/id_ed25519 -C "TYPE_YOUR_EMAIL@HERE.com"
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
 
-# Adding your SSH key to the ssh-agent
-# https://docs.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#adding-your-ssh-key-to-the-ssh-agent
+echo "Generating a new SSH key..."
+read -rp "Email for SSH key comment: " ssh_email
+
+if [[ -z "$ssh_email" ]]; then
+  echo "Email is required" >&2
+  exit 1
+fi
+
+if [[ -e "$KEY_PATH" ]]; then
+  echo "Key already exists at $KEY_PATH" >&2
+  exit 1
+fi
+
+ssh-keygen -t ed25519 -a 100 -f "$KEY_PATH" -C "$ssh_email"
+
 eval "$(ssh-agent -s)"
 
-touch ~/.ssh/config
-echo "Host *\n AddKeysToAgent yes\n UseKeychain yes\n IdentityFile ~/.ssh/id_ed25519" | tee ~/.ssh/config
+if ! grep -q "IdentityFile ~/.ssh/$KEY_NAME" "$CONFIG_PATH" 2>/dev/null; then
+  cat >> "$CONFIG_PATH" <<EOF
 
-ssh-add -K ~/.ssh/id_ed25519
+Host *
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentityFile ~/.ssh/$KEY_NAME
+EOF
+  echo "Updated $CONFIG_PATH"
+else
+  echo "$CONFIG_PATH already contains ~/.ssh/$KEY_NAME"
+fi
 
-# Adding your SSH key to your GitHub account
-# https://docs.github.com/en/github/authenticating-to-github/adding-a-new-ssh-key-to-your-github-account
-echo "run 'pbcopy < ~/.ssh/id_ed25519.pub' and paste that into GitHub"
+chmod 600 "$CONFIG_PATH"
+
+if ssh-add --help 2>&1 | grep -q -- '--apple-use-keychain'; then
+  ssh-add --apple-use-keychain "$KEY_PATH"
+else
+  ssh-add "$KEY_PATH"
+fi
+
+if command -v pbcopy >/dev/null 2>&1; then
+  pbcopy < "$KEY_PATH.pub"
+  echo "Public key copied to clipboard"
+fi
+
+echo "Public key: $KEY_PATH.pub"
+echo "Next: add it to GitHub/GitLab and verify with: ssh -T git@github.com"

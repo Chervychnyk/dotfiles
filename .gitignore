@@ -1,1 +1,7 @@
 /.config/nvim/plugin/packer_compiled.lua
+.pi/
+pi/agent/mcp.json
+*.backup.*
+*.local
+.env.secrets
+.config/shell.local.env

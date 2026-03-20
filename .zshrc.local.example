@@ -1,0 +1,10 @@
+# Machine-local overrides for ~/.zshrc
+
+# Space-separated list of project roots used by proj/cdp helpers
+# export PROJECT_PATHS="$HOME/projects $HOME/work"
+
+# Example: custom KUBECONFIG
+# export KUBECONFIG="$HOME/.kube/config:$HOME/.kube/work-config"
+
+# Example: machine-specific PATH additions
+# export PATH="$HOME/bin:$PATH"

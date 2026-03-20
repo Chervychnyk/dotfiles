@@ -1,113 +1,140 @@
-# Set the directory we want to store Zinit and plugins
-ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+# Enable profiling for performance monitoring
+# zmodload zsh/zprof
 
-# Download Zinit if it is not there yet
-if [ ! -d "$ZINIT_HOME" ]; then
-  mkdir -p "$(dirname $ZINIT_HOME)"
-  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+# Zim setup
+ZIM_HOME=${ZDOTDIR:-${HOME}}/.zim
+
+# Download zimfw plugin manager if missing.
+if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
+  curl -fsSL --create-dirs -o ${ZIM_HOME}/zimfw.zsh \
+      https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
 fi
 
-# Source/Load Zinit
-source "${ZINIT_HOME}/zinit.zsh" \
-  && autoload -Uz _zinit \
-  && (( ${+_comps} )) \
-  && _comps[zinit]=_zinit
+# Load completion before Zim (required by omz plugins that use compdef)
+# Cache compinit — only regenerate once daily
+autoload -Uz compinit
+if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
+  compinit
+else
+  compinit -C
+fi
+
+# Install missing modules and update ${ZIM_HOME}/init.zsh if missing or outdated.
+if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZIM_CONFIG_FILE:-${ZDOTDIR:-${HOME}}/.zimrc} ]]; then
+  source ${ZIM_HOME}/zimfw.zsh init
+fi
+
+# Initialize Zim
+source ${ZIM_HOME}/init.zsh
+
+# History configuration
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt SHARE_HISTORY          # Share history between sessions
+setopt HIST_IGNORE_DUPS       # Don't record duplicate entries
+setopt HIST_IGNORE_ALL_DUPS   # Remove older duplicate entries
+setopt HIST_IGNORE_SPACE      # Don't record commands starting with space
+setopt HIST_REDUCE_BLANKS     # Remove unnecessary blanks
+setopt INC_APPEND_HISTORY     # Write immediately, not on shell exit
 
 # Prompt
-zinit ice as"command" from"gh-r" \
-          atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
-          atpull"%atclone" src"init.zsh"
-zinit light starship/starship
-
+eval "$(starship init zsh)"
 setopt promptsubst
 
-zinit lucid for \
-  atinit"HIST_STAMPS=dd.mm.yyyy" \
-  OMZL::history.zsh
+# Bat theme
+export BAT_THEME=base16
 
-# Snippets
-zinit wait lucid for \
-  OMZL::clipboard.zsh \
-  OMZL::compfix.zsh \
-  OMZL::completion.zsh \
-  OMZL::correction.zsh \
-  atinit"
-    zstyle ':omz:alpha:lib:git' async-prompt no
-  " \
-  OMZL::git.zsh \
-  OMZP::aws \
-  OMZP::command-not-found \
-  OMZP::docker-compose \
-  OMZP::git \
-  OMZP::fzf \
-  OMZP::kubectl \
-  atinit"
-    zstyle ':omz:plugins:ssh-agent' quiet yes
-    export SHORT_HOST='local'
-  " \
-  OMZP::ssh-agent \
-  OMZP::sudo \
-  OMZP::asdf \
-  atinit"
-    zstyle ':omz:plugins:nvm' lazy yes
-    zstyle ':omz:plugins:nvm' autoload yes
-    zstyle ':omz:plugins:nvm' silent-autoload yes 
-  " \
-  OMZP::nvm \
-  atinit'
-    export PYENV_ROOT="$HOME/.pyenv"
-    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-    eval "$(pyenv init --path)"
-  ' \
-  OMZP::pyenv
+# Completion and enhancement plugins are now handled by Zim
+# Configure styles after Zim init
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu no
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 
-# Plugins
-# Install and configure fzf
-zinit ice as"command" from"gh-r" 
-zinit light junegunn/fzf
+# Load machine-local overrides first
+[[ -f ~/.config/shell.local.env ]] && source ~/.config/shell.local.env
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local
 
-zinit ice as"command" from"gh-r" sbin
-zinit light zellij-org/zellij
+# Load secrets (API keys, tokens — chmod 600)
+[[ -f ~/.env.secrets ]] && source ~/.env.secrets
 
-zinit ice wait lucid as"program" from"gh-r" \
-      mv"bat* -> bat" pick"bat/bat" \
-      atload"export BAT_THEME=base16"
-zinit light sharkdp/bat
-
-zinit ice wait as"command" from"gh-r" lucid \
-  mv"zoxide* -> zoxide" \
-  atclone"./zoxide init zsh > init.zsh" \
-  atpull"%atclone" src"init.zsh" nocompile'!'
-zinit light ajeetdsouza/zoxide
-
-zinit wait lucid for \
-    light-mode atinit"ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20" atload"_zsh_autosuggest_start" \
-  zsh-users/zsh-autosuggestions \
-    light-mode atinit"
-      typeset -gA FAST_HIGHLIGHT; FAST_HIGHLIGHT[git-cmsg-len]=100;
-      zpcompinit; zpcdreplay" \
-  zdharma-continuum/fast-syntax-highlighting \
-    atpull'zinit creinstall -q .' \
-    atinit"
-      zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-      zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-      zstyle ':completion:*' menu no" \
-    blockf light-mode \
-  zsh-users/zsh-completions \
-    atinit"
-      zstyle :history-search-multi-word page-size 10
-      zstyle :history-search-multi-word highlight-color fg=red,bold
-      zstyle :plugin:history-search-multi-word reset-prompt-protect 1" \
-    bindmap"^R -> ^H" \
-  zdharma-continuum/history-search-multi-word \
-    atinit"
-      zstyle ':fzf-tab:*' use-fzf-default-opts yes
-      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
-      zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'" \
-  Aloxaf/fzf-tab
- 
 # Load aliases
 [[ -f ~/.aliases ]] && source ~/.aliases
+[[ -f ~/.aliases.local ]] && source ~/.aliases.local
+
+# Load FZF themes
+[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
+
+# FZF enhanced functions
+# Search Rails routes
+routes() {
+  if [[ -f "bin/rails" ]]; then
+    bin/rails routes | fzf --header="Rails Routes" --preview="echo {}" --preview-window=up:3:wrap
+  else
+    echo "Not in a Rails project"
+  fi
+}
+
+# Project roots can be overridden in ~/.zshrc.local
+: ${PROJECT_PATHS:="$HOME/projects $HOME/code $HOME/work"}
+
+# Find and cd into project directory (only immediate project folders)
+proj() {
+  local -a roots
+  local dir
+  roots=(${=PROJECT_PATHS})
+  dir=$(find ${roots[@]} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf --height=40% --reverse --preview="ls -la {}")
+  if [[ -n "$dir" ]]; then
+    cd "$dir"
+  fi
+}
+
+# Search command history with fzf (alternative to atuin)
+fh() {
+  print -z $(fc -ln 1 | fzf --tac --no-sort --height=40% --reverse)
+}
+
+# Search and kill process
+fkill() {
+  local pid
+  pid=$(ps -ef | sed 1d | fzf -m | awk '{print $2}')
+  if [[ -n "$pid" ]]; then
+    echo "$pid" | xargs kill -${1:-9}
+  fi
+}
+
+# Search and checkout git branch (local and remote)
+fbr() {
+  local branches branch
+  branches=$(git branch -a | grep -v HEAD) &&
+  branch=$(echo "$branches" | fzf --height=40% --reverse +m) &&
+  git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+}
+
+# Preview file with syntax highlighting
+fp() {
+  fzf --preview="bat --style=numbers --color=always --line-range :500 {}"
+}
+
+# Find in files with ripgrep and fzf
+rga() {
+  rg --color=always --line-number --no-heading --smart-case "${*:-}" |
+    fzf --ansi \
+        --delimiter : \
+        --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
+        --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+        --bind 'enter:become(nvim {1} +{2})'
+}
+
+# Atuin - magical shell history with fzf integration
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init zsh --disable-up-arrow)"
+  # Use Ctrl+R for atuin search with fzf-style interface
+  bindkey '^r' atuin-search
+fi
 
 # Keybindings
 bindkey '^l' autosuggest-accept
@@ -116,20 +143,9 @@ bindkey '^n' history-search-forward
 bindkey "^[a" beginning-of-line
 bindkey "^[e" end-of-line
 
-# Soho vibes for fzf
-export FZF_DEFAULT_OPTS="
-	--color=fg:#908caa,bg:#191724,hl:#ebbcba
-	--color=fg+:#e0def4,bg+:#26233a,hl+:#ebbcba
-	--color=border:#403d52,header:#31748f,gutter:#191724
-	--color=spinner:#f6c177,info:#9ccfd8
-	--color=pointer:#c4a7e7,marker:#eb6f92,prompt:#908caa"
-
 # User configuration
-export PATH="$HOME/.local/bin:$PATH"
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-export TERM="xterm-256color"
-export DISPLAY=:0.0
 
 # Preferred editor for local and remote sessions
 if [[ -n $SSH_CONNECTION ]]; then
@@ -138,51 +154,87 @@ else
   export EDITOR='nvim'
 fi
 
-# export JAVA_HOME=`/usr/libexec/java_home -v 1.8`
-# export ANDROID_HOME=$HOME/Library/Android/sdk
-# export PATH=$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools:$PATH
-# export PATH=$HOME/flutter/bin:$PATH 
+# Mise (runtime version manager — replaces asdf)
+eval "$(mise activate zsh)"
 
-export ASDF_DIR="$HOME/.asdf"
+# Erlang/Elixir build options
 export ERL_AFLAGS="-kernel shell_history enabled"
 export KERL_CONFIGURE_OPTIONS="--disable-debug --disable-silent-rules --enable-dynamic-ssl-lib --enable-gettimeofday-as-os-system-time --enable-kernel-poll --without-javac --without-wx --without-odbc"
 
-export PATH="$HOME/.asdf/installs/elixir/1.12/.mix/escripts:$PATH"
-export PATH="$HOME/.yarn/bin:$PATH"
+# Tool-specific exports with presence checks
+if command -v brew >/dev/null 2>&1; then
+  : ${HOMEBREW_PREFIX:="$(brew --prefix 2>/dev/null)"}
 
-# OpenSSL
-export PATH="/opt/homebrew/opt/openssl@1.1/bin:$PATH"
-export LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib:$LDFLAGS"
-export CPPFLAGS="-I/opt/homebrew/opt/openssl@1.1/include:$CPPFLAGS"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@1.1/lib/pkgconfig:$PKG_CONFIG_PATH"
-export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)"
-export optflags="-Wno-error=implicit-function-declaration"
+  # OpenSSL (openssl@3 — 1.1 is EOL since Sep 2023)
+  if [[ -d "$HOMEBREW_PREFIX/opt/openssl@3" ]]; then
+    export PATH="$HOMEBREW_PREFIX/opt/openssl@3/bin:$PATH"
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/openssl@3/lib:${LDFLAGS:-}"
+    export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/openssl@3/include:${CPPFLAGS:-}"
+    export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/openssl@3/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+    export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl@3"
+  fi
 
-# Readline
-export LDFLAGS="-L/opt/homebrew/opt/readline/lib:$LDFLAGS"
-export CPPFLAGS="-I/opt/homebrew/opt/readline/include:$CPPFLAGS"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/readline/lib/pkgconfig:$PKG_CONFIG_PATH"
+  # Readline
+  if [[ -d "$HOMEBREW_PREFIX/opt/readline" ]]; then
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/readline/lib:${LDFLAGS:-}"
+    export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/readline/include:${CPPFLAGS:-}"
+    export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/readline/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+  fi
 
-# Libffi
-export LDFLAGS="-L/opt/homebrew/opt/libffi/lib:$LDFLAGS"
-export CPPFLAGS="-I/opt/homebrew/opt/libffi/include:$CPPFLAGS"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH"
+  # Libffi
+  if [[ -d "$HOMEBREW_PREFIX/opt/libffi" ]]; then
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/libffi/lib:${LDFLAGS:-}"
+    export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/libffi/include:${CPPFLAGS:-}"
+    export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+  fi
 
+  # Java / other libs
+  [[ -d "$HOMEBREW_PREFIX/opt/openjdk/bin" ]] && export PATH="$HOMEBREW_PREFIX/opt/openjdk/bin:$PATH"
+
+  if [[ -d "$HOMEBREW_PREFIX/opt/taglib@1.13.1" ]]; then
+    export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib@1.13.1"
+  elif [[ -d "$HOMEBREW_PREFIX/opt/taglib" ]]; then
+    export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib"
+  fi
+fi
+
+# Puppeteer
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-export PUPPETEER_EXECUTABLE_PATH=`which chromium`
+if command -v chromium >/dev/null 2>&1; then
+  export PUPPETEER_EXECUTABLE_PATH="$(command -v chromium)"
+fi
 
-export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
-export PATH="/opt/homebrew/opt/postgresql@14/bin:$PATH"
-export PATH="/opt/homebrew/opt/mysql@5.7/bin:$PATH"
+# Kubernetes
+if [[ -z "${KUBECONFIG:-}" ]]; then
+  typeset -a kubeconfigs
+  [[ -f "$HOME/.kube/config.argo" ]] && kubeconfigs+=("$HOME/.kube/config.argo")
+  [[ -f "$HOME/.kube/config.aws.auro" ]] && kubeconfigs+=("$HOME/.kube/config.aws.auro")
+  [[ -f "$HOME/.kube/config" ]] && kubeconfigs+=("$HOME/.kube/config")
+  [[ ${#kubeconfigs[@]} -gt 0 ]] && export KUBECONFIG="${(j/:/)kubeconfigs}"
+fi
 
-# Add RVM to PATH for scripting. Make sure this is the last PATH variable change.
-export PATH="$HOME/.rvm/bin:$PATH"
-
-export TAGLIB_DIR="$(brew --prefix taglib)"
-export KUBECONFIG=$HOME/.kube/config.ovh.products:$HOME/.kube/config
-
+# Bitwarden
 export BITWARDENCLI_APPDATA_DIR=~/.bw/
 
 # Load custom functions
 fpath=(~/.zsh/functions $fpath)
-autoload -Uz unlock_bitwarden set_openrouter_key
+autoload -Uz unlock_bitwarden
+
+# Load RVM if available
+if [[ -s "$HOME/.rvm/scripts/rvm" ]]; then
+  source "$HOME/.rvm/scripts/rvm"
+  export PATH="$PATH:$HOME/.rvm/bin"
+fi
+
+# Consolidated PATH additions (add to end for proper precedence)
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.yarn/bin:$PATH"
+
+# zprof  # Uncomment to show profiling results
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"

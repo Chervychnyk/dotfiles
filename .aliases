@@ -1,4 +1,5 @@
 alias ez='nvim ~/.zshrc'
+alias ea='nvim ~/.aliases'
 alias copypub='cat ~/.ssh/id_ed25519.pub | pbcopy'
 
 # IP addresses
@@ -12,7 +13,38 @@ alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
 
-# Run Rails commands inside Docker
+# Docker Compose Rails commands
+alias drc='docker compose run --rm app bin/rails console'
+alias drs='docker compose up'
+alias drdb='docker compose run --rm app bin/rails db'
+alias drdm='docker compose run --rm app bin/rails db:migrate'
+alias drspec='docker compose run --rm app bundle exec rspec'
+alias drubocop='docker compose run --rm app bundle exec rubocop'
+alias drbundle='docker compose run --rm app bundle install'
+
+# Run Rails commands inside Docker (standalone)
 alias docked='docker run --rm -it -v ${PWD}:/rails -v ruby-bundle-cache:/bundle --network host -p 3000:3000 ghcr.io/rails/cli'
+
+# Database connections
+alias pgdev='pgcli postgresql://localhost/$(basename $(pwd))_development'
+alias pgtest='pgcli postgresql://localhost/$(basename $(pwd))_test'
+
+# Quick file operations
+alias fv='nvim $(fzf --preview="bat --color=always {}")'
+
+# Project navigation (only immediate project folders)
+alias cdp='cd $(find ${=PROJECT_PATHS:-$HOME/projects $HOME/code $HOME/work} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)'
+
+# Docker utilities
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias dclean='docker system prune -af --volumes'
+alias dlogs='docker compose logs -f'
+alias dexec='docker compose exec'
+
+# Colima management
+alias colima-start='colima start --cpu 4 --memory 8 --disk 60'
+alias colima-status='colima status'
+alias colima-stop='colima stop'
+alias colima-restart='colima restart'
 
 alias set_openrouter_key='export OPENROUTER_API_KEY=$(bw get password --nointeraction OPENROUTER_API_KEY 2>/dev/null)'
