@@ -1,0 +1,128 @@
+[
+  {
+    "context": "Dock",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown"
+    }
+  },
+  {
+    "context": "Editor && vim_mode == normal && !VimWaiting && !menu",
+    "bindings": {
+      // put key-bindings here if you want them to work only in normal mode
+      // Window movement bindings
+      // Ctrl jklk to move between panes
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-j": "workspace::ActivatePaneDown",
+
+      // +LSP
+      ", c a": "editor::ToggleCodeActions",
+      ", r n": "editor::Rename",
+      ", f f": "file_finder::Toggle",
+      "g d": "editor::GoToDefinition",
+      "g D": "editor::GoToDefinitionSplit",
+      "g i": "editor::GoToImplementation",
+      "g I": "editor::GoToImplementationSplit",
+      "g t": "editor::GoToTypeDefinition",
+      "g T": "editor::GoToTypeDefinitionSplit",
+      "g r": "editor::FindAllReferences",
+      "] d": "editor::GoToDiagnostic",
+      "[ d": "editor::GoToPreviousDiagnostic",
+
+      // +Git
+      // Git prev/next hunk
+      "] h": "editor::GoToHunk",
+      "[ h": "editor::GoToPreviousHunk",
+
+      // + Buffers
+      // Switch between buffers
+      "shift-h": "pane::ActivatePreviousItem",
+      "shift-l": "pane::ActivateNextItem",
+      // Close active panel
+      "ctrl-q": "pane::CloseActiveItem",
+      ", b d": "pane::CloseActiveItem",
+      // Close other items
+      ", b o": "pane::CloseInactiveItems",
+      // Show project panel with current file
+      ", e": "pane::RevealInProjectPanel",
+      ", a c": "agent::ToggleFocus"
+      // Toogle inline completions
+    }
+  },
+  {
+    "context": "Editor && (vim_mode == normal || vim_mode == visual) && !VimWaiting && !menu",
+    "bindings": {
+      // Open markdown preview
+      ", m p": "markdown::OpenPreview",
+      ", m P": "markdown::OpenPreviewToTheSide",
+
+      // Open recent project
+      ", f p": "projects::OpenRecent",
+      // Search word under cursor
+      ", f t": "pane::DeploySearch",
+
+      // Chat with AI
+      ", a c": "agent::ToggleFocus",
+      "cmd-i": "assistant::InlineAssist"
+    }
+  },
+  {
+    "context": "Terminal",
+    "bindings": {
+      "cmd-i": "assistant::InlineAssist"
+    }
+  },
+  {
+    "context": "Agent",
+    "bindings": {
+      "cmd-n": "agent::NewThread",
+      ", a h": "agent::OpenHistory",
+      "ctrl-h": "workspace::ActivatePaneLeft"
+    }
+  },
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "a": "project_panel::NewFile",
+      "A": "project_panel::NewDirectory",
+      "r": "project_panel::Rename",
+      "d": "project_panel::Delete",
+      "x": "project_panel::Cut",
+      "c": "project_panel::Copy",
+      "p": "project_panel::Paste",
+      "ctrl-v": "pane::SplitRight",
+      // Close project panel as project file panel on the right
+      ", e": "workspace::ToggleLeftDock",
+      "q": "workspace::ToggleLeftDock"
+    }
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      ", e": "workspace::ToggleLeftDock"
+    }
+  },
+
+  // Comment code
+  {
+    "context": "Editor && vim_mode == visual && !VimWaiting && !menu",
+    "bindings": {
+      // visual, visual line & visual block modes
+      "g c": "editor::ToggleComments",
+      "a q": "assistant::QuoteSelection"
+    }
+  },
+  // Better escape
+  {
+    "context": "Editor && vim_mode == insert && !menu",
+    "bindings": {
+      "j k": "vim::NormalBefore", // remap jk in insert mode to escape
+      "ctrl-i": "assistant::InlineAssist",
+      "ctrl-l": "editor::AcceptEditPrediction"
+    }
+  }
+]

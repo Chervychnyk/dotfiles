@@ -1,0 +1,68 @@
+layout {
+  pane size=1 borderless=true {
+    plugin location="file:$HOME/.config/zellij/plugins/zjstatus.wasm" {
+      // Kanagawa Wave theme colors
+      color_fg "#dcd7ba"
+      color_bg "#1f1f28"
+      color_black "#16161d"
+      color_red "#c34043"
+      color_green "#76946a"
+      color_yellow "#c0a36e"
+      color_blue "#7e9cd8"
+      color_magenta "#957fb8"
+      color_cyan "#6a9589"
+      color_white "#c8c093"
+      color_orange "#ffa066"
+      color_gray "#54546d"
+
+      format_left   "{mode} {tabs} #[fg=$green,bold]{session}"
+      format_center ""
+      format_right  "{command_git_branch} {datetime}"
+      format_space  ""
+
+      border_enabled  "false"
+      border_char     "─"
+      border_format   "#[fg=$gray]{char}"
+      border_position "top"
+      hide_frame_for_single_pane "true"
+
+      mode_normal  "#[fg=$bg,bg=$cyan,bold] NOR "
+      mode_locked  "#[fg=$bg,bg=$green,bold] LCK   "
+      mode_resize  "#[fg=$bg,bg=$red,bold] RSZ "
+      mode_pane    "#[fg=$bg,bg=$magenta,bold] PNE "
+      mode_tab     "#[fg=$bg,bg=$magenta,bold] TAB "
+      mode_scroll  "#[fg=$bg,bg=$yellow,bold] SCR "
+      mode_session "#[fg=$bg,bg=$yellow,bold] SSN "
+      mode_move    "#[fg=$bg,bg=$red,bold] MOV "
+      mode_tmux    "#[fg=$bg,bg=$green,bold] TMX "
+
+      // formatting for inactive tabs
+      tab_normal              "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$gray]█"
+      tab_normal_fullscreen   "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$gray]█"
+      tab_normal_sync         "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$gray]█"
+
+      // formatting for the current active tab
+      tab_active              "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$gray]█"
+      tab_active_fullscreen   "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$gray]█"
+      tab_active_sync         "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$gray]█"
+
+      // separator between the tabs
+      tab_separator           "#[bg=$bg] "
+
+      // indicators
+      tab_sync_indicator       "  "
+      tab_fullscreen_indicator "  "
+      tab_floating_indicator   " "
+
+      command_git_branch_command     "git rev-parse --abbrev-ref HEAD"
+      command_git_branch_format      "#[fg=$magenta,bold] {stdout} "
+      command_git_branch_interval    "10"
+      command_git_branch_rendermode  "static"
+
+      datetime        "#[fg=$gray,bold] {format} "
+      datetime_format "%A, %d %b %Y %H:%M"
+      datetime_timezone "Europe/Kyiv"
+    }
+  }
+  pane
+}

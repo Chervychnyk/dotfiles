@@ -1,0 +1,34 @@
+#!/bin/bash
+
+source "$CONFIG_DIR/colors.sh" # Loads all defined colors
+
+ITEM_DIR="$CONFIG_DIR/items" # Directory where the items are configured
+PLUGIN_DIR="$CONFIG_DIR/plugins" # Directory where all the plugin scripts are stored
+
+FONT="Hack Nerd Font" # Needs to have Regular, Bold, Semibold, Heavy and Black variants
+PADDINGS=4 # All paddings use this value (icon, label, background)
+
+# Setting up the general bar appearance
+source "$CONFIG_DIR/bar.sh"
+
+# Setting up default values
+source "$CONFIG_DIR/defaults.sh"
+
+# Left
+source "$ITEM_DIR/spaces.sh"
+source "$ITEM_DIR/front_app.sh"
+
+# Right
+source "$ITEM_DIR/calendar.sh"
+source "$ITEM_DIR/notifications.sh"
+source "$ITEM_DIR/network.sh"
+source "$ITEM_DIR/volume.sh"
+source "$ITEM_DIR/battery.sh"
+source "$ITEM_DIR/keyboard.sh"
+source "$ITEM_DIR/vpn.sh"
+# source "$ITEM_DIR/cron.sh"
+
+# Forcing all item scripts to run (never do this outside of sketchybarrc)
+sketchybar --update
+
+echo "sketchybar configuration loaded.."
