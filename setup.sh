@@ -163,7 +163,6 @@ link_file "$DOTFILES/wezterm"       "$HOME/.config/wezterm"
 link_file "$DOTFILES/ghostty"       "$HOME/.config/ghostty"
 
 link_file "$DOTFILES/.tmux.conf"    "$HOME/.tmux.conf"
-link_file "$DOTFILES/.config/tmux"  "$HOME/.config/tmux"
 link_file "$DOTFILES/zellij"        "$HOME/.config/zellij"
 
 link_file "$DOTFILES/.config/starship.toml" "$HOME/.config/starship.toml"
