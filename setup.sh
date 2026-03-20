@@ -121,13 +121,13 @@ brew update
 brew bundle --file="$DOTFILES/Brewfile"
 
 info "Installing custom TagLib 1.13.1 formula..."
-if brew list --versions taglib@1.13.1 >/dev/null 2>&1; then
-  success "taglib@1.13.1 already installed"
+if brew list --versions taglib-legacy >/dev/null 2>&1; then
+  success "taglib-legacy already installed"
 else
-  brew install "$DOTFILES/homebrew/Formula/taglib@1.13.1.rb"
-  success "Installed taglib@1.13.1"
+  brew install --formula "$DOTFILES/homebrew/Formula/taglib-legacy.rb"
+  success "Installed taglib-legacy"
 fi
-brew pin taglib@1.13.1 >/dev/null 2>&1 || true
+brew pin taglib-legacy >/dev/null 2>&1 || true
 
 brew cleanup
 success "Packages installed"

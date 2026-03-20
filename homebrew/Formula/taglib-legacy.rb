@@ -1,5 +1,5 @@
-class TaglibAT1131 < Formula
-  desc "Audio metadata library"
+class TaglibLegacy < Formula
+  desc "Audio metadata library (legacy 1.13.1 build)"
   homepage "https://taglib.org/"
   url "https://taglib.github.io/releases/taglib-1.13.1.tar.gz"
   sha256 "c8da2b10f1bfec2cd7dbfcd33f4a2338db0765d851a50583d410bacf055cfd0b"
@@ -16,6 +16,6 @@ class TaglibAT1131 < Formula
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/taglib-config --version")
+    assert_match "1.13.1", shell_output("#{bin}/taglib-config --version")
   end
 end

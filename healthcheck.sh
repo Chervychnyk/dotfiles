@@ -29,10 +29,10 @@ for cmd in brew git zsh nvim tmux zellij ghostty wezterm ssh gh mise docker coli
 done
 
 if command -v brew >/dev/null 2>&1; then
-  if brew list --versions taglib@1.13.1 >/dev/null 2>&1; then
-    ok "taglib@1.13.1 installed"
+  if brew list --versions taglib-legacy >/dev/null 2>&1; then
+    ok "taglib-legacy installed"
   else
-    warn "taglib@1.13.1 missing"
+    warn "taglib-legacy missing"
   fi
 fi
 

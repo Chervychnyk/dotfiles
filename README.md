@@ -36,7 +36,7 @@ After setup, run:
 
 - installs Homebrew if needed
 - installs formulae/casks from `Brewfile`
-- installs a custom Homebrew formula for `taglib@1.13.1`
+- installs a custom Homebrew formula for legacy TagLib 1.13.1 (`taglib-legacy`)
 - writes `~/.config/shell.local.env` with detected `HOMEBREW_PREFIX`
 - creates symlinks for tracked config files
 - installs Zim and NVM if missing
@@ -130,10 +130,10 @@ Examples of what belongs there:
 
 This repo vendors one custom formula:
 
-- `homebrew/Formula/taglib@1.13.1.rb`
+- `homebrew/Formula/taglib-legacy.rb`
 
-It is installed by `setup.sh` and pinned so Homebrew does not upgrade it.
-`~/.zshrc` also prefers `TAGLIB_DIR` from `taglib@1.13.1` when available.
+It is installed by `setup.sh` as `taglib-legacy` and pinned so Homebrew does not upgrade it.
+`~/.zshrc` also prefers `TAGLIB_DIR` from `taglib-legacy` when available.
 
 ## Colima / Docker on the new machine
 
