@@ -190,17 +190,6 @@ else
   success "Zim already installed"
 fi
 
-if [[ ! -d "$HOME/.nvm" ]]; then
-  info "Installing NVM..."
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-  export NVM_DIR="$HOME/.nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-  info "Installing latest Node..."
-  nvm install node
-  success "NVM + Node installed ($(node -v))"
-else
-  success "NVM already installed"
-fi
 
 mkdir -p "$HOME/projects" "$HOME/code" "$HOME/work"
 success "Project directories ready"

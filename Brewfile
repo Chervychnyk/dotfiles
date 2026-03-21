@@ -50,6 +50,7 @@ brew "zlib"           # Needed for some native builds
 # -----------------------------------------------------------------------------
 brew "colima"         # Docker Desktop alternative
 brew "docker"         # Docker CLI
+brew "docker-compose"
 brew "k9s"
 brew "kubectx"
 brew "lazydocker"     # Docker TUI

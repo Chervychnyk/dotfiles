@@ -6,7 +6,6 @@ zmodule ruby
 
 # Removed ohmyzsh git and kubectl plugins to avoid compdef errors
 zmodule ohmyzsh/ohmyzsh --root plugins/git
-zmodule ohmyzsh/ohmyzsh --root plugins/nvm
 zmodule ohmyzsh/ohmyzsh --root plugins/pyenv
 zmodule ohmyzsh/ohmyzsh --root plugins/ssh-agent
 zmodule ohmyzsh/ohmyzsh --root plugins/sudo
