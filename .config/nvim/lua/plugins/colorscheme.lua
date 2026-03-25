@@ -1,19 +1,12 @@
 return {
-  {
-    "rebelot/kanagawa.nvim",
-    priority = 1000,
-    config = function()
-      require("kanagawa").setup({
-        theme = "wave",
-        transparent = true,
-        overrides = function(colors)
-          local theme = colors.theme
-          return {
-            FloatBorder = { fg = theme.ui.special, bg = "none" },
-            PmenuSel = { fg = "none", bg = theme.ui.bg_p2 },
-          }
-        end,
-      })
-    end,
-  },
+  "neanias/everforest-nvim",
+  version = false,
+  lazy = false,
+  priority = 1000, -- make sure to load this before all the other start plugins
+  -- Optional; default configuration will be used if setup isn't called.
+  config = function()
+    require("everforest").setup({
+      background = "hard",
+    })
+  end,
 }

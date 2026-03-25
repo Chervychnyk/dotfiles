@@ -1,4 +1,4 @@
-font-family                = Fira Code
+font-family                = JetBrainsMono Nerd Font 
 font-size                  = 16
 adjust-cell-height         = 4
 macos-option-as-alt        = true
@@ -19,5 +19,5 @@ mouse-hide-while-typing = true
 
 scrollback-limit = 500000
 
-theme = Kanagawa Wave
+theme = Everforest Dark Hard
 keybind = shift+enter=text:\n

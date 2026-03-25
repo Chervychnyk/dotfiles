@@ -12,8 +12,7 @@ end
 
 -- This is where you actually apply your config choices
 
--- For example, changing the color scheme:
-config.color_scheme = 'Kanagawa (Gogh)'
+config.color_scheme = 'Everforest Dark Hard (Gogh)'
 config.font = wezterm.font "Hack Nerd Font Mono"
 config.font_size = 16
 config.line_height = 1.2

@@ -25,7 +25,7 @@ k9s:
     textWrap: false
     showTime: true
   ui:
-    skin: kanagawa
+    skin: everforest-dark
   keepMissingClusters: false
   thresholds:
     cpu:

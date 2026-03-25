@@ -1,19 +1,20 @@
 layout {
   pane size=1 borderless=true {
     plugin location="file:$HOME/.config/zellij/plugins/zjstatus.wasm" {
-      // Kanagawa Wave theme colors
-      color_fg "#dcd7ba"
-      color_bg "#1f1f28"
-      color_black "#16161d"
-      color_red "#c34043"
-      color_green "#76946a"
-      color_yellow "#c0a36e"
-      color_blue "#7e9cd8"
-      color_magenta "#957fb8"
-      color_cyan "#6a9589"
-      color_white "#c8c093"
-      color_orange "#ffa066"
-      color_gray "#54546d"
+      // Everforest Dark Hard theme colors
+      color_fg "#d3c6aa"
+      color_bg "#272e33"
+      color_black "#1e2326"
+      color_red "#e67e80"
+      color_green "#a7c080"
+      color_yellow "#dbbc7f"
+      color_blue "#7fbbb3"
+      color_magenta "#d699b6"
+      color_cyan "#83c092"
+      color_white "#d3c6aa"
+      color_orange "#e69875"
+      color_gray "#7A8478"
+      color_bg_alt "#2e383c"
 
       format_left   "{mode} #[fg=$green,bold]{session}"
       format_center "{tabs}"
@@ -39,14 +40,14 @@ layout {
       mode_tmux    "#[fg=$bg,bg=$green,bold] TMX "
 
       // formatting for inactive tabs
-      tab_normal              "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$gray]█"
-      tab_normal_fullscreen   "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$gray]█"
-      tab_normal_sync         "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$gray]█"
+      tab_normal              "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$bg_alt]█"
+      tab_normal_fullscreen   "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$bg_alt]█"
+      tab_normal_sync         "#[bg=$bg,fg=$gray]█#[bg=$gray,fg=$fg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$bg_alt]█"
 
       // formatting for the current active tab
-      tab_active              "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$gray]█"
-      tab_active_fullscreen   "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$gray]█"
-      tab_active_sync         "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$gray,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$gray]█"
+      tab_active              "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{floating_indicator}#[bg=$bg,fg=$bg_alt]█"
+      tab_active_fullscreen   "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{fullscreen_indicator}#[bg=$bg,fg=$bg_alt]█"
+      tab_active_sync         "#[bg=$bg,fg=$orange]█#[bg=$orange,fg=$bg,bold]{index} #[bg=$bg_alt,fg=$fg,bold] {name}{sync_indicator}#[bg=$bg,fg=$bg_alt]█"
 
       // separator between the tabs
       tab_separator           "#[bg=$bg] "

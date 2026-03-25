@@ -161,7 +161,7 @@ scrollback_lines_to_serialize 1000
 // Choose the theme that is specified in the themes section.
 // Default: default
 
-theme "kanagawa"
+theme "everforest-dark"
 
 // The name of the default layout to load on startup
 // Default: "default"

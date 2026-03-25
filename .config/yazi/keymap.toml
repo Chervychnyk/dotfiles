@@ -1,0 +1,77 @@
+# Yazi keymaps tailored for quick navigation in this dotfiles setup.
+# Archive actions below assume `ouch` is installed.
+
+# Quick jumps
+[[mgr.prepend_keymap]]
+on = ["g", "h"]
+run = "cd ~"
+desc = "Go to home"
+
+[[mgr.prepend_keymap]]
+on = ["g", "d"]
+run = "cd ~/dotfiles"
+desc = "Go to dotfiles"
+
+[[mgr.prepend_keymap]]
+on = ["g", "c"]
+run = "cd ~/.config"
+desc = "Go to ~/.config"
+
+[[mgr.prepend_keymap]]
+on = ["g", "D"]
+run = "cd ~/Downloads"
+desc = "Go to Downloads"
+
+[[mgr.prepend_keymap]]
+on = ["g", "t"]
+run = "cd /tmp"
+desc = "Go to /tmp"
+
+# Tabs
+[[mgr.prepend_keymap]]
+on = ["t", "n"]
+run = "tab_create --current"
+desc = "Create a new tab"
+
+[[mgr.prepend_keymap]]
+on = ["t", "h"]
+run = "tab_switch -1 --relative"
+desc = "Previous tab"
+
+[[mgr.prepend_keymap]]
+on = ["t", "l"]
+run = "tab_switch 1 --relative"
+desc = "Next tab"
+
+# Visibility toggle
+[[mgr.prepend_keymap]]
+on = ["."]
+run = "hidden toggle"
+desc = "Toggle hidden files"
+
+# Copy helpers
+[[mgr.prepend_keymap]]
+on = ["y", "p"]
+run = "copy path"
+desc = "Copy full path"
+
+[[mgr.prepend_keymap]]
+on = ["y", "f"]
+run = "copy filename"
+desc = "Copy file name"
+
+[[mgr.prepend_keymap]]
+on = ["y", "d"]
+run = "copy dirname"
+desc = "Copy parent directory path"
+
+# Archives (requires: brew install ouch)
+[[mgr.prepend_keymap]]
+on = ["E"]
+run = 'shell --block --confirm "ouch decompress -q \"$0\""'
+desc = "Extract archive here"
+
+[[mgr.prepend_keymap]]
+on = ["Z"]
+run = 'shell --block --confirm "name=\"$(basename \"$0\")\"; stem=\"${name%%.*}\"; ouch compress -q \"$0\" \"${stem}.zip\""'
+desc = "Compress hovered item to <name>.zip"
