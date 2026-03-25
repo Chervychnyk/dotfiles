@@ -10,6 +10,9 @@ alias torip='curl --socks5 localhost:9050 https://check.torproject.org |& grep "
 # Recursively delete `.DS_Store` files
 alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
 
+# Remove Syncthing conflict files (e.g. *.sync-conflict-20250305-205739-BV2V3SH.json)
+alias cleanup-sync-conflicts="find . -type f -name '*sync-conflict-*' -ls -delete"
+
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
 
@@ -48,3 +51,4 @@ alias colima-stop='colima stop'
 alias colima-restart='colima restart'
 
 alias set_openrouter_key='export OPENROUTER_API_KEY=$(bw get password --nointeraction OPENROUTER_API_KEY 2>/dev/null)'
+alias keka="/Applications/Keka.app/Contents/MacOS/Keka --cli"

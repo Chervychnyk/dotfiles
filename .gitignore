@@ -5,10 +5,14 @@ pi/agent/mcp-cache.json
 pi/agent/mcp-npx-cache.json
 pi/agent/run-history.jsonl
 pi/agent/.update-check
+pi/agent/bin/
+pi/agent/git/
 pi/agent/sessions/
+pi/history/
 pi/interview-sessions.json
 pi/interview-snapshots/
 pi/agent/mcp.json
+**/node_modules/
 *.backup.*
 *.local
 .env.secrets

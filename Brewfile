@@ -2,6 +2,7 @@ tap "meltylabs/tap"
 tap "sst/tap"
 tap "stripe/stripe-cli"
 tap "tw93/tap"
+tap "manaflow-ai/cmux"
 
 # -----------------------------------------------------------------------------
 # CLI tools
@@ -25,6 +26,7 @@ brew "starship"
 brew "tmux"
 brew "vim"
 brew "wget"
+brew "yazi"
 brew "yq"             # YAML processor
 brew "zellij"
 brew "zoxide"
@@ -74,6 +76,7 @@ brew "stripe"
 cask "anytype"
 cask "arc"
 cask "claude-code"
+cask "cmux"
 cask "cyberduck"
 cask "element"
 cask "figma"
@@ -97,6 +100,7 @@ cask "transmission"
 cask "via"
 cask "visual-studio-code"
 cask "wechatwebdevtools"
+cask "zed"
 cask "zoom"
 
 # -----------------------------------------------------------------------------
@@ -120,3 +124,4 @@ mas "Numbers", id: 409203825
 mas "Pages", id: 409201541
 mas "Telegram", id: 747648890
 mas "WeChat", id: 836500024
+mas "WireGuard", id: 1451685025  

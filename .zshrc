@@ -86,7 +86,7 @@ proj() {
   local -a roots
   local dir
   roots=(${=PROJECT_PATHS})
-  dir=$(find ${roots[@]} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf --height=40% --reverse --preview="ls -la {}")
+  dir=$(find ${roots[@]} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf --height=60% --reverse --preview="ls -la {}")
   if [[ -n "$dir" ]]; then
     cd "$dir"
   fi
@@ -94,7 +94,7 @@ proj() {
 
 # Search command history with fzf (alternative to atuin)
 fh() {
-  print -z $(fc -ln 1 | fzf --tac --no-sort --height=40% --reverse)
+  print -z $(fc -ln 1 | fzf --tac --no-sort --height=60% --reverse)
 }
 
 # Search and kill process
@@ -110,7 +110,7 @@ fkill() {
 fbr() {
   local branches branch
   branches=$(git branch -a | grep -v HEAD) &&
-  branch=$(echo "$branches" | fzf --height=40% --reverse +m) &&
+  branch=$(echo "$branches" | fzf --height=60% --reverse +m) &&
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
 
@@ -168,7 +168,7 @@ if command -v brew >/dev/null 2>&1; then
   # OpenSSL (openssl@3 — 1.1 is EOL since Sep 2023)
   if [[ -d "$HOMEBREW_PREFIX/opt/openssl@3" ]]; then
     export PATH="$HOMEBREW_PREFIX/opt/openssl@3/bin:$PATH"
-    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/openssl@3/lib:${LDFLAGS:-}"
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/openssl@3/lib ${LDFLAGS:-}"
     export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/openssl@3/include:${CPPFLAGS:-}"
     export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/openssl@3/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
     export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl@3"
@@ -176,14 +176,14 @@ if command -v brew >/dev/null 2>&1; then
 
   # Readline
   if [[ -d "$HOMEBREW_PREFIX/opt/readline" ]]; then
-    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/readline/lib:${LDFLAGS:-}"
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/readline/lib ${LDFLAGS:-}"
     export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/readline/include:${CPPFLAGS:-}"
     export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/readline/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
   fi
 
   # Libffi
   if [[ -d "$HOMEBREW_PREFIX/opt/libffi" ]]; then
-    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/libffi/lib:${LDFLAGS:-}"
+    export LDFLAGS="-L$HOMEBREW_PREFIX/opt/libffi/lib ${LDFLAGS:-}"
     export CPPFLAGS="-I$HOMEBREW_PREFIX/opt/libffi/include:${CPPFLAGS:-}"
     export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
   fi
@@ -207,11 +207,10 @@ fi
 # Kubernetes
 if [[ -z "${KUBECONFIG:-}" ]]; then
   typeset -a kubeconfigs
-  [[ -f "$HOME/.kube/config.argo" ]] && kubeconfigs+=("$HOME/.kube/config.argo")
-  [[ -f "$HOME/.kube/config.aws.auro" ]] && kubeconfigs+=("$HOME/.kube/config.aws.auro")
-  [[ -f "$HOME/.kube/config" ]] && kubeconfigs+=("$HOME/.kube/config")
+  kubeconfigs=("$HOME"/.kube/config*(N-.))
   [[ ${#kubeconfigs[@]} -gt 0 ]] && export KUBECONFIG="${(j/:/)kubeconfigs}"
 fi
+export K9S_FOLDER="$HOME/Library/Application Support/k9s"
 
 # Bitwarden
 export BITWARDENCLI_APPDATA_DIR=~/.bw/

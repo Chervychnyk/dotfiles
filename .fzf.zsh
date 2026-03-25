@@ -1,8 +1,8 @@
-# FZF Color Theme — Kanagawa Wave
+# FZF Color Theme — Everforest Dark Hard
 export FZF_DEFAULT_OPTS="
-        --color=bg+:#2d4f67,bg:#1f1f28,spinner:#7aa89f,hl:#e82424
-        --color=fg:#dcd7ba,header:#7e9cd8,info:#6a9589,pointer:#ffa066
-        --color=marker:#98bb6c,fg+:#dcd7ba,prompt:#957fb8,hl+:#e82424
-        --color=border:#54546d,gutter:#1f1f28,query:#dcd7ba
-        --color=disabled:#727169,preview-bg:#1f1f28,preview-border:#54546d
-        --height=40% --layout=reverse --border --margin=1 --padding=1"
+        --color=bg+:#374145,bg:#272e33,spinner:#83c092,hl:#e67e80
+        --color=fg:#d3c6aa,header:#7fbbb3,info:#a7c080,pointer:#e69875
+        --color=marker:#a7c080,fg+:#eddeb5,prompt:#d699b6,hl+:#e67e80
+        --color=border:#4f5b58,gutter:#272e33,query:#d3c6aa
+        --color=disabled:#859289,preview-bg:#272e33,preview-border:#4f5b58
+        --height=60% --layout=reverse --border --margin=1 --padding=1"
