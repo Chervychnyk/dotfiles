@@ -1,0 +1,157 @@
+{
+  "enabled": true,
+  "features": {
+    "policies": true,
+    "permissionGate": true
+  },
+  "policies": {
+    "rules": [
+      {
+        "id": "secret-files",
+        "description": "Block access to env files and Rails secret material",
+        "patterns": [
+          {
+            "pattern": ".env"
+          },
+          {
+            "pattern": ".env.*"
+          },
+          {
+            "pattern": "config/secrets.yml"
+          },
+          {
+            "pattern": "config/application.yml"
+          },
+          {
+            "pattern": "config/credentials.yml"
+          },
+          {
+            "pattern": "config/credentials.yml.enc"
+          },
+          {
+            "pattern": "config/master.key"
+          },
+          {
+            "pattern": "config/credentials/*.key"
+          },
+          {
+            "pattern": "config/credentials/*.yml.enc"
+          }
+        ],
+        "allowedPatterns": [
+          {
+            "pattern": ".env.example"
+          },
+          {
+            "pattern": ".env.sample"
+          },
+          {
+            "pattern": ".env.template"
+          }
+        ],
+        "protection": "noAccess",
+        "onlyIfExists": true,
+        "blockMessage": "Accessing {file} is not allowed. This file likely contains secrets. Explain why you need it, and ask the user to inspect or edit it manually if needed."
+      },
+      {
+        "id": "key-material",
+        "description": "Block certificates, private keys, and SSH material",
+        "patterns": [
+          {
+            "pattern": "*.pem"
+          },
+          {
+            "pattern": "*.key"
+          },
+          {
+            "pattern": "*.p12"
+          },
+          {
+            "pattern": "*.pfx"
+          },
+          {
+            "pattern": "*.jks"
+          },
+          {
+            "pattern": "*.keystore"
+          },
+          {
+            "pattern": "*.der"
+          },
+          {
+            "pattern": "*.crt"
+          },
+          {
+            "pattern": "*.cer"
+          },
+          {
+            "pattern": "id_rsa"
+          },
+          {
+            "pattern": "id_rsa.pub"
+          },
+          {
+            "pattern": "**/.ssh/**"
+          }
+        ],
+        "protection": "noAccess",
+        "onlyIfExists": true,
+        "blockMessage": "Accessing {file} is not allowed. This path may contain sensitive key material."
+      },
+      {
+        "id": "git-internals",
+        "description": "Block direct access to Git internals",
+        "patterns": [
+          {
+            "pattern": "**/.git/**"
+          }
+        ],
+        "protection": "noAccess",
+        "onlyIfExists": true,
+        "blockMessage": "Accessing {file} is not allowed. Use git commands instead of reading or editing Git internals directly."
+      },
+      {
+        "id": "node-modules",
+        "description": "Prevent modifying vendored dependencies",
+        "patterns": [
+          {
+            "pattern": "**/node_modules/**"
+          }
+        ],
+        "protection": "readOnly",
+        "onlyIfExists": true,
+        "blockMessage": "Writing to {file} is not allowed. Dependencies under node_modules are read-only."
+      }
+    ]
+  },
+  "permissionGate": {
+    "requireConfirmation": true,
+    "autoDenyPatterns": [
+      {
+        "pattern": "git add -A",
+        "regex": true
+      },
+      {
+        "pattern": "git add .",
+        "regex": true
+      },
+      {
+        "pattern": "git push --force",
+        "regex": true
+      },
+      {
+        "pattern": "git push -f",
+        "regex": true
+      },
+      {
+        "pattern": "--force-with-lease",
+        "regex": true
+      },
+      {
+        "pattern": "\\brm\\b[^\\n]*\\*",
+        "regex": true
+      }
+    ]
+  },
+  "version": "0.8.0-20260228"
+}
