@@ -9,7 +9,8 @@ Local Pi extension providing:
 
 - `index.ts` — extension entrypoint; registers both tools
 - `shared.ts` — common helpers for timeouts, truncation, whitespace cleanup, and render badges
-- `web-search.ts` — `web_search` tool implementation and provider selection
+- `web-search.ts` — `web_search` tool implementation
+- `providers/` — search provider resolution plus one file per provider implementation
 - `web-fetch.ts` — `web_fetch` tool implementation
 
 ## Development
@@ -20,9 +21,13 @@ Run lightweight structural tests:
 npm test
 ```
 
+Note: tests are structural/unit-style checks for parsing and guard helpers. They do not hit live provider APIs.
+
 ## Search providers
 
 `web_search` supports:
+
+- result limit is clamped to a maximum of 20 across providers for more consistent behavior
 
 - `auto` — default; picks the first configured provider below
 - `brave` — requires `BRAVE_API_KEY`
@@ -43,6 +48,8 @@ You can choose a provider via:
 
 - `provider` tool parameter
 - `PI_WEB_SEARCH_PROVIDER`
+
+Provider API response formats may evolve over time; the extension uses minimal response-shape parsing to keep this maintainable. Each provider now lives in its own file under `providers/` for easier maintenance.
 
 ## Fetch guardrails
 

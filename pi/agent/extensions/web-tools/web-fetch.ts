@@ -71,7 +71,6 @@ export type FetchDetails = {
   originalChars?: number
   cloudflareBypassed?: boolean
   contentLength?: number
-  parseGuardTriggered?: boolean
 }
 
 function getDocumentMetadata(html: string, url: string) {
@@ -487,7 +486,6 @@ export function registerWebFetchTool(pi: ExtensionAPI) {
               contentType,
               contentLength,
               cloudflareBypassed,
-              parseGuardTriggered: false,
             } satisfies FetchDetails,
           }
         }
@@ -595,7 +593,6 @@ export function registerWebFetchTool(pi: ExtensionAPI) {
             maxChars: output.maxChars,
             originalChars: output.originalChars,
             cloudflareBypassed,
-            parseGuardTriggered: false,
           } satisfies FetchDetails,
         }
       } catch (error) {

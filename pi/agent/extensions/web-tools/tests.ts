@@ -1,14 +1,19 @@
 import assert from 'node:assert/strict'
+import { parseBraveResults } from './providers/brave.ts'
 import {
-  SEARCH_PROVIDER_NAMES,
-  dedupeResults,
-  parseBraveResults,
   parseDuckDuckGoResults,
-  parseGoogleResults,
-  parseKagiResults,
-  parseSearXngResults,
   unwrapDuckDuckGoUrl,
-} from './web-search.ts'
+} from './providers/duckduckgo.ts'
+import { parseGoogleResults } from './providers/google.ts'
+import { parseKagiResults } from './providers/kagi.ts'
+import {
+  MAX_SEARCH_LIMIT,
+  clampSearchLimit,
+  dedupeResults,
+} from './providers/shared.ts'
+import { parseSearXngResults } from './providers/searxng.ts'
+import { resolveSearchProvider } from './providers/index.ts'
+import { SEARCH_PROVIDER_NAMES } from './providers/types.ts'
 import { parseContentLength, shouldApplyHtmlGuard } from './web-fetch.ts'
 
 function testSearchHelpers() {
@@ -20,6 +25,10 @@ function testSearchHelpers() {
     'google',
     'searxng',
   ])
+  assert.equal(MAX_SEARCH_LIMIT, 20)
+  assert.equal(clampSearchLimit(0), 1)
+  assert.equal(clampSearchLimit(5), 5)
+  assert.equal(clampSearchLimit(999), 20)
 
   assert.equal(
     unwrapDuckDuckGoUrl(
@@ -87,6 +96,30 @@ function testSearchHelpers() {
   assert.equal(searxng[0]?.snippet, 'desc')
 }
 
+function testProviderResolution() {
+  assert.equal(resolveSearchProvider('duckduckgo', {}).name, 'duckduckgo')
+  assert.equal(
+    resolveSearchProvider(undefined, { BRAVE_API_KEY: 'x' }).name,
+    'brave',
+  )
+  assert.equal(
+    resolveSearchProvider(undefined, { KAGI_API_KEY: 'x' }).name,
+    'kagi',
+  )
+  assert.equal(
+    resolveSearchProvider(undefined, {
+      GOOGLE_API_KEY: 'x',
+      GOOGLE_CX: 'y',
+    }).name,
+    'google',
+  )
+  assert.equal(
+    resolveSearchProvider(undefined, { SEARXNG_URL: 'https://searx.test' }).name,
+    'searxng',
+  )
+  assert.throws(() => resolveSearchProvider('nope' as never, {}), /Unknown search provider/)
+}
+
 function testFetchGuardHelpers() {
   assert.equal(parseContentLength(null), undefined)
   assert.equal(parseContentLength('1234'), 1234)
@@ -99,5 +132,6 @@ function testFetchGuardHelpers() {
 }
 
 testSearchHelpers()
+testProviderResolution()
 testFetchGuardHelpers()
 console.log('tests ok')
