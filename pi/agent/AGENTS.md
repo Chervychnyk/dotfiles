@@ -44,6 +44,13 @@ Prefer subagents for substantial work:
 - `scout` — read-only reconnaissance and architecture mapping
 - `planner` — phased plans, ambiguity reduction, grouped questions
 - `worker` — focused implementation once scope is clear
+- `reviewer` — read-only implementation review and regression detection
+
+Reusable global chains:
+
+- `bugfix` — scout → planner → worker → reviewer
+- `feature` — scout → planner → worker → reviewer
+- `refactor` — scout → planner → worker → reviewer
 
 If tasks are independent, delegate in parallel.
 
