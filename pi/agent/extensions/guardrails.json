@@ -17,10 +17,19 @@
             "pattern": ".env.*"
           },
           {
+            "pattern": ".npmrc"
+          },
+          {
+            "pattern": ".pypirc"
+          },
+          {
             "pattern": "config/secrets.yml"
           },
           {
             "pattern": "config/application.yml"
+          },
+          {
+            "pattern": "config/database.yml"
           },
           {
             "pattern": "config/credentials.yml"
@@ -36,6 +45,9 @@
           },
           {
             "pattern": "config/credentials/*.yml.enc"
+          },
+          {
+            "pattern": "**/.bundle/config"
           }
         ],
         "allowedPatterns": [
@@ -47,11 +59,23 @@
           },
           {
             "pattern": ".env.template"
+          },
+          {
+            "pattern": ".env.test"
+          },
+          {
+            "pattern": "*.example.env"
+          },
+          {
+            "pattern": "*.sample.env"
+          },
+          {
+            "pattern": "*.test.env"
           }
         ],
         "protection": "noAccess",
         "onlyIfExists": true,
-        "blockMessage": "Accessing {file} is not allowed. This file likely contains secrets. Explain why you need it, and ask the user to inspect or edit it manually if needed."
+        "blockMessage": "Accessing {file} is not allowed. This file likely contains secrets or machine-local credentials. Explain why you need it, and ask the user to inspect or edit it manually if needed."
       },
       {
         "id": "key-material",
@@ -111,30 +135,115 @@
         "blockMessage": "Accessing {file} is not allowed. Use git commands instead of reading or editing Git internals directly."
       },
       {
-        "id": "node-modules",
+        "id": "dependency-vendors",
         "description": "Prevent modifying vendored dependencies",
         "patterns": [
           {
             "pattern": "**/node_modules/**"
+          },
+          {
+            "pattern": "vendor/bundle/**"
+          },
+          {
+            "pattern": "vendor/cache/**"
+          },
+          {
+            "pattern": ".venv/**"
+          },
+          {
+            "pattern": "venv/**"
+          },
+          {
+            "pattern": "site-packages/**"
           }
         ],
         "protection": "readOnly",
         "onlyIfExists": true,
-        "blockMessage": "Writing to {file} is not allowed. Dependencies under node_modules are read-only."
+        "blockMessage": "Writing to {file} is not allowed. Vendored dependencies and virtual environments are read-only."
+      },
+      {
+        "id": "generated-lockfiles-and-schema",
+        "description": "Require explicit intent for lockfiles and generated schema artifacts",
+        "patterns": [
+          {
+            "pattern": "Gemfile.lock"
+          },
+          {
+            "pattern": "package-lock.json"
+          },
+          {
+            "pattern": "pnpm-lock.yaml"
+          },
+          {
+            "pattern": "yarn.lock"
+          },
+          {
+            "pattern": "poetry.lock"
+          },
+          {
+            "pattern": "Pipfile.lock"
+          },
+          {
+            "pattern": "uv.lock"
+          },
+          {
+            "pattern": "db/schema.rb"
+          },
+          {
+            "pattern": "db/structure.sql"
+          }
+        ],
+        "protection": "readOnly",
+        "onlyIfExists": true,
+        "blockMessage": "Writing to {file} is blocked by default because it is usually generated or managed by tooling. Prefer changing source files and regenerating it intentionally."
       }
     ]
   },
   "permissionGate": {
     "requireConfirmation": true,
+    "patterns": [
+      {
+        "pattern": "docker compose down -v",
+        "description": "remove containers, networks, and volumes"
+      },
+      {
+        "pattern": "docker-compose down -v",
+        "description": "remove containers, networks, and volumes"
+      },
+      {
+        "pattern": "docker system prune",
+        "description": "remove Docker data globally"
+      },
+      {
+        "pattern": "docker volume rm",
+        "description": "delete Docker volumes"
+      },
+      {
+        "pattern": "dropdb",
+        "description": "drop a database"
+      },
+      {
+        "pattern": "rails db:drop",
+        "description": "drop the Rails database"
+      },
+      {
+        "pattern": "rails db:reset",
+        "description": "drop and recreate the Rails database"
+      },
+      {
+        "pattern": "rails db:purge",
+        "description": "purge the Rails database"
+      },
+      {
+        "pattern": "psql -c DROP DATABASE",
+        "description": "drop a Postgres database"
+      },
+      {
+        "pattern": "kubectl delete",
+        "description": "delete Kubernetes resources"
+      }
+    ],
     "autoDenyPatterns": [
-      {
-        "pattern": "git add -A",
-        "regex": true
-      },
-      {
-        "pattern": "git add .",
-        "regex": true
-      },
       {
         "pattern": "git push --force",
         "regex": true
