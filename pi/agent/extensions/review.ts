@@ -52,21 +52,37 @@ const REVIEW_STATE_TYPE = 'review-session'
 type ReviewSessionState = {
   active: boolean
   originId?: string
+  targetHint?: string
+  originalGitBranch?: string
+  originalGitRef?: string
 }
 
-function setReviewWidget(ctx: ExtensionContext, active: boolean) {
+type GitRefSnapshot = {
+  branch?: string
+  ref: string
+}
+
+function setReviewWidget(
+  ctx: ExtensionContext,
+  state: ReviewSessionState | undefined,
+) {
   if (!ctx.hasUI) return
-  if (!active) {
+  if (!state?.active) {
+    ctx.ui.setStatus('review', undefined)
     ctx.ui.setWidget('review', undefined)
     return
   }
 
+  const statusLabel = state.targetHint
+    ? `🔍 ${state.targetHint}`
+    : '🔍 review active'
+  ctx.ui.setStatus('review', statusLabel)
+
   ctx.ui.setWidget('review', (_tui, theme) => {
-    const text = new Text(
-      theme.fg('warning', 'Review session active, return with /end-review'),
-      0,
-      0,
-    )
+    const label = state.targetHint
+      ? `Review session active: ${state.targetHint} • /end-review`
+      : 'Review session active, return with /end-review'
+    const text = new Text(theme.fg('warning', label), 0, 0)
     return {
       render(width: number) {
         return text.render(width)
@@ -92,14 +108,14 @@ function getReviewState(ctx: ExtensionContext): ReviewSessionState | undefined {
 function applyReviewState(ctx: ExtensionContext) {
   const state = getReviewState(ctx)
 
-  if (state?.active && state.originId) {
+  if (state?.active) {
     reviewOriginId = state.originId
-    setReviewWidget(ctx, true)
+    setReviewWidget(ctx, state)
     return
   }
 
   reviewOriginId = undefined
-  setReviewWidget(ctx, false)
+  setReviewWidget(ctx, undefined)
 }
 
 // Review target types (matching Codex's approach)
@@ -108,8 +124,22 @@ type ReviewTarget =
   | { type: 'baseBranch'; branch: string }
   | { type: 'commit'; sha: string; title?: string }
   | { type: 'custom'; instructions: string }
-  | { type: 'pullRequest'; prNumber: number; baseBranch: string; title: string }
+  | {
+      type: 'pullRequest'
+      prNumber: number
+      repo?: string
+      baseBranch: string
+      headBranch: string
+      title: string
+    }
   | { type: 'folder'; paths: string[] }
+
+type PullRequestReviewTarget = Extract<ReviewTarget, { type: 'pullRequest' }>
+
+type PullRequestReference = {
+  prNumber: number
+  repo?: string
+}
 
 // Prompts (adapted from Codex)
 const UNCOMMITTED_PROMPT =
@@ -346,26 +376,34 @@ async function hasPendingChanges(pi: ExtensionAPI): Promise<boolean> {
 }
 
 /**
- * Parse a PR reference (URL or number) and return the PR number
+ * Parse a PR reference (URL or number) and return the PR number plus repo, when available.
  */
-function parsePrReference(ref: string): number | null {
+function parsePrReference(ref: string): PullRequestReference | null {
   const trimmed = ref.trim()
 
   // Try as a number first
-  const num = parseInt(trimmed, 10)
-  if (!isNaN(num) && num > 0) {
-    return num
+  if (/^\d+$/.test(trimmed)) {
+    return { prNumber: parseInt(trimmed, 10) }
   }
 
   // Try to extract from GitHub URL
   // Formats: https://github.com/owner/repo/pull/123
   //          github.com/owner/repo/pull/123
-  const urlMatch = trimmed.match(/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/)
+  const urlMatch = trimmed.match(
+    /github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)(?:[/?#].*)?$/,
+  )
   if (urlMatch) {
-    return parseInt(urlMatch[1], 10)
+    return {
+      repo: urlMatch[1],
+      prNumber: parseInt(urlMatch[2], 10),
+    }
   }
 
   return null
+}
+
+function formatPullRequestRef(prNumber: number, repo?: string): string {
+  return repo ? `${repo}#${prNumber}` : `PR #${prNumber}`
 }
 
 /**
@@ -373,15 +411,15 @@ function parsePrReference(ref: string): number | null {
  */
 async function getPrInfo(
   pi: ExtensionAPI,
-  prNumber: number,
+  pr: PullRequestReference,
 ): Promise<{ baseBranch: string; title: string; headBranch: string } | null> {
-  const { stdout, code } = await pi.exec('gh', [
-    'pr',
-    'view',
-    String(prNumber),
-    '--json',
-    'baseRefName,title,headRefName',
-  ])
+  const args = ['pr', 'view', String(pr.prNumber)]
+  if (pr.repo) {
+    args.push('-R', pr.repo)
+  }
+  args.push('--json', 'baseRefName,title,headRefName')
+
+  const { stdout, code } = await pi.exec('gh', args)
 
   if (code !== 0) return null
 
@@ -402,13 +440,14 @@ async function getPrInfo(
  */
 async function checkoutPr(
   pi: ExtensionAPI,
-  prNumber: number,
+  target: PullRequestReviewTarget,
 ): Promise<{ success: boolean; error?: string }> {
-  const { stdout, stderr, code } = await pi.exec('gh', [
-    'pr',
-    'checkout',
-    String(prNumber),
-  ])
+  const args = ['pr', 'checkout', String(target.prNumber)]
+  if (target.repo) {
+    args.push('-R', target.repo)
+  }
+
+  const { stdout, stderr, code } = await pi.exec('gh', args)
 
   if (code !== 0) {
     return {
@@ -429,6 +468,44 @@ async function getCurrentBranch(pi: ExtensionAPI): Promise<string | null> {
     return stdout.trim()
   }
   return null
+}
+
+async function getGitRefSnapshot(
+  pi: ExtensionAPI,
+): Promise<GitRefSnapshot | null> {
+  const branch = await getCurrentBranch(pi)
+  if (branch) {
+    return { branch, ref: branch }
+  }
+
+  const { stdout, code } = await pi.exec('git', ['rev-parse', 'HEAD'])
+  if (code === 0 && stdout.trim()) {
+    return { ref: stdout.trim() }
+  }
+
+  return null
+}
+
+async function restoreGitRef(
+  pi: ExtensionAPI,
+  snapshot: GitRefSnapshot,
+): Promise<{ success: boolean; error?: string }> {
+  const args = snapshot.branch
+    ? ['switch', snapshot.branch]
+    : ['checkout', snapshot.ref]
+  const { stdout, stderr, code } = await pi.exec('git', args)
+
+  if (code !== 0) {
+    return {
+      success: false,
+      error:
+        stderr ||
+        stdout ||
+        `Failed to restore git state to ${snapshot.branch ?? snapshot.ref}`,
+    }
+  }
+
+  return { success: true }
 }
 
 /**
@@ -536,7 +613,7 @@ function getUserFacingHint(target: ReviewTarget): string {
         target.title.length > 30
           ? target.title.slice(0, 27) + '...'
           : target.title
-      return `PR #${target.prNumber}: ${shortTitle}`
+      return `${formatPullRequestRef(target.prNumber, target.repo)}: ${shortTitle}`
     }
 
     case 'folder': {
@@ -898,11 +975,21 @@ export default function reviewExtension(pi: ExtensionAPI) {
     return { type: 'custom', instructions: result.trim() }
   }
 
+  function tokenizeArgs(value: string): string[] {
+    const tokens: string[] = []
+    const pattern = /"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|(\S+)/g
+
+    for (const match of value.matchAll(pattern)) {
+      const token = (match[1] ?? match[2] ?? match[3] ?? '').trim()
+      if (!token) continue
+      tokens.push(token.replace(/\\(["'])/g, '$1'))
+    }
+
+    return tokens
+  }
+
   function parseReviewPaths(value: string): string[] {
-    return value
-      .split(/\s+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
+    return tokenizeArgs(value)
   }
 
   /**
@@ -923,31 +1010,21 @@ export default function reviewExtension(pi: ExtensionAPI) {
     return { type: 'folder', paths }
   }
 
-  /**
-   * Show PR input and handle checkout
-   */
-  async function showPrInput(
+  async function resolvePrTargetFromRef(
     ctx: ExtensionContext,
+    ref: string,
   ): Promise<ReviewTarget | null> {
-    // First check for pending changes that would prevent branch switching
+    // First check for pending changes
     if (await hasPendingChanges(pi)) {
       ctx.ui.notify(
-        'Cannot checkout PR: you have uncommitted changes. Please commit or stash them first.',
+        'Cannot review a PR: you have uncommitted changes. Please commit or stash them first.',
         'error',
       )
       return null
     }
 
-    // Get PR reference from user
-    const prRef = await ctx.ui.editor(
-      'Enter PR number or URL (e.g. 123 or https://github.com/owner/repo/pull/123):',
-      '',
-    )
-
-    if (!prRef?.trim()) return null
-
-    const prNumber = parsePrReference(prRef)
-    if (!prNumber) {
+    const parsedRef = parsePrReference(ref)
+    if (!parsedRef) {
       ctx.ui.notify(
         'Invalid PR reference. Enter a number or GitHub PR URL.',
         'error',
@@ -955,44 +1032,43 @@ export default function reviewExtension(pi: ExtensionAPI) {
       return null
     }
 
-    // Get PR info from GitHub
-    ctx.ui.notify(`Fetching PR #${prNumber} info...`, 'info')
-    const prInfo = await getPrInfo(pi, prNumber)
+    const prLabel = formatPullRequestRef(parsedRef.prNumber, parsedRef.repo)
+    ctx.ui.notify(`Fetching ${prLabel} info...`, 'info')
+    const prInfo = await getPrInfo(pi, parsedRef)
 
     if (!prInfo) {
       ctx.ui.notify(
-        `Could not find PR #${prNumber}. Make sure gh is authenticated and the PR exists.`,
+        `Could not find ${prLabel}. Make sure gh is authenticated and the PR exists.`,
         'error',
       )
       return null
     }
-
-    // Check again for pending changes (in case something changed)
-    if (await hasPendingChanges(pi)) {
-      ctx.ui.notify(
-        'Cannot checkout PR: you have uncommitted changes. Please commit or stash them first.',
-        'error',
-      )
-      return null
-    }
-
-    // Checkout the PR
-    ctx.ui.notify(`Checking out PR #${prNumber}...`, 'info')
-    const checkoutResult = await checkoutPr(pi, prNumber)
-
-    if (!checkoutResult.success) {
-      ctx.ui.notify(`Failed to checkout PR: ${checkoutResult.error}`, 'error')
-      return null
-    }
-
-    ctx.ui.notify(`Checked out PR #${prNumber} (${prInfo.headBranch})`, 'info')
 
     return {
       type: 'pullRequest',
-      prNumber,
+      prNumber: parsedRef.prNumber,
+      repo: parsedRef.repo,
       baseBranch: prInfo.baseBranch,
+      headBranch: prInfo.headBranch,
       title: prInfo.title,
     }
+  }
+
+  /**
+   * Show PR input and resolve the review target.
+   * The actual checkout happens only after the review mode is confirmed.
+   */
+  async function showPrInput(
+    ctx: ExtensionContext,
+  ): Promise<ReviewTarget | null> {
+    const prRef = await ctx.ui.editor(
+      'Enter PR number or URL (e.g. 123 or https://github.com/owner/repo/pull/123):',
+      '',
+    )
+
+    if (!prRef?.trim()) return null
+
+    return resolvePrTargetFromRef(ctx, prRef)
   }
 
   /**
@@ -1012,11 +1088,47 @@ export default function reviewExtension(pi: ExtensionAPI) {
       return
     }
 
+    const hint = getUserFacingHint(target)
+    let originalGitSnapshot: GitRefSnapshot | null = null
+
+    if (target.type === 'pullRequest') {
+      if (await hasPendingChanges(pi)) {
+        ctx.ui.notify(
+          'Cannot checkout PR: you have uncommitted changes. Please commit or stash them first.',
+          'error',
+        )
+        return
+      }
+
+      originalGitSnapshot = await getGitRefSnapshot(pi)
+      if (!originalGitSnapshot) {
+        ctx.ui.notify('Failed to determine current git branch/commit.', 'error')
+        return
+      }
+
+      const prLabel = formatPullRequestRef(target.prNumber, target.repo)
+      ctx.ui.notify(`Checking out ${prLabel}...`, 'info')
+      const checkoutResult = await checkoutPr(pi, target)
+
+      if (!checkoutResult.success) {
+        ctx.ui.notify(
+          `Failed to checkout ${prLabel}: ${checkoutResult.error}`,
+          'error',
+        )
+        return
+      }
+
+      ctx.ui.notify(`Checked out ${prLabel} (${target.headBranch})`, 'info')
+    }
+
     // Handle fresh session mode
     if (useFreshSession) {
       // Store current position (where we'll return to)
       const originId = ctx.sessionManager.getLeafId() ?? undefined
       if (!originId) {
+        if (originalGitSnapshot) {
+          await restoreGitRef(pi, originalGitSnapshot)
+        }
         ctx.ui.notify(
           'Failed to determine review origin. Try again from a session with messages.',
           'error',
@@ -1035,6 +1147,9 @@ export default function reviewExtension(pi: ExtensionAPI) {
       )
 
       if (!firstUserMessage) {
+        if (originalGitSnapshot) {
+          await restoreGitRef(pi, originalGitSnapshot)
+        }
         ctx.ui.notify('No user message found in session', 'error')
         reviewOriginId = undefined
         return
@@ -1048,11 +1163,17 @@ export default function reviewExtension(pi: ExtensionAPI) {
           label: 'code-review',
         })
         if (result.cancelled) {
+          if (originalGitSnapshot) {
+            await restoreGitRef(pi, originalGitSnapshot)
+          }
           reviewOriginId = undefined
           return
         }
       } catch (error) {
         // Clean up state if navigation fails
+        if (originalGitSnapshot) {
+          await restoreGitRef(pi, originalGitSnapshot)
+        }
         reviewOriginId = undefined
         ctx.ui.notify(
           `Failed to start review: ${error instanceof Error ? error.message : String(error)}`,
@@ -1067,18 +1188,39 @@ export default function reviewExtension(pi: ExtensionAPI) {
       // Clear the editor (navigating to user message fills it with the message text)
       ctx.ui.setEditorText('')
 
-      // Show widget indicating review is active
-      setReviewWidget(ctx, true)
-
-      // Persist review state so tree navigation can restore/reset it
-      pi.appendEntry(REVIEW_STATE_TYPE, {
+      const reviewState: ReviewSessionState = {
         active: true,
         originId: lockedOriginId,
-      })
+        targetHint: hint,
+        originalGitBranch: originalGitSnapshot?.branch,
+        originalGitRef: originalGitSnapshot?.ref,
+      }
+
+      // Show widget indicating review is active
+      setReviewWidget(ctx, reviewState)
+
+      // Persist review state so tree navigation can restore/reset it
+      pi.appendEntry(REVIEW_STATE_TYPE, reviewState)
+    } else if (originalGitSnapshot) {
+      const reviewState: ReviewSessionState = {
+        active: true,
+        targetHint: hint,
+        originalGitBranch: originalGitSnapshot.branch,
+        originalGitRef: originalGitSnapshot.ref,
+      }
+
+      setReviewWidget(ctx, reviewState)
+      pi.appendEntry(REVIEW_STATE_TYPE, reviewState)
+
+      const originalTarget =
+        originalGitSnapshot.branch ?? originalGitSnapshot.ref
+      ctx.ui.notify(
+        `Reviewing in the current session. Use /end-review to switch back to ${originalTarget} when you're done.`,
+        'info',
+      )
     }
 
     const prompt = await buildReviewPrompt(pi, target)
-    const hint = getUserFacingHint(target)
     const projectGuidelines = await loadProjectReviewGuidelines(ctx.cwd)
 
     // Combine the review rubric with the specific prompt
@@ -1104,7 +1246,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
   ): ReviewTarget | { type: 'pr'; ref: string } | null {
     if (!args?.trim()) return null
 
-    const parts = args.trim().split(/\s+/)
+    const parts = tokenizeArgs(args)
     const subcommand = parts[0]?.toLowerCase()
 
     switch (subcommand) {
@@ -1131,7 +1273,7 @@ export default function reviewExtension(pi: ExtensionAPI) {
       }
 
       case 'folder': {
-        const paths = parseReviewPaths(parts.slice(1).join(' '))
+        const paths = parts.slice(1)
         if (paths.length === 0) return null
         return { type: 'folder', paths }
       }
@@ -1144,62 +1286,6 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
       default:
         return null
-    }
-  }
-
-  /**
-   * Handle PR checkout and return a ReviewTarget (or null on failure)
-   */
-  async function handlePrCheckout(
-    ctx: ExtensionContext,
-    ref: string,
-  ): Promise<ReviewTarget | null> {
-    // First check for pending changes
-    if (await hasPendingChanges(pi)) {
-      ctx.ui.notify(
-        'Cannot checkout PR: you have uncommitted changes. Please commit or stash them first.',
-        'error',
-      )
-      return null
-    }
-
-    const prNumber = parsePrReference(ref)
-    if (!prNumber) {
-      ctx.ui.notify(
-        'Invalid PR reference. Enter a number or GitHub PR URL.',
-        'error',
-      )
-      return null
-    }
-
-    // Get PR info
-    ctx.ui.notify(`Fetching PR #${prNumber} info...`, 'info')
-    const prInfo = await getPrInfo(pi, prNumber)
-
-    if (!prInfo) {
-      ctx.ui.notify(
-        `Could not find PR #${prNumber}. Make sure gh is authenticated and the PR exists.`,
-        'error',
-      )
-      return null
-    }
-
-    // Checkout the PR
-    ctx.ui.notify(`Checking out PR #${prNumber}...`, 'info')
-    const checkoutResult = await checkoutPr(pi, prNumber)
-
-    if (!checkoutResult.success) {
-      ctx.ui.notify(`Failed to checkout PR: ${checkoutResult.error}`, 'error')
-      return null
-    }
-
-    ctx.ui.notify(`Checked out PR #${prNumber} (${prInfo.headBranch})`, 'info')
-
-    return {
-      type: 'pullRequest',
-      prNumber,
-      baseBranch: prInfo.baseBranch,
-      title: prInfo.title,
     }
   }
 
@@ -1236,11 +1322,10 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
       if (parsed) {
         if (parsed.type === 'pr') {
-          // Handle PR checkout (async operation)
-          target = await handlePrCheckout(ctx, parsed.ref)
+          target = await resolvePrTargetFromRef(ctx, parsed.ref)
           if (!target) {
             ctx.ui.notify(
-              'PR review failed. Returning to review menu.',
+              'PR review setup failed. Returning to review menu.',
               'warning',
             )
           }
@@ -1350,20 +1435,32 @@ Instructions:
       return reviewOriginId
     }
 
-    if (state?.active) {
-      setReviewWidget(ctx, false)
-      pi.appendEntry(REVIEW_STATE_TYPE, { active: false })
-      ctx.ui.notify(
-        'Review state was missing origin info; cleared review status.',
-        'warning',
-      )
-    }
-
     return undefined
   }
 
+  async function restoreReviewGitState(
+    ctx: ExtensionContext,
+    snapshot: GitRefSnapshot | null,
+  ): Promise<boolean> {
+    if (!snapshot) return true
+
+    const targetLabel = snapshot.branch ?? snapshot.ref
+    ctx.ui.notify(`Restoring git state to ${targetLabel}...`, 'info')
+    const result = await restoreGitRef(pi, snapshot)
+
+    if (!result.success) {
+      ctx.ui.notify(
+        `Returned to the original session, but failed to restore git state: ${result.error}`,
+        'error',
+      )
+      return false
+    }
+
+    return true
+  }
+
   function clearReviewState(ctx: ExtensionContext) {
-    setReviewWidget(ctx, false)
+    setReviewWidget(ctx, undefined)
     reviewOriginId = undefined
     pi.appendEntry(REVIEW_STATE_TYPE, { active: false })
   }
@@ -1379,13 +1476,28 @@ Instructions:
       return
     }
 
+    const reviewState = getReviewState(ctx)
+    const originalGitSnapshot = reviewState?.originalGitRef
+      ? {
+          branch: reviewState.originalGitBranch,
+          ref: reviewState.originalGitRef,
+        }
+      : null
+
     const originId = getActiveReviewOrigin(ctx)
     if (!originId) {
-      if (!getReviewState(ctx)?.active) {
-        ctx.ui.notify(
-          'Not in a review branch (use /review first, or review was started in current session mode)',
-          'info',
-        )
+      if (reviewState?.active && originalGitSnapshot) {
+        if (!(await restoreReviewGitState(ctx, originalGitSnapshot))) {
+          return
+        }
+
+        clearReviewState(ctx)
+        ctx.ui.notify('Review complete! Restored original git state.', 'info')
+        return
+      }
+
+      if (!reviewState?.active) {
+        ctx.ui.notify('Not in an active review session (use /review first)', 'info')
       }
       return
     }
@@ -1424,6 +1536,10 @@ Instructions:
             `Failed to return: ${error instanceof Error ? error.message : String(error)}`,
             'error',
           )
+          return
+        }
+
+        if (!(await restoreReviewGitState(ctx, originalGitSnapshot))) {
           return
         }
 
@@ -1478,6 +1594,10 @@ Instructions:
           'Navigation cancelled. Use /end-review to try again.',
           'info',
         )
+        return
+      }
+
+      if (!(await restoreReviewGitState(ctx, originalGitSnapshot))) {
         return
       }
 
