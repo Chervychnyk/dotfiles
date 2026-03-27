@@ -23,6 +23,20 @@ function isProviderName(value: string): value is SearchProviderName {
   return SEARCH_PROVIDER_NAMES.includes(value as SearchProviderName)
 }
 
+function getAutoProviders(env: NodeJS.ProcessEnv) {
+  const providers = []
+
+  if (env.BRAVE_API_KEY) providers.push(createBraveProvider(env.BRAVE_API_KEY))
+  if (env.KAGI_API_KEY) providers.push(createKagiProvider(env.KAGI_API_KEY))
+  if (env.GOOGLE_API_KEY && env.GOOGLE_CX) {
+    providers.push(createGoogleProvider(env.GOOGLE_API_KEY, env.GOOGLE_CX))
+  }
+  if (env.SEARXNG_URL) providers.push(createSearXngProvider(env.SEARXNG_URL))
+  providers.push(createDuckDuckGoProvider())
+
+  return providers
+}
+
 function fromExplicitProvider(
   explicit: ConcreteSearchProviderName,
   env: NodeJS.ProcessEnv,
@@ -55,7 +69,7 @@ function fromExplicitProvider(
   }
 }
 
-export function resolveSearchProvider(
+export function resolveSearchProviders(
   providerName: SearchProviderName | undefined,
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -70,14 +84,15 @@ export function resolveSearchProvider(
   }
 
   if (rawExplicit === 'auto') {
-    if (env.BRAVE_API_KEY) return createBraveProvider(env.BRAVE_API_KEY)
-    if (env.KAGI_API_KEY) return createKagiProvider(env.KAGI_API_KEY)
-    if (env.GOOGLE_API_KEY && env.GOOGLE_CX) {
-      return createGoogleProvider(env.GOOGLE_API_KEY, env.GOOGLE_CX)
-    }
-    if (env.SEARXNG_URL) return createSearXngProvider(env.SEARXNG_URL)
-    return createDuckDuckGoProvider()
+    return getAutoProviders(env)
   }
 
-  return fromExplicitProvider(rawExplicit, env)
+  return [fromExplicitProvider(rawExplicit, env)]
+}
+
+export function resolveSearchProvider(
+  providerName: SearchProviderName | undefined,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  return resolveSearchProviders(providerName, env)[0]!
 }

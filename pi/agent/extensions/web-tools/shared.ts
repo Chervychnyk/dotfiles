@@ -10,6 +10,11 @@ import path from 'node:path'
 
 export const DEFAULT_TIMEOUT = 10_000
 
+const TOOL_CACHE = new Map<
+  string,
+  { value: unknown; storedAt: number; expiresAt: number }
+>()
+
 export type TruncationResult = {
   text: string
   truncated: boolean
@@ -32,7 +37,12 @@ export function normalizeWhitespace(value: string): string {
 
 export function createAbortController(timeoutMs: number, signal?: AbortSignal) {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+  let timedOut = false
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
 
   const onAbort = () => controller.abort()
   if (signal) {
@@ -45,6 +55,7 @@ export function createAbortController(timeoutMs: number, signal?: AbortSignal) {
 
   return {
     controller,
+    wasTimedOut: () => timedOut,
     cleanup: () => {
       clearTimeout(timeoutId)
       signal?.removeEventListener('abort', onAbort)
@@ -128,6 +139,50 @@ export function truncateForModel(
   }
 }
 
+function pruneExpiredCacheEntries(now = Date.now()) {
+  for (const [key, entry] of TOOL_CACHE.entries()) {
+    if (entry.expiresAt <= now) TOOL_CACHE.delete(key)
+  }
+}
+
+function stableSerialize(value: unknown): string {
+  if (value === null || value === undefined) return JSON.stringify(value)
+  if (typeof value !== 'object') return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerialize(item)).join(',')}]`
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>).sort(
+    ([left], [right]) => left.localeCompare(right),
+  )
+  return `{${entries
+    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`)
+    .join(',')}}`
+}
+
+export function buildCacheKey(parts: unknown) {
+  return stableSerialize(parts)
+}
+
+export function getCachedValue<T>(key: string, now = Date.now()) {
+  pruneExpiredCacheEntries(now)
+  const entry = TOOL_CACHE.get(key)
+  if (!entry) return undefined
+  return {
+    value: structuredClone(entry.value) as T,
+    ageMs: Math.max(0, now - entry.storedAt),
+  }
+}
+
+export function setCachedValue<T>(key: string, value: T, ttlMs: number, now = Date.now()) {
+  pruneExpiredCacheEntries(now)
+  TOOL_CACHE.set(key, {
+    value: structuredClone(value),
+    storedAt: now,
+    expiresAt: now + ttlMs,
+  })
+}
+
 export function truncateText(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
 }
@@ -140,13 +195,20 @@ export function renderBadges(
     selector?: string
     extractionMethod?: string
     cloudflareBypassed?: boolean
+    fallbackUsed?: boolean
+    aborted?: boolean
+    cached?: boolean
   },
 ) {
   const badges: string[] = []
+  if (details.aborted) badges.push(theme.fg('warning', 'aborted'))
+  if (details.cached) badges.push(theme.fg('accent', 'cached'))
   if (details.charLimited) badges.push(theme.fg('warning', 'chars-limited'))
   if (details.truncated) badges.push(theme.fg('warning', 'truncated'))
   if (details.cloudflareBypassed)
     badges.push(theme.fg('warning', 'cf-retry'))
+  if (details.fallbackUsed)
+    badges.push(theme.fg('warning', 'fallback'))
   if (details.extractionMethod)
     badges.push(theme.fg('muted', details.extractionMethod))
   if (details.selector)
