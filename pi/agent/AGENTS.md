@@ -31,6 +31,7 @@ Load these with `read` when the task matches:
 - `agents-md` — create or tighten repo agent instructions
 - `cmux` — manage tabs/workspaces and long-running terminal tasks in cmux
 - `learn-codebase` — discover instructions, conventions, and change points
+- `ralph-wiggum` — guidance for long-running iterative loops via the local Ralph extension
 - `web-search` — thin wrapper that points the model to the `web_search` extension tool
 - `web-fetch` — thin wrapper that points the model to the `web_fetch` extension tool
 
@@ -51,27 +52,33 @@ If tasks are independent, delegate in parallel.
 Installed local extensions live in `pi/agent/extensions/`:
 
 - `auto-session-name.ts`
-- `clipboard.ts`
+- `clipboard.ts` — clipboard helper tool
 - `cmux.ts`
 - `custom-footer.ts`
+- `docker-context.ts` — Docker Compose discovery plus `docker_services`, `docker_exec`, `docker_logs`
+- `github-lookup.ts` — `github_lookup` research tool using `gh`
 - `go-to-bed.ts`
-- `handoff.ts`
-- `memory-mode.ts`
-- `modes.ts`
-- `ralph-wiggum.ts`
-- `review.ts`
-- `session-breakdown.ts`
-- `usage-bar.ts`
+- `handoff.ts` — `/handoff` command and `handoff` tool
+- `memory-mode.ts` — `/mem`, `/remember`
+- `modes.ts` — `/mode`
+- `ralph-wiggum.ts` — `/ralph`, `/ralph-stop`, `ralph_start`, `ralph_done`
+- `review.ts` — `/review`, `/end-review`
+- `sandbox/`
+- `session-breakdown.ts` — `/session-breakdown`
+- `usage-bar.ts` — `/usage`
 - `web-tools/` — custom tools: `web_search`, `web_fetch`
 - `guardrails.json`
 
 Use extension-backed workflows when relevant:
 
-- `web_search` for current web search results
-- `web_fetch` for fetching and extracting URL content
+- `web_search` / `web_fetch` for web research and content extraction
+- `docker_services` before backend commands when Docker Compose may be involved
+- `docker_exec` for Rails, Python, Node, and other app commands that should run in containers
+- `docker_logs` for targeted service log inspection
+- `github_lookup` for repository discovery and GitHub codebase research via `gh`
 - `handoff` for clean session transitions
-- `review` for review-focused iteration
-- `ralph_start` / `ralph_done` for long-running iterative loops
+- `review` / `end-review` for review-focused iteration
+- `ralph_start` / `ralph_done` or `/ralph` for long-running iterative loops
 - cmux tooling when work benefits from multiple managed terminals
 
 ## Current Pi Configuration
@@ -79,6 +86,7 @@ Use extension-backed workflows when relevant:
 From `pi/agent/settings.json` and `pi/agent/modes.json`:
 
 - Default provider/model: `openai-codex` / `gpt-5.4`
+- Default thinking level: `high`
 - Modes:
   - `rush` → `anthropic / claude-haiku-4-5`
   - `smart` → `anthropic / claude-opus-4-6`
@@ -88,12 +96,13 @@ From `pi/agent/settings.json` and `pi/agent/modes.json`:
   - `npm:pi-interview`
   - `npm:pi-mcp-adapter`
   - `npm:@aliou/pi-guardrails`
-  - `git:github.com/HazAT/pi-interactive-subagents`
+  - `npm:pi-subagents`
 
 ## Research Guidance
 
 - Prefer `web_search` + `web_fetch` extension tools for web lookup and content extraction.
 - Wrapper skills `web-search` and `web-fetch` remain available for discoverability and `/skill:` usage.
+- Prefer `github_lookup` for GitHub repository research.
 - Prefer `mcp` tools for configured external systems when they provide direct access.
 - When working on Pi itself, read the relevant Pi docs and follow linked `.md` references before changing code.
 

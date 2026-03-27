@@ -132,13 +132,33 @@ export default function (pi: ExtensionAPI) {
     return raw as LoopState
   }
 
+  function parseStateContent(
+    ctx: ExtensionContext,
+    filePath: string,
+    content: string,
+  ): LoopState | null {
+    try {
+      return migrateState(JSON.parse(content))
+    } catch {
+      if (ctx.hasUI) {
+        const relativePath = path.relative(ctx.cwd, filePath) || filePath
+        ctx.ui.notify(
+          `Ignoring invalid Ralph state file: ${relativePath}`,
+          'warning',
+        )
+      }
+      return null
+    }
+  }
+
   function loadState(
     ctx: ExtensionContext,
     name: string,
     archived = false,
   ): LoopState | null {
-    const content = tryRead(getPath(ctx, name, '.state.json', archived))
-    return content ? migrateState(JSON.parse(content)) : null
+    const filePath = getPath(ctx, name, '.state.json', archived)
+    const content = tryRead(filePath)
+    return content ? parseStateContent(ctx, filePath, content) : null
   }
 
   function saveState(
@@ -159,10 +179,42 @@ export default function (pi: ExtensionAPI) {
       .readdirSync(dir)
       .filter((f) => f.endsWith('.state.json'))
       .map((f) => {
-        const content = tryRead(path.join(dir, f))
-        return content ? migrateState(JSON.parse(content)) : null
+        const filePath = path.join(dir, f)
+        const content = tryRead(filePath)
+        return content ? parseStateContent(ctx, filePath, content) : null
       })
       .filter((s): s is LoopState => s !== null)
+  }
+
+  function getActiveLoops(ctx: ExtensionContext): LoopState[] {
+    return listLoops(ctx).filter((loop) => loop.status === 'active')
+  }
+
+  function pauseOtherActiveLoops(
+    ctx: ExtensionContext,
+    keepLoopName: string,
+  ): string[] {
+    const paused: string[] = []
+
+    for (const loop of getActiveLoops(ctx)) {
+      if (loop.name === keepLoopName) continue
+      loop.status = 'paused'
+      loop.active = false
+      saveState(ctx, loop)
+      paused.push(loop.name)
+    }
+
+    if (currentLoop && currentLoop !== keepLoopName && paused.includes(currentLoop)) {
+      currentLoop = null
+    }
+
+    return paused
+  }
+
+  function shouldReflectOnCurrentIteration(state: LoopState): boolean {
+    if (state.reflectEvery <= 0 || state.iteration <= 1) return false
+    if ((state.iteration - 1) % state.reflectEvery !== 0) return false
+    return state.lastReflectionAt === state.iteration || state.lastReflectionAt === 0
   }
 
   // --- Loop state transitions ---
@@ -308,8 +360,21 @@ export default function (pi: ExtensionAPI) {
 
   // --- Arg parsing ---
 
+  function tokenizeArgs(value: string): string[] {
+    const tokens: string[] = []
+    const pattern = /"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|(\S+)/g
+
+    for (const match of value.matchAll(pattern)) {
+      const token = (match[1] ?? match[2] ?? match[3] ?? '').trim()
+      if (!token) continue
+      tokens.push(token.replace(/\\(["'])/g, '$1'))
+    }
+
+    return tokens
+  }
+
   function parseArgs(argsStr: string) {
-    const tokens = argsStr.match(/(?:[^\s"]+|"[^"]*")+/g) || []
+    const tokens = tokenizeArgs(argsStr)
     const result = {
       name: '',
       maxIterations: 50,
@@ -331,7 +396,7 @@ export default function (pi: ExtensionAPI) {
         result.reflectEvery = parseInt(next, 10) || 0
         i++
       } else if (tok === '--reflect-instructions' && next) {
-        result.reflectInstructions = next.replace(/^"|"$/g, '')
+        result.reflectInstructions = next
         i++
       } else if (!tok.startsWith('--')) {
         result.name = tok
@@ -394,15 +459,24 @@ export default function (pi: ExtensionAPI) {
         lastReflectionAt: 0,
       }
 
-      saveState(ctx, state)
-      currentLoop = loopName
-      updateUI(ctx)
-
       const content = tryRead(fullPath)
       if (!content) {
         ctx.ui.notify(`Could not read task file: ${taskFile}`, 'error')
         return
       }
+
+      const pausedLoops = pauseOtherActiveLoops(ctx, loopName)
+      saveState(ctx, state)
+      currentLoop = loopName
+      updateUI(ctx)
+
+      if (pausedLoops.length > 0) {
+        ctx.ui.notify(
+          `Paused other active Ralph loop(s): ${pausedLoops.join(', ')}`,
+          'info',
+        )
+      }
+
       pi.sendUserMessage(buildPrompt(state, content, false))
     },
 
@@ -451,34 +525,27 @@ export default function (pi: ExtensionAPI) {
         return
       }
 
-      // Pause current loop if different
-      if (currentLoop && currentLoop !== loopName) {
-        const curr = loadState(ctx, currentLoop)
-        if (curr) pauseLoop(ctx, curr)
-      }
-
-      state.status = 'active'
-      state.active = true
-      state.iteration++
-      saveState(ctx, state)
-      currentLoop = loopName
-      updateUI(ctx)
-
-      ctx.ui.notify(
-        `Resumed: ${loopName} (iteration ${state.iteration})`,
-        'info',
-      )
-
       const content = tryRead(path.resolve(ctx.cwd, state.taskFile))
       if (!content) {
         ctx.ui.notify(`Could not read task file: ${state.taskFile}`, 'error')
         return
       }
 
-      const needsReflection =
-        state.reflectEvery > 0 &&
-        state.iteration > 1 &&
-        (state.iteration - 1) % state.reflectEvery === 0
+      const pausedLoops = pauseOtherActiveLoops(ctx, loopName)
+
+      state.status = 'active'
+      state.active = true
+      saveState(ctx, state)
+      currentLoop = loopName
+      updateUI(ctx)
+
+      const resumeMessage =
+        pausedLoops.length > 0
+          ? `Resumed: ${loopName} (iteration ${state.iteration}). Paused: ${pausedLoops.join(', ')}`
+          : `Resumed: ${loopName} (iteration ${state.iteration})`
+      ctx.ui.notify(resumeMessage, 'info')
+
+      const needsReflection = shouldReflectOnCurrentIteration(state)
       pi.sendUserMessage(buildPrompt(state, content, needsReflection))
     },
 
@@ -622,11 +689,6 @@ export default function (pi: ExtensionAPI) {
             .then((confirmed) => {
               if (confirmed) run()
             })
-        } else {
-          ctx.ui.notify(
-            `Run /ralph nuke --yes to confirm. ${warning}`,
-            'warning',
-          )
         }
         return
       }
@@ -718,6 +780,12 @@ Examples:
     label: 'Start Ralph Loop',
     description:
       'Start a long-running development loop. Use for complex multi-iteration tasks.',
+    promptSnippet:
+      'Start a persistent multi-iteration development loop with pacing and reflection controls.',
+    promptGuidelines: [
+      'Use this tool when the user explicitly wants an iterative loop, autonomous repeated passes, or paced multi-step execution.',
+      'After starting a loop, continue each finished iteration with ralph_done unless the completion marker has already been emitted.',
+    ],
     parameters: Type.Object({
       name: Type.String({ description: "Loop name (e.g., 'refactor-auth')" }),
       taskContent: Type.String({
@@ -767,6 +835,7 @@ Examples:
         lastReflectionAt: 0,
       }
 
+      const pausedLoops = pauseOtherActiveLoops(ctx, loopName)
       saveState(ctx, state)
       currentLoop = loopName
       updateUI(ctx)
@@ -779,7 +848,10 @@ Examples:
         content: [
           {
             type: 'text',
-            text: `Started loop "${loopName}" (max ${state.maxIterations} iterations).`,
+            text:
+              pausedLoops.length > 0
+                ? `Started loop "${loopName}" (max ${state.maxIterations} iterations). Paused: ${pausedLoops.join(', ')}.`
+                : `Started loop "${loopName}" (max ${state.maxIterations} iterations).`,
           },
         ],
         details: {},
@@ -793,6 +865,12 @@ Examples:
     label: 'Ralph Iteration Done',
     description:
       "Signal that you've completed this iteration of the Ralph loop. Call this after making progress to get the next iteration prompt. Do NOT call this if you've output the completion marker.",
+    promptSnippet:
+      'Advance an active Ralph loop after completing the current iteration.',
+    promptGuidelines: [
+      'Call this after making real iteration progress so Ralph can queue the next prompt.',
+      'Do not call this if there is no active loop, if pending messages are already queued, or if the completion marker has already been emitted.',
+    ],
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       if (!currentLoop) {
@@ -842,9 +920,7 @@ Examples:
         }
       }
 
-      const needsReflection =
-        state.reflectEvery > 0 &&
-        (state.iteration - 1) % state.reflectEvery === 0
+      const needsReflection = shouldReflectOnCurrentIteration(state)
       if (needsReflection) state.lastReflectionAt = state.iteration
 
       saveState(ctx, state)
@@ -952,14 +1028,28 @@ Examples:
   })
 
   pi.on('session_start', async (_event, ctx) => {
-    const active = listLoops(ctx).filter((l) => l.status === 'active')
+    const active = getActiveLoops(ctx)
+    let pausedLoops: string[] = []
+
+    if (active.length > 1) {
+      const keep = active[0]!
+      pausedLoops = pauseOtherActiveLoops(ctx, keep.name)
+      currentLoop = keep.name
+    } else {
+      currentLoop = active[0]?.name ?? null
+    }
+
     if (active.length > 0 && ctx.hasUI) {
-      const lines = active.map(
+      const lines = getActiveLoops(ctx).map(
         (l) =>
           `  • ${l.name} (iteration ${l.iteration}${l.maxIterations > 0 ? `/${l.maxIterations}` : ''})`,
       )
+      const normalizedNotice =
+        pausedLoops.length > 0
+          ? `\n\nPaused extra active loops to keep one active loop: ${pausedLoops.join(', ')}`
+          : ''
       ctx.ui.notify(
-        `Active Ralph loops:\n${lines.join('\n')}\n\nUse /ralph resume <name> to continue`,
+        `Active Ralph loops:\n${lines.join('\n')}\n\nUse /ralph resume <name> to continue${normalizedNotice}`,
         'info',
       )
     }
