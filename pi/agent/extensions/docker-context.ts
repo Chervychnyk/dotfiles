@@ -106,6 +106,8 @@ async function streamCommandInDir(
   signal?: AbortSignal,
   onUpdate?: (update: { content: Array<{ type: 'text'; text: string }>; details?: Record<string, unknown> }) => void,
 ): Promise<{ code: number; stdout: string; stderr: string }> {
+  // Use spawn here instead of pi.exec because docker_exec/docker_logs need
+  // incremental stdout/stderr updates while the command is still running.
   return new Promise((resolve, reject) => {
     const child = spawn(args[0]!, args.slice(1), {
       cwd,
@@ -116,6 +118,8 @@ async function streamCommandInDir(
     let stdout = ''
     let stderr = ''
     let lastUpdateAt = 0
+    let settled = false
+    let forceKillTimer: NodeJS.Timeout | undefined
 
     const emitUpdate = (force = false) => {
       const now = Date.now()
@@ -130,9 +134,29 @@ async function streamCommandInDir(
       })
     }
 
+    const clearForceKillTimer = () => {
+      if (!forceKillTimer) return
+      clearTimeout(forceKillTimer)
+      forceKillTimer = undefined
+    }
+
+    const scheduleForceKill = () => {
+      clearForceKillTimer()
+      forceKillTimer = setTimeout(() => {
+        try { child.kill('SIGKILL') } catch {}
+      }, 1000)
+      forceKillTimer.unref()
+    }
+
     const abort = () => {
+      if (settled) return
       child.kill('SIGTERM')
-      setTimeout(() => child.kill('SIGKILL'), 1000).unref()
+      scheduleForceKill()
+    }
+
+    const cleanup = () => {
+      clearForceKillTimer()
+      signal?.removeEventListener('abort', abort)
     }
 
     if (signal) {
@@ -150,8 +174,16 @@ async function streamCommandInDir(
       emitUpdate()
     })
 
-    child.on('error', reject)
+    child.on('error', (error) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(error)
+    })
     child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      cleanup()
       emitUpdate(true)
       resolve({ code: code ?? 0, stdout, stderr })
     })

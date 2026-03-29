@@ -6,9 +6,9 @@ import {
   CustomEditor,
   ModelSelectorComponent,
   SettingsManager,
+  getAgentDir,
 } from '@mariozechner/pi-coding-agent'
 import path from 'node:path'
-import os from 'node:os'
 import fs from 'node:fs/promises'
 
 // =============================================================================
@@ -112,20 +112,8 @@ const SIMPLE_MODE_COLOR_ANSI: Record<SimpleModeColor, string> = {
 // File/path helpers
 // =============================================================================
 
-function expandUserPath(p: string): string {
-  if (p === '~') return os.homedir()
-  if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2))
-  return p
-}
-
-function getGlobalAgentDir(): string {
-  const env = process.env.PI_CODING_AGENT_DIR
-  if (env) return expandUserPath(env)
-  return path.join(os.homedir(), '.pi', 'agent')
-}
-
 function getGlobalModesPath(): string {
-  return path.join(getGlobalAgentDir(), 'modes.json')
+  return path.join(getAgentDir(), 'modes.json')
 }
 
 function getProjectModesPath(cwd: string): string {
@@ -939,7 +927,7 @@ function validateModeNameOrError(
 async function pickModelForModeUI(
   ctx: ExtensionContext,
   spec: ModeSpec,
-): Promise<{ provider: string; modelId: string } | undefined> {
+): Promise<{ provider: string; modelId: string } | null | undefined> {
   if (!ctx.hasUI) return undefined
 
   const settingsManager = SettingsManager.inMemory()
@@ -949,7 +937,7 @@ async function pickModelForModeUI(
       : ctx.model
   const scopedModels: Array<{ model: any; thinkingLevel: string }> = []
 
-  return ctx.ui.custom<{ provider: string; modelId: string } | undefined>(
+  return ctx.ui.custom<{ provider: string; modelId: string } | null>(
     (tui, _theme, _keybindings, done) => {
       const selector = new ModelSelectorComponent(
         tui,
@@ -958,7 +946,7 @@ async function pickModelForModeUI(
         ctx.modelRegistry as any,
         scopedModels as any,
         (model) => done({ provider: model.provider, modelId: model.id }),
-        () => done(undefined),
+        () => done(null),
       )
       return selector
     },

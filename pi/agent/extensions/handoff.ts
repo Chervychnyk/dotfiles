@@ -178,8 +178,8 @@ async function generateHandoffPrompt(
     MAX_SERIALIZED_CHARS,
   )
 
-  const apiKey = await ctx.modelRegistry.getApiKey(handoffModel)
-  if (!apiKey) {
+  const auth = await ctx.modelRegistry.getApiKeyAndHeaders(handoffModel)
+  if (!auth.ok || !auth.apiKey) {
     return fallbackPrompt(sessionId, goal, conversationText)
   }
 
@@ -195,7 +195,13 @@ async function generateHandoffPrompt(
     const response = await complete(
       handoffModel,
       { messages: [request], tools: [EXTRACTION_TOOL] },
-      { apiKey, signal, toolChoice: 'any', maxTokens: 1200 },
+      {
+        apiKey: auth.apiKey,
+        headers: auth.headers,
+        signal,
+        toolChoice: 'any',
+        maxTokens: 1200,
+      },
     )
 
     if (response.stopReason === 'aborted') return null

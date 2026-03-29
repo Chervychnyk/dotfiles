@@ -8,12 +8,11 @@
  * - Reset countdowns
  */
 
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
+import { getAgentDir, type ExtensionAPI } from '@mariozechner/pi-coding-agent'
 import { visibleWidth } from '@mariozechner/pi-tui'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { execSync } from 'node:child_process'
 
 // ============================================================================
 // Types
@@ -43,6 +42,11 @@ interface UsageSnapshot {
 // ============================================================================
 // Status Polling
 // ============================================================================
+
+const PI_AUTH_PATH = path.join(getAgentDir(), 'auth.json')
+const HOME_DIR = process.env.HOME || os.homedir()
+const GEMINI_OAUTH_CREDS_PATH = path.join(HOME_DIR, '.gemini', 'oauth_creds.json')
+const CODEX_HOME = process.env.CODEX_HOME || path.join(HOME_DIR, '.codex')
 
 const STATUS_URLS: Record<string, string> = {
   anthropic: 'https://status.anthropic.com/api/v2/status.json',
@@ -130,39 +134,55 @@ async function fetchGeminiStatus(): Promise<ProviderStatus> {
 // Claude Usage
 // ============================================================================
 
-function loadClaudeToken(): string | undefined {
+async function runCommand(
+  pi: ExtensionAPI,
+  command: string,
+  args: string[],
+  timeout?: number,
+) {
+  const result = await pi.exec(command, args, { timeout }).catch(() => null)
+  if (!result || result.killed) return null
+  return result
+}
+
+async function loadClaudeToken(pi: ExtensionAPI): Promise<string | undefined> {
   // Try pi's auth.json first (has user:profile scope)
-  const piAuthPath = path.join(os.homedir(), '.pi', 'agent', 'auth.json')
   try {
-    if (fs.existsSync(piAuthPath)) {
-      const data = JSON.parse(fs.readFileSync(piAuthPath, 'utf-8'))
+    if (fs.existsSync(PI_AUTH_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
       if (data.anthropic?.access) return data.anthropic.access
     }
   } catch {}
 
-  // Fallback to Claude CLI keychain (macOS)
+  // Fallback to Claude CLI keychain (macOS only)
+  if (process.platform !== 'darwin') return undefined
+
+  const result = await runCommand(
+    pi,
+    'security',
+    ['find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+    5000,
+  )
+  if (!result || result.code !== 0) return undefined
+
   try {
-    const keychainData = execSync(
-      'security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null',
-      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] },
-    ).trim()
-    if (keychainData) {
-      const parsed = JSON.parse(keychainData)
-      const scopes = parsed.claudeAiOauth?.scopes || []
-      if (
-        scopes.includes('user:profile') &&
-        parsed.claudeAiOauth?.accessToken
-      ) {
-        return parsed.claudeAiOauth.accessToken
-      }
+    const keychainData = result.stdout.trim()
+    if (!keychainData) return undefined
+    const parsed = JSON.parse(keychainData)
+    const scopes = parsed.claudeAiOauth?.scopes || []
+    if (
+      scopes.includes('user:profile') &&
+      parsed.claudeAiOauth?.accessToken
+    ) {
+      return parsed.claudeAiOauth.accessToken
     }
   } catch {}
 
   return undefined
 }
 
-async function fetchClaudeUsage(): Promise<UsageSnapshot> {
-  const token = loadClaudeToken()
+async function fetchClaudeUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
+  const token = await loadClaudeToken(pi)
   if (!token) {
     return {
       provider: 'anthropic',
@@ -242,10 +262,9 @@ async function fetchClaudeUsage(): Promise<UsageSnapshot> {
 function loadCopilotRefreshToken(): string | undefined {
   // The copilot_internal/user endpoint needs the GitHub OAuth token (ghu_*),
   // NOT the Copilot session token (tid=*). The refresh token IS the GitHub OAuth token.
-  const authPath = path.join(os.homedir(), '.pi', 'agent', 'auth.json')
   try {
-    if (fs.existsSync(authPath)) {
-      const data = JSON.parse(fs.readFileSync(authPath, 'utf-8'))
+    if (fs.existsSync(PI_AUTH_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
       // Use refresh token (GitHub OAuth token ghu_*) for the usage API
       if (data['github-copilot']?.refresh) return data['github-copilot'].refresh
     }
@@ -369,20 +388,18 @@ async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
   let token: string | undefined
 
   // Read directly from pi's auth.json
-  const piAuthPath = path.join(os.homedir(), '.pi', 'agent', 'auth.json')
   try {
-    if (fs.existsSync(piAuthPath)) {
-      const data = JSON.parse(fs.readFileSync(piAuthPath, 'utf-8'))
+    if (fs.existsSync(PI_AUTH_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
       token = data['google-gemini-cli']?.access
     }
   } catch {}
 
   // Fallback to ~/.gemini/oauth_creds.json
   if (!token) {
-    const credPath = path.join(os.homedir(), '.gemini', 'oauth_creds.json')
     try {
-      if (fs.existsSync(credPath)) {
-        const data = JSON.parse(fs.readFileSync(credPath, 'utf-8'))
+      if (fs.existsSync(GEMINI_OAUTH_CREDS_PATH)) {
+        const data = JSON.parse(fs.readFileSync(GEMINI_OAUTH_CREDS_PATH, 'utf-8'))
         token = data.access_token
       }
     } catch {}
@@ -478,10 +495,9 @@ type AntigravityAuth = {
 }
 
 function loadAntigravityAuthFromPiAuthJson(): AntigravityAuth | undefined {
-  const piAuthPath = path.join(os.homedir(), '.pi', 'agent', 'auth.json')
   try {
-    if (!fs.existsSync(piAuthPath)) return undefined
-    const data = JSON.parse(fs.readFileSync(piAuthPath, 'utf-8'))
+    if (!fs.existsSync(PI_AUTH_PATH)) return undefined
+    const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
 
     // Provider is called "google-antigravity" in pi.
     const cred =
@@ -773,9 +789,7 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
 
   // Fallback to ~/.codex/auth.json if not in pi's auth
   if (!accessToken) {
-    const codexHome =
-      process.env.CODEX_HOME || path.join(os.homedir(), '.codex')
-    const authPath = path.join(codexHome, 'auth.json')
+    const authPath = path.join(CODEX_HOME, 'auth.json')
 
     try {
       if (fs.existsSync(authPath)) {
@@ -897,17 +911,9 @@ function stripAnsi(text: string): string {
   return text.replace(/\x1B\[[0-9;?]*[A-Za-z]|\x1B\].*?\x07/g, '')
 }
 
-function whichSync(cmd: string): string | null {
-  try {
-    return execSync(`which ${cmd}`, { encoding: 'utf-8' }).trim()
-  } catch {
-    return null
-  }
-}
-
-async function fetchKiroUsage(): Promise<UsageSnapshot> {
-  const kiroBinary = whichSync('kiro-cli')
-  if (!kiroBinary) {
+async function fetchKiroUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
+  const version = await runCommand(pi, 'kiro-cli', ['--version'], 5000)
+  if (!version || version.code !== 0) {
     return {
       provider: 'kiro',
       displayName: 'Kiro',
@@ -917,10 +923,8 @@ async function fetchKiroUsage(): Promise<UsageSnapshot> {
   }
 
   try {
-    // Check if logged in
-    try {
-      execSync('kiro-cli whoami', { encoding: 'utf-8', timeout: 5000 })
-    } catch {
+    const whoami = await runCommand(pi, 'kiro-cli', ['whoami'], 5000)
+    if (!whoami || whoami.code !== 0) {
       return {
         provider: 'kiro',
         displayName: 'Kiro',
@@ -929,14 +933,19 @@ async function fetchKiroUsage(): Promise<UsageSnapshot> {
       }
     }
 
-    // Get usage
-    const output = execSync('kiro-cli chat --no-interactive /usage', {
-      encoding: 'utf-8',
-      timeout: 10000,
-      env: { ...process.env, TERM: 'xterm-256color' },
-    })
+    const usage = await runCommand(
+      pi,
+      'kiro-cli',
+      ['chat', '--no-interactive', '/usage'],
+      10000,
+    )
+    if (!usage || usage.code !== 0) {
+      throw new Error(
+        usage?.stderr?.trim() || usage?.stdout?.trim() || 'kiro-cli usage failed',
+      )
+    }
 
-    const stripped = stripAnsi(output)
+    const stripped = stripAnsi(usage.stdout)
     const windows: RateWindow[] = []
 
     // Parse plan name from "| KIRO FREE" or similar
@@ -1018,9 +1027,8 @@ async function fetchZaiUsage(): Promise<UsageSnapshot> {
   if (!apiKey) {
     // Try pi auth storage
     try {
-      const authPath = path.join(os.homedir(), '.pi', 'agent', 'auth.json')
-      if (fs.existsSync(authPath)) {
-        const auth = JSON.parse(fs.readFileSync(authPath, 'utf-8'))
+      if (fs.existsSync(PI_AUTH_PATH)) {
+        const auth = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
         apiKey = auth['z-ai']?.access || auth['zai']?.access
       }
     } catch {}
@@ -1165,17 +1173,20 @@ class UsageComponent {
   private theme: any
   private onClose: () => void
   private modelRegistry: any
+  private pi: ExtensionAPI
 
   constructor(
     tui: { requestRender: () => void },
     theme: any,
     onClose: () => void,
     modelRegistry: any,
+    pi: ExtensionAPI,
   ) {
     this.tui = tui
     this.theme = theme
     this.onClose = onClose
     this.modelRegistry = modelRegistry
+    this.pi = pi
     this.load()
   }
 
@@ -1200,7 +1211,7 @@ class UsageComponent {
       geminiStatus,
       codexStatus,
     ] = await Promise.all([
-      timeout(fetchClaudeUsage(), 6000, {
+      timeout(fetchClaudeUsage(this.pi), 6000, {
         provider: 'anthropic',
         displayName: 'Claude',
         windows: [],
@@ -1230,7 +1241,7 @@ class UsageComponent {
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchKiroUsage(), 6000, {
+      timeout(fetchKiroUsage(this.pi), 6000, {
         provider: 'kiro',
         displayName: 'Kiro',
         windows: [],
@@ -1384,7 +1395,7 @@ export default function (pi: ExtensionAPI) {
 
       const modelRegistry = ctx.modelRegistry
       await ctx.ui.custom((tui, theme, _kb, done) => {
-        return new UsageComponent(tui, theme, () => done(), modelRegistry)
+        return new UsageComponent(tui, theme, () => done(), modelRegistry, pi)
       })
     },
   })

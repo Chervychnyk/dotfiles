@@ -27,6 +27,7 @@ import type {
   Theme,
 } from '@mariozechner/pi-coding-agent'
 import {
+  getAgentDir,
   type TUI,
   matchesKey,
   Key,
@@ -365,9 +366,12 @@ async function handleMemoryInstruction(
     return
   }
 
-  const apiKey = await ctx.modelRegistry.getApiKey(model)
-  if (!apiKey) {
-    ctx.ui.notify('No API key available for current model', 'error')
+  const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model)
+  if (!auth.ok || !auth.apiKey) {
+    ctx.ui.notify(
+      auth.ok ? 'No API key available for current model' : auth.error,
+      'error',
+    )
     return
   }
 
@@ -423,7 +427,12 @@ Output the complete file content:`
               },
             ],
           },
-          { apiKey, signal: component.signal, maxTokens: 4096 },
+          {
+            apiKey: auth.apiKey,
+            headers: auth.headers,
+            signal: component.signal,
+            maxTokens: 4096,
+          },
         )
 
         if (response.stopReason === 'aborted') {
@@ -510,15 +519,6 @@ Output the complete file content:`
       display: true,
     })
   }
-}
-
-function getAgentDir(): string {
-  const envDir = process.env.PI_CODING_AGENT_DIR
-  if (envDir) {
-    return envDir
-  }
-  const home = process.env.HOME || process.env.USERPROFILE || ''
-  return path.join(home, '.pi', 'agent')
 }
 
 function ensureGitignore(cwd: string, filename: string): void {

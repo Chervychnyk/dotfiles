@@ -147,6 +147,9 @@ function createSandboxedBashOps(): BashOperations {
 
       const wrappedCommand = await SandboxManager.wrapWithSandbox(command)
 
+      // Use spawn here instead of pi.exec because the sandbox runtime wraps a
+      // long-lived shell command and the bash tool expects streamed output plus
+      // process-group termination on abort/timeout.
       return new Promise((resolve, reject) => {
         const child = spawn('bash', ['-c', wrappedCommand], {
           cwd,
@@ -155,45 +158,51 @@ function createSandboxedBashOps(): BashOperations {
         })
 
         let timedOut = false
+        let settled = false
         let timeoutHandle: NodeJS.Timeout | undefined
+
+        const killChild = () => {
+          try {
+            if (child.pid) process.kill(-child.pid, 'SIGKILL')
+            else child.kill('SIGKILL')
+          } catch {}
+        }
+
+        const clearTimeoutHandle = () => {
+          if (!timeoutHandle) return
+          clearTimeout(timeoutHandle)
+          timeoutHandle = undefined
+        }
+
+        const cleanup = () => {
+          clearTimeoutHandle()
+          signal?.removeEventListener('abort', killChild)
+        }
 
         if (timeout !== undefined && timeout > 0) {
           timeoutHandle = setTimeout(() => {
             timedOut = true
-            if (child.pid) {
-              try {
-                process.kill(-child.pid, 'SIGKILL')
-              } catch {
-                child.kill('SIGKILL')
-              }
-            }
+            killChild()
           }, timeout * 1000)
+          timeoutHandle.unref()
         }
 
         child.stdout?.on('data', onData)
         child.stderr?.on('data', onData)
 
         child.on('error', (err) => {
-          if (timeoutHandle) clearTimeout(timeoutHandle)
+          if (settled) return
+          settled = true
+          cleanup()
           reject(err)
         })
 
-        const onAbort = () => {
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, 'SIGKILL')
-            } catch {
-              child.kill('SIGKILL')
-            }
-          }
-        }
-
-        signal?.addEventListener('abort', onAbort, { once: true })
+        signal?.addEventListener('abort', killChild, { once: true })
 
         child.on('close', (code) => {
-          if (timeoutHandle) clearTimeout(timeoutHandle)
-          signal?.removeEventListener('abort', onAbort)
-
+          if (settled) return
+          settled = true
+          cleanup()
           if (signal?.aborted) {
             reject(new Error('aborted'))
           } else if (timedOut) {
@@ -208,6 +217,23 @@ function createSandboxedBashOps(): BashOperations {
 }
 
 export default function (pi: ExtensionAPI) {
+  type SandboxCtx = { ui: { notify: (message: string, level: 'info' | 'warning' | 'error') => void; setStatus: (key: string, value: string | undefined) => void } }
+
+  const clearSandboxStatus = (ctx: SandboxCtx) => {
+    ctx.ui.setStatus('sandbox', undefined)
+  }
+
+  const disableSandbox = (
+    ctx: SandboxCtx,
+    message: string,
+    level: 'info' | 'warning' | 'error',
+  ) => {
+    sandboxEnabled = false
+    sandboxInitialized = false
+    clearSandboxStatus(ctx)
+    ctx.ui.notify(message, level)
+  }
+
   pi.registerFlag('no-sandbox', {
     description: 'Disable OS-level sandboxing for bash commands',
     type: 'boolean',
@@ -244,23 +270,20 @@ export default function (pi: ExtensionAPI) {
     const noSandbox = pi.getFlag('no-sandbox') as boolean
 
     if (noSandbox) {
-      sandboxEnabled = false
-      ctx.ui.notify('Sandbox disabled via --no-sandbox', 'warning')
+      disableSandbox(ctx, 'Sandbox disabled via --no-sandbox', 'warning')
       return
     }
 
     const config = loadConfig(ctx.cwd)
 
     if (!config.enabled) {
-      sandboxEnabled = false
-      ctx.ui.notify('Sandbox disabled via config', 'info')
+      disableSandbox(ctx, 'Sandbox disabled via config', 'info')
       return
     }
 
     const platform = process.platform
     if (platform !== 'darwin' && platform !== 'linux') {
-      sandboxEnabled = false
-      ctx.ui.notify(`Sandbox not supported on ${platform}`, 'warning')
+      disableSandbox(ctx, `Sandbox not supported on ${platform}`, 'warning')
       return
     }
 
@@ -291,15 +314,15 @@ export default function (pi: ExtensionAPI) {
       )
       ctx.ui.notify('Sandbox initialized', 'info')
     } catch (err) {
-      sandboxEnabled = false
-      ctx.ui.notify(
+      disableSandbox(
+        ctx,
         `Sandbox initialization failed: ${err instanceof Error ? err.message : err}`,
         'error',
       )
     }
   })
 
-  pi.on('session_shutdown', async () => {
+  pi.on('session_shutdown', async (_event, ctx) => {
     if (sandboxInitialized) {
       try {
         await SandboxManager.reset()
@@ -307,6 +330,9 @@ export default function (pi: ExtensionAPI) {
         // Ignore cleanup errors
       }
     }
+    sandboxInitialized = false
+    sandboxEnabled = false
+    clearSandboxStatus(ctx)
   })
 
   pi.registerCommand('sandbox', {

@@ -199,7 +199,6 @@ export default function (pi: ExtensionAPI) {
     for (const loop of getActiveLoops(ctx)) {
       if (loop.name === keepLoopName) continue
       loop.status = 'paused'
-      loop.active = false
       saveState(ctx, loop)
       paused.push(loop.name)
     }
@@ -219,45 +218,22 @@ export default function (pi: ExtensionAPI) {
 
   // --- Loop state transitions ---
 
-  function pauseLoop(
-    ctx: ExtensionContext,
-    state: LoopState,
-    message?: string,
-  ): void {
-    state.status = 'paused'
-    state.active = false
-    saveState(ctx, state)
-    currentLoop = null
-    updateUI(ctx)
-    if (message && ctx.hasUI) ctx.ui.notify(message, 'info')
+  const BANNER_LINE = '───────────────────────────────────────────────────────────────────────'
+
+  function maxItersBanner(state: LoopState): string {
+    return `${BANNER_LINE}\n⚠️ RALPH LOOP STOPPED: ${state.name} | Max iterations (${state.maxIterations}) reached\n${BANNER_LINE}`
   }
 
-  function completeLoop(
+  function endLoop(
     ctx: ExtensionContext,
     state: LoopState,
-    banner: string,
+    status: 'paused' | 'completed',
   ): void {
-    state.status = 'completed'
-    state.completedAt = new Date().toISOString()
-    state.active = false
+    state.status = status
+    if (status === 'completed') state.completedAt = new Date().toISOString()
     saveState(ctx, state)
     currentLoop = null
     updateUI(ctx)
-    pi.sendUserMessage(banner)
-  }
-
-  function stopLoop(
-    ctx: ExtensionContext,
-    state: LoopState,
-    message?: string,
-  ): void {
-    state.status = 'completed'
-    state.completedAt = new Date().toISOString()
-    state.active = false
-    saveState(ctx, state)
-    currentLoop = null
-    updateUI(ctx)
-    if (message && ctx.hasUI) ctx.ui.notify(message, 'info')
   }
 
   // --- UI ---
@@ -321,9 +297,7 @@ export default function (pi: ExtensionAPI) {
     isReflection: boolean,
   ): string {
     const maxStr = state.maxIterations > 0 ? `/${state.maxIterations}` : ''
-    const header = `───────────────────────────────────────────────────────────────────────
-🔄 RALPH LOOP: ${state.name} | Iteration ${state.iteration}${maxStr}${isReflection ? ' | 🪞 REFLECTION' : ''}
-───────────────────────────────────────────────────────────────────────`
+    const header = `${BANNER_LINE}\n🔄 RALPH LOOP: ${state.name} | Iteration ${state.iteration}${maxStr}${isReflection ? ' | 🪞 REFLECTION' : ''}\n${BANNER_LINE}`
 
     const parts = [header, '']
     if (isReflection) parts.push(state.reflectInstructions, '\n---\n')
@@ -485,11 +459,8 @@ export default function (pi: ExtensionAPI) {
         // Check persisted state for any active loop
         const active = listLoops(ctx).find((l) => l.status === 'active')
         if (active) {
-          pauseLoop(
-            ctx,
-            active,
-            `Paused Ralph loop: ${active.name} (iteration ${active.iteration})`,
-          )
+          endLoop(ctx, active, 'paused')
+          ctx.ui.notify(`Paused Ralph loop: ${active.name} (iteration ${active.iteration})`, 'info')
         } else {
           ctx.ui.notify('No active Ralph loop', 'warning')
         }
@@ -497,11 +468,8 @@ export default function (pi: ExtensionAPI) {
       }
       const state = loadState(ctx, currentLoop)
       if (state) {
-        pauseLoop(
-          ctx,
-          state,
-          `Paused Ralph loop: ${currentLoop} (iteration ${state.iteration})`,
-        )
+        endLoop(ctx, state, 'paused')
+        ctx.ui.notify(`Paused Ralph loop: ${currentLoop} (iteration ${state.iteration})`, 'info')
       }
     },
 
@@ -534,7 +502,6 @@ export default function (pi: ExtensionAPI) {
       const pausedLoops = pauseOtherActiveLoops(ctx, loopName)
 
       state.status = 'active'
-      state.active = true
       saveState(ctx, state)
       currentLoop = loopName
       updateUI(ctx)
@@ -765,11 +732,8 @@ Examples:
         return
       }
 
-      stopLoop(
-        ctx,
-        state,
-        `Stopped Ralph loop: ${state.name} (iteration ${state.iteration})`,
-      )
+      endLoop(ctx, state, 'completed')
+      if (ctx.hasUI) ctx.ui.notify(`Stopped Ralph loop: ${state.name} (iteration ${state.iteration})`, 'info')
     },
   })
 
@@ -905,13 +869,8 @@ Examples:
 
       // Check max iterations
       if (state.maxIterations > 0 && state.iteration > state.maxIterations) {
-        completeLoop(
-          ctx,
-          state,
-          `───────────────────────────────────────────────────────────────────────
-⚠️ RALPH LOOP STOPPED: ${state.name} | Max iterations (${state.maxIterations}) reached
-───────────────────────────────────────────────────────────────────────`,
-        )
+        endLoop(ctx, state, 'completed')
+        pi.sendUserMessage(maxItersBanner(state))
         return {
           content: [
             { type: 'text', text: 'Max iterations reached. Loop stopped.' },
@@ -928,7 +887,7 @@ Examples:
 
       const content = tryRead(path.resolve(ctx.cwd, state.taskFile))
       if (!content) {
-        pauseLoop(ctx, state)
+        endLoop(ctx, state, 'paused')
         return {
           content: [
             {
@@ -1001,25 +960,17 @@ Examples:
         : ''
 
     if (text.includes(COMPLETE_MARKER)) {
-      completeLoop(
-        ctx,
-        state,
-        `───────────────────────────────────────────────────────────────────────
-✅ RALPH LOOP COMPLETE: ${state.name} | ${state.iteration} iterations
-───────────────────────────────────────────────────────────────────────`,
+      endLoop(ctx, state, 'completed')
+      pi.sendUserMessage(
+        `${BANNER_LINE}\n✅ RALPH LOOP COMPLETE: ${state.name} | ${state.iteration} iterations\n${BANNER_LINE}`,
       )
       return
     }
 
     // Check max iterations
     if (state.maxIterations > 0 && state.iteration >= state.maxIterations) {
-      completeLoop(
-        ctx,
-        state,
-        `───────────────────────────────────────────────────────────────────────
-⚠️ RALPH LOOP STOPPED: ${state.name} | Max iterations (${state.maxIterations}) reached
-───────────────────────────────────────────────────────────────────────`,
-      )
+      endLoop(ctx, state, 'completed')
+      pi.sendUserMessage(maxItersBanner(state))
       return
     }
 

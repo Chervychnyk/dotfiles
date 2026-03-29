@@ -1,7 +1,7 @@
 /**
  * /session-breakdown
  *
- * Interactive TUI that analyzes ~/.pi/agent/sessions (recursively, *.jsonl) and shows
+ * Interactive TUI that analyzes Pi's sessions directory (recursively, *.jsonl) and shows
  * last 7/30/90 days of:
  * - sessions/day
  * - messages/day
@@ -19,7 +19,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from '@mariozechner/pi-coding-agent'
-import { BorderedLoader } from '@mariozechner/pi-coding-agent'
+import { BorderedLoader, getAgentDir } from '@mariozechner/pi-coding-agent'
 import {
   Key,
   matchesKey,
@@ -29,7 +29,6 @@ import {
   truncateToWidth,
   visibleWidth,
 } from '@mariozechner/pi-tui'
-import os from 'node:os'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { createReadStream, type Dirent } from 'node:fs'
@@ -92,7 +91,7 @@ interface BreakdownData {
   }
 }
 
-const SESSION_ROOT = path.join(os.homedir(), '.pi', 'agent', 'sessions')
+const SESSION_ROOT = path.join(getAgentDir(), 'sessions')
 const RANGE_DAYS = [7, 30, 90] as const
 
 type MeasurementMode = 'sessions' | 'messages' | 'tokens'
