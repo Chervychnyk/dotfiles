@@ -1,12 +1,13 @@
 {
-  "lastChangelogVersion": "0.62.0",
+  "lastChangelogVersion": "0.64.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.4",
   "packages": [
     "npm:pi-interview",
     "npm:pi-mcp-adapter",
     "npm:@aliou/pi-guardrails",
-    "git:github.com/HazAT/pi-interactive-subagents"
+    "npm:pi-subagents",
+    "npm:pi-web-access"
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",

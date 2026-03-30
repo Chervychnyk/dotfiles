@@ -32,8 +32,6 @@ Load these with `read` when the task matches:
 - `cmux` — manage tabs/workspaces and long-running terminal tasks in cmux
 - `learn-codebase` — discover instructions, conventions, and change points
 - `ralph-wiggum` — guidance for long-running iterative loops via the local Ralph extension
-- `web-search` — thin wrapper that points the model to the `web_search` extension tool
-- `web-fetch` — thin wrapper that points the model to the `web_fetch` extension tool
 
 Skill location: `pi/agent/skills/`
 
@@ -63,7 +61,6 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `cmux.ts`
 - `custom-footer.ts`
 - `docker-context.ts` — Docker Compose discovery plus `docker_services`, `docker_exec`, `docker_logs`
-- `github-lookup.ts` — `github_lookup` research tool using `gh`
 - `go-to-bed.ts`
 - `handoff.ts` — `/handoff` command and `handoff` tool
 - `memory-mode.ts` — `/mem`, `/remember`
@@ -73,16 +70,16 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `sandbox/`
 - `session-breakdown.ts` — `/session-breakdown`
 - `usage-bar.ts` — `/usage`
-- `web-tools/` — custom tools: `web_search`, `web_fetch`
 - `guardrails.json`
 
 Use extension-backed workflows when relevant:
 
-- `web_search` / `web_fetch` for web research and content extraction
+- `web_search` for web search
+- `fetch_content` / `get_search_content` for content extraction, GitHub URL fetching, PDFs, and richer web access via `pi-web-access`
+- `code_search` for code and repository discovery on the web
 - `docker_services` before backend commands when Docker Compose may be involved
 - `docker_exec` for Rails, Python, Node, and other app commands that should run in containers
 - `docker_logs` for targeted service log inspection
-- `github_lookup` for repository discovery and GitHub codebase research via `gh`
 - `handoff` for clean session transitions
 - `review` / `end-review` for review-focused iteration
 - `ralph_start` / `ralph_done` or `/ralph` for long-running iterative loops
@@ -104,12 +101,13 @@ From `pi/agent/settings.json` and `pi/agent/modes.json`:
   - `npm:pi-mcp-adapter`
   - `npm:@aliou/pi-guardrails`
   - `npm:pi-subagents`
+  - `npm:pi-web-access`
 
 ## Research Guidance
 
-- Prefer `web_search` + `web_fetch` extension tools for web lookup and content extraction.
-- Wrapper skills `web-search` and `web-fetch` remain available for discoverability and `/skill:` usage.
-- Prefer `github_lookup` for GitHub repository research.
+- Prefer `web_search` for web lookup, then `fetch_content` or `get_search_content` for page, repository, and content extraction.
+- Use `code_search` when you need web-scale code or repository discovery from the installed `pi-web-access` package.
+- For GitHub research, prefer `fetch_content` on GitHub URLs and `code_search` when broad repository/code discovery is needed.
 - Prefer `mcp` tools for configured external systems when they provide direct access.
 - When working on Pi itself, read the relevant Pi docs and follow linked `.md` references before changing code.
 
