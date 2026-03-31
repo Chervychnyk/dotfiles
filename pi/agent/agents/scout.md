@@ -3,7 +3,7 @@ name: scout
 description: Use for read-only reconnaissance, codebase mapping, convention discovery, and context gathering before implementation.
 model: anthropic/claude-haiku-4-5
 thinking: low
-tools: read, bash, docker_services, docker_logs, web_search, web_fetch, github_lookup, mcp
+tools: read, bash, docker_services, docker_logs, web_search, fetch_content, get_search_content, code_search, mcp
 skill: learn-codebase
 ---
 

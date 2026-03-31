@@ -1350,7 +1350,7 @@ export default function (pi: ExtensionAPI) {
     },
   })
 
-  pi.registerShortcut('ctrl+shift+s', {
+  pi.registerShortcut('ctrl+shift+m', {
     description: 'Select prompt mode',
     handler: async (ctx) => {
       await ensureRuntime(pi, ctx)

@@ -3,7 +3,7 @@ name: worker
 description: Use for focused implementation, file edits, and verification once the task and plan are clear.
 model: openai-codex/gpt-5.4
 thinking: high
-tools: read, edit, write, bash, docker_services, docker_exec, docker_logs, web_search, web_fetch, mcp
+tools: read, edit, write, bash, docker_services, docker_exec, docker_logs, web_search, fetch_content, get_search_content, code_search, mcp
 defaultProgress: true
 ---
 

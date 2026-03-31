@@ -55,6 +55,7 @@ type ReviewSessionState = {
   targetHint?: string
   originalGitBranch?: string
   originalGitRef?: string
+  previousActiveTools?: string[]
 }
 
 type GitRefSnapshot = {
@@ -105,12 +106,29 @@ function getReviewState(ctx: ExtensionContext): ReviewSessionState | undefined {
   return state
 }
 
+function disableSubagentTool(pi: ExtensionAPI): string[] | undefined {
+  const activeTools = pi.getActiveTools()
+  if (!activeTools.includes('subagent')) return activeTools
+
+  pi.setActiveTools(activeTools.filter((tool) => tool !== 'subagent'))
+  return activeTools
+}
+
+function restoreReviewTools(
+  pi: ExtensionAPI,
+  previousActiveTools?: string[],
+): void {
+  if (!previousActiveTools || previousActiveTools.length === 0) return
+  pi.setActiveTools(previousActiveTools)
+}
+
 function applyReviewState(ctx: ExtensionContext) {
   const state = getReviewState(ctx)
 
   if (state?.active) {
     reviewOriginId = state.originId
     setReviewWidget(ctx, state)
+    disableSubagentTool(pi)
     return
   }
 
@@ -172,6 +190,11 @@ const REVIEW_RUBRIC = `# Review Guidelines
 You are acting as a code reviewer for a proposed code change made by another engineer.
 
 Below are default guidelines for determining what to flag. These are not the final word — if you encounter more specific guidelines elsewhere (in a developer message, user message, file, or project review guidelines appended below), those override these general instructions.
+
+## Review Execution
+
+- Review in the current session.
+- Do not use subagents, including `reviewer`.
 
 ## Determining what to flag
 
@@ -1188,12 +1211,15 @@ export default function reviewExtension(pi: ExtensionAPI) {
       // Clear the editor (navigating to user message fills it with the message text)
       ctx.ui.setEditorText('')
 
+      const previousActiveTools = disableSubagentTool(pi)
+
       const reviewState: ReviewSessionState = {
         active: true,
         originId: lockedOriginId,
         targetHint: hint,
         originalGitBranch: originalGitSnapshot?.branch,
         originalGitRef: originalGitSnapshot?.ref,
+        previousActiveTools,
       }
 
       // Show widget indicating review is active
@@ -1202,11 +1228,14 @@ export default function reviewExtension(pi: ExtensionAPI) {
       // Persist review state so tree navigation can restore/reset it
       pi.appendEntry(REVIEW_STATE_TYPE, reviewState)
     } else if (originalGitSnapshot) {
+      const previousActiveTools = disableSubagentTool(pi)
+
       const reviewState: ReviewSessionState = {
         active: true,
         targetHint: hint,
         originalGitBranch: originalGitSnapshot.branch,
         originalGitRef: originalGitSnapshot.ref,
+        previousActiveTools,
       }
 
       setReviewWidget(ctx, reviewState)
@@ -1460,6 +1489,8 @@ Instructions:
   }
 
   function clearReviewState(ctx: ExtensionContext) {
+    const reviewState = getReviewState(ctx)
+    restoreReviewTools(pi, reviewState?.previousActiveTools)
     setReviewWidget(ctx, undefined)
     reviewOriginId = undefined
     pi.appendEntry(REVIEW_STATE_TYPE, { active: false })

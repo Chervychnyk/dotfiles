@@ -31,7 +31,6 @@ Load these with `read` when the task matches:
 - `agents-md` — create or tighten repo agent instructions
 - `cmux` — manage tabs/workspaces and long-running terminal tasks in cmux
 - `learn-codebase` — discover instructions, conventions, and change points
-- `ralph-wiggum` — guidance for long-running iterative loops via the local Ralph extension
 
 Skill location: `pi/agent/skills/`
 
@@ -65,7 +64,7 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `handoff.ts` — `/handoff` command and `handoff` tool
 - `memory-mode.ts` — `/mem`, `/remember`
 - `modes.ts` — `/mode`
-- `ralph-wiggum.ts` — `/ralph`, `/ralph-stop`, `ralph_start`, `ralph_done`
+- `pi-boomerang` — `/boomerang`, `/boomerang-cancel`, optional `boomerang` tool
 - `review.ts` — `/review`, `/end-review`
 - `sandbox/`
 - `session-breakdown.ts` — `/session-breakdown`
@@ -81,8 +80,9 @@ Use extension-backed workflows when relevant:
 - `docker_exec` for Rails, Python, Node, and other app commands that should run in containers
 - `docker_logs` for targeted service log inspection
 - `handoff` for clean session transitions
-- `review` / `end-review` for review-focused iteration
-- `ralph_start` / `ralph_done` or `/ralph` for long-running iterative loops
+- `review` / `end-review` for interactive review-focused iteration in the current session (not via the `reviewer` subagent)
+- `/boomerang` / `/boomerang-cancel` for autonomous task execution with context collapse
+- Prefer `--rethrow N` with `/boomerang` for repeated fresh-pass execution when iterative improvement is desired
 - cmux tooling when work benefits from multiple managed terminals
 
 ## Current Pi Configuration

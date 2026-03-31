@@ -3,7 +3,7 @@ name: reviewer
 description: Use for read-only implementation review, regression detection, and verification after a change is made.
 model: anthropic/claude-opus-4-6
 thinking: high
-tools: read, bash, docker_services, docker_exec, docker_logs, web_search, web_fetch, github_lookup, mcp
+tools: read, bash, docker_services, docker_exec, docker_logs, web_search, fetch_content, get_search_content, code_search, mcp
 ---
 
 # Reviewer

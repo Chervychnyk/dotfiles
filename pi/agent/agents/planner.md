@@ -3,7 +3,7 @@ name: planner
 description: Use for phased planning, ambiguity reduction, sequencing, and grouped clarification questions before implementation.
 model: anthropic/claude-opus-4-6
 thinking: high
-tools: read, bash, web_search, web_fetch, github_lookup, mcp
+tools: read, bash, web_search, fetch_content, get_search_content, code_search, mcp
 ---
 
 # Planner

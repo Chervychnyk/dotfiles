@@ -7,7 +7,8 @@
     "npm:pi-mcp-adapter",
     "npm:@aliou/pi-guardrails",
     "npm:pi-subagents",
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "npm:pi-boomerang"
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",
