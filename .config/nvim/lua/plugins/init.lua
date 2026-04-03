@@ -3,13 +3,6 @@ return {
   "nvim-lua/plenary.nvim",
 
   {
-    'akinsho/git-conflict.nvim',
-    version = "*",
-    event = { "BufReadPost", "BufNewFile" },
-    config = true
-  },
-
-  {
     'NvChad/nvim-colorizer.lua',
     event = { "BufReadPost", "BufNewFile" },
     config = function()

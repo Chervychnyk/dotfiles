@@ -194,7 +194,7 @@ Below are default guidelines for determining what to flag. These are not the fin
 ## Review Execution
 
 - Review in the current session.
-- Do not use subagents, including `reviewer`.
+- Do not use subagents, including \`reviewer\`.
 
 ## Determining what to flag
 

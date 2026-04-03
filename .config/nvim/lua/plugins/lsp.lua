@@ -71,7 +71,8 @@ return {
       map("n", "sd", vim.diagnostic.open_float, { desc = "Open diagnostics in float" })
       map({ "n", "v" }, "<leader>la", vim.lsp.buf.code_action, { desc = "Code actions" })
       map("n", "<leader>lh", function()
-        vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({}))
+        local filter = { bufnr = bufnr }
+        vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled(filter), filter)
       end, { desc = "Toggle inlay hints" })
     end
 
@@ -81,8 +82,8 @@ return {
     local function on_attach(client, bufnr)
       lsp_keymaps(bufnr)
 
-      if client.supports_method("textDocument/inlayHint") then
-        vim.lsp.inlay_hint.enable(true)
+      if client:supports_method("textDocument/inlayHint") then
+        vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
       end
     end
 

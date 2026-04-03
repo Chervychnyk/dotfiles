@@ -3,12 +3,11 @@
 local mappings = {
   { mode = "n" },
   { "<leader>T",  group = "Treesitter",                  nowait = true,            remap = false },
-  { "<leader>Ti", ":TSConfigInfo<cr>",                   desc = "Info",            nowait = true, remap = false },
   { "<leader>b",  group = "Buffer",                      nowait = true,            remap = false },
   { "<leader>l",  group = "LSP",                         nowait = true,            remap = false },
   { "<leader>lI", "<cmd>Mason<cr>",                      desc = "Mason Info",      nowait = true, remap = false },
   { "<leader>li", "<cmd>LspInfo<cr>",                    desc = "Info",            nowait = true, remap = false },
-  { "<leader>ll", "<cmd>lua vim.lsp.codelens.run()<cr>", desc = "CodeLens Action", nowait = true, remap = false },
+  { "<leader>ll", vim.lsp.codelens.run,                  desc = "CodeLens Action", nowait = true, remap = false },
   { "<leader>p",  group = "Plugins",                     nowait = true,            remap = false },
   { "<leader>pS", "<cmd>Lazy clear<cr>",                 desc = "Status",          nowait = true, remap = false },
   { "<leader>pc", "<cmd>Lazy clean<cr>",                 desc = "Clean",           nowait = true, remap = false },

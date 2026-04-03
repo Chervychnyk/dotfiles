@@ -4,7 +4,7 @@ return {
   lazy = true,
   ft = "markdown",
   opts = {
-    dir = vim.fn.expand("$HOME") .. "/Library/Mobile Documents/iCloud~md~obsidian/Documents/Second Brain",
+    dir = vim.fn.expand("$HOME") .. "/vaults/second-brain",
     completion = { nvim_cmp = false, blink = true, min_chars = 2 },
     daily_notes = {
       folder = "Journal",
@@ -14,13 +14,14 @@ return {
     },
     disable_frontmatter = true,
     templates = {
-      subdir = "Templates",
+      folder = "Templates",
     },
-    follow_url_func = function(url)
-      vim.fn.jobstart({ "open", url })
-    end,
-    use_advanced_uri = true,
-    open_app_foreground = true,
+    open = {
+      use_advanced_uri = true,
+      func = function(uri)
+        vim.ui.open(uri, { cmd = { "open", "-a", "/Applications/Obsidian.app" } })
+      end,
+    },
   },
   config = function(_, opts)
     require("obsidian").setup(opts)

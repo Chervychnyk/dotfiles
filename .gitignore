@@ -1,6 +1,9 @@
 /.config/nvim/plugin/packer_compiled.lua
+.cache/
+.state/
 .pi/
 pi/agent/auth.json
+pi/agent/mcp.json
 pi/agent/mcp-cache.json
 pi/agent/mcp-npx-cache.json
 pi/agent/run-history.jsonl
@@ -11,9 +14,7 @@ pi/agent/sessions/
 pi/history/
 pi/interview-sessions.json
 pi/interview-snapshots/
-pi/agent/mcp.json
 **/node_modules/
 *.backup.*
 *.local
 .env.secrets
-.config/shell.local.env

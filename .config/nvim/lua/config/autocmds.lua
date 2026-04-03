@@ -55,7 +55,7 @@ autocmd({ "VimEnter", "BufEnter", "DirChanged" }, {
 autocmd("TextYankPost", {
   group = augroup("yank_highlight", { clear = true }),
   callback = function()
-    vim.highlight.on_yank()
+    vim.hl.on_yank()
   end,
 })
 
