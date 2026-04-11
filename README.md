@@ -8,7 +8,7 @@ Personal macOS development environment bootstrap and configuration.
 - editors: Neovim, Vim, Zed
 - terminals: Ghostty, WezTerm, tmux, Zellij
 - macOS UX: AeroSpace, SketchyBar, `.macos`
-- tooling: k9s, yazi, PostgreSQL CLI config, Pi agent config
+- tooling: mise, hk, fnox, k9s, yazi, PostgreSQL CLI config, Pi agent config
 - packages/apps: `Brewfile`
 
 ## Quick start on a new Mac
@@ -36,6 +36,7 @@ After setup, run:
 
 - installs Homebrew if needed
 - installs formulae/casks from `Brewfile`
+- installs `mise`, `hk`, and `fnox` for reproducible tools, hooks, and secrets workflows
 - installs TagLib 1.13.1 from the `$USER/versions` Homebrew tap
 - writes `~/.config/shell.local.env` with detected `HOMEBREW_PREFIX`
 - creates symlinks for tracked config files
@@ -95,7 +96,9 @@ These are intentionally **not** stored in this repo:
 - `gh auth status`
 
 ### Dev environment
-- `mise doctor` (if installed)
+- `mise doctor`
+- `hk --version`
+- `fnox --version`
 - `colima start --cpu 4 --memory 8 --disk 60`
 - `docker context use colima`
 - `docker ps`
@@ -125,6 +128,41 @@ Examples of what belongs there:
 - experimental aliases
 - API keys and tokens
 - custom `KUBECONFIG`
+
+## jdx ecosystem notes
+
+This setup now includes the core parts of the jdx workflow that fit well in dotfiles:
+
+- `mise` for runtime versions, env loading, and tasks
+- `hk` for Git hooks, ideally driven by project `mise.toml`
+- `fnox` for secrets management when you want something more structured than a single sourced env file
+
+Recommended usage:
+
+- keep global machine secrets in `~/.env.secrets` when simple shell exports are enough
+- use `fnox` mainly for per-project or encrypted secrets
+- use `hk` with `HK_MISE=1` in project repos so hooks run with the correct `mise` toolchain
+
+Example project-level `mise.toml` snippets:
+
+```toml
+[tools]
+hk = "latest"
+fnox = "latest"
+
+[env]
+HK_MISE = 1
+```
+
+For automatic `fnox` secret loading via `mise`, add the plugin in the project:
+
+```toml
+[plugins]
+fnox-env = "https://github.com/jdx/mise-env-fnox"
+
+[env]
+_.fnox-env = { tools = true }
+```
 
 ## Custom Homebrew tap
 
@@ -206,4 +244,5 @@ It will:
 
 - `k9s/config.yml` is intentionally kept generic; current context and temp paths should stay machine-local.
 - `.macos` keeps safer defaults now; review it before applying on a fresh machine.
+- `.macos` also includes extra animation-reduction defaults inspired by Nate Berkopec's setup for lower-latency UI behavior.
 - if you move the repo somewhere other than `~/dotfiles`, `setup.sh` will still work.

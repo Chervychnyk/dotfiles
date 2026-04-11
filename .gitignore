@@ -12,6 +12,7 @@ pi/agent/bin/
 pi/agent/git/
 pi/agent/sessions/
 pi/history/
+pi/cache/
 pi/interview-sessions.json
 pi/interview-snapshots/
 **/node_modules/

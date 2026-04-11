@@ -453,7 +453,7 @@ export default function handoffExtension(pi: ExtensionAPI) {
     },
   })
 
-  pi.on('session_switch', async (_event, ctx) => {
+  pi.on('session_shutdown', async (_event, ctx) => {
     storedHandoffPrompt = null
     handoffPending = false
     generating = false

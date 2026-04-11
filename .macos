@@ -31,6 +31,9 @@ defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
 # Show hostname details in the login window clock menu.
 sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
 
+# Accessibility: reduce motion system-wide.
+defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
+
 # Keep language/locale explicit.
 defaults write NSGlobalDomain AppleLanguages -array "en" "ru" "uk"
 defaults write NSGlobalDomain AppleLocale -string "en_US@currency=UAH"
@@ -48,6 +51,15 @@ defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
+
+# Reduce UI animation latency.
+defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+defaults write NSGlobalDomain NSScrollAnimationEnabled -bool false
+defaults write NSGlobalDomain QLPanelAnimationDuration -float 0
+defaults write NSGlobalDomain NSScrollViewRubberbanding -bool false
+defaults write NSGlobalDomain NSDocumentRevisionsWindowTransformAnimation -bool false
+defaults write NSGlobalDomain NSToolbarFullScreenAnimationDuration -float 0
+defaults write NSGlobalDomain NSBrowserColumnAnimationSpeedMultiplier -float 0
 
 # Fast key repeat.
 defaults write NSGlobalDomain KeyRepeat -int 2
@@ -159,6 +171,9 @@ defaults write com.apple.dock autohide -bool true
 defaults write com.apple.dock showhidden -bool true
 defaults write com.apple.dock no-bouncing -bool true
 defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock springboard-show-duration -float 0
+defaults write com.apple.dock springboard-hide-duration -float 0
+defaults write com.apple.dock springboard-page-duration -float 0
 
 ###############################################################################
 # Calendar / Safari / Activity Monitor                                        #

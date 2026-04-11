@@ -115,9 +115,4 @@ export default function (pi: ExtensionAPI) {
     })
   })
 
-  pi.on('session_switch', async (event) => {
-    if (event.reason === 'new') {
-      sessionStart = Date.now()
-    }
-  })
 }

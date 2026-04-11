@@ -69,13 +69,13 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `sandbox/`
 - `session-breakdown.ts` — `/session-breakdown`
 - `usage-bar.ts` — `/usage`
+- `pi-web-tools` package — custom tools: `web_search`, `web_fetch`, `get_web_content`
 - `guardrails.json`
 
 Use extension-backed workflows when relevant:
 
-- `web_search` for web search
-- `fetch_content` / `get_search_content` for content extraction, GitHub URL fetching, PDFs, and richer web access via `pi-web-access`
-- `code_search` for code and repository discovery on the web
+- `web_search` / `web_fetch` for web research and content extraction
+- `get_web_content` to retrieve stored full content from earlier web tool calls
 - `docker_services` before backend commands when Docker Compose may be involved
 - `docker_exec` for Rails, Python, Node, and other app commands that should run in containers
 - `docker_logs` for targeted service log inspection
@@ -101,13 +101,12 @@ From `pi/agent/settings.json` and `pi/agent/modes.json`:
   - `npm:pi-mcp-adapter`
   - `npm:@aliou/pi-guardrails`
   - `npm:pi-subagents`
-  - `npm:pi-web-access`
+  - `npm:pi-boomerang`
 
 ## Research Guidance
 
-- Prefer `web_search` for web lookup, then `fetch_content` or `get_search_content` for page, repository, and content extraction.
-- Use `code_search` when you need web-scale code or repository discovery from the installed `pi-web-access` package.
-- For GitHub research, prefer `fetch_content` on GitHub URLs and `code_search` when broad repository/code discovery is needed.
+- Prefer `web_search` + `web_fetch` extension tools for web lookup and content extraction.
+- Wrapper skills `web-search` and `web-fetch` are provided by the `pi-web-tools` package for discoverability and `/skill:` usage.
 - Prefer `mcp` tools for configured external systems when they provide direct access.
 - When working on Pi itself, read the relevant Pi docs and follow linked `.md` references before changing code.
 

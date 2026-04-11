@@ -49,6 +49,15 @@ local function lsp_servers()
   return table.concat(buf_client_names, ", ")
 end
 
+local function lsp_status()
+  local status = vim.lsp.status()
+  if status == nil or status == "" then
+    return nil
+  end
+
+  return status
+end
+
 local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
 
 if has_nvim_10 then
@@ -67,7 +76,7 @@ return {
         globalstatus = true,
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
-        disabled_filetypes = { "alpha", "Avante", "AvanteInput", "codecompanion", "qf", "lazy", "NeogitStatus", "neo-tree", "Outline", "snacks_picker_input", "snacks_picker_list", "TelescopePrompt", "TelescopeResults", "Trouble" },
+        disabled_filetypes = { "alpha", "codecompanion", "qf", "lazy", "NeogitStatus", "neo-tree", "Outline", "snacks_picker_input", "snacks_picker_list", "TelescopePrompt", "TelescopeResults" },
         always_divide_middle = true,
       },
       sections = {
@@ -90,6 +99,10 @@ return {
         },
         lualine_x = {
           diagnostics,
+          {
+            lsp_status,
+            color = { gui = "none" },
+          },
           {
             lsp_servers,
             icon = icons.ui.Watches,

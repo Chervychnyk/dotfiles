@@ -20,7 +20,6 @@ return {
       "snacks_win",      -- General snacks window
       "TelescopePrompt", -- If you also use telescope
       "neo-tree",
-      "trouble",
       "Outline",
       "help",
     },

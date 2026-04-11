@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.64.0",
+  "lastChangelogVersion": "0.66.1",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.4",
   "packages": [
@@ -7,8 +7,8 @@
     "npm:pi-mcp-adapter",
     "npm:@aliou/pi-guardrails",
     "npm:pi-subagents",
-    "npm:pi-web-access",
-    "npm:pi-boomerang"
+    "npm:pi-boomerang",
+    "~/code/pi-web-tools"
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",

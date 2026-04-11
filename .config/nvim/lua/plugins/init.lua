@@ -3,43 +3,30 @@ return {
   "nvim-lua/plenary.nvim",
 
   {
-    'NvChad/nvim-colorizer.lua',
+    "brenoprata10/nvim-highlight-colors",
     event = { "BufReadPost", "BufNewFile" },
-    config = function()
-      require("colorizer").setup {
-        filetypes = {
-          "typescript",
-          "typescriptreact",
-          "javascript",
-          "javascriptreact",
-          "css",
-          "scss",
-          "html",
-          "astro",
-          "vue",
-          "markdown",
-          "markdown_inline",
-          "lua",
-          "yaml"
-        },
-        user_default_options = {
-          names = false,
-          rgb_fn = true,
-          hsl_fn = true,
-          tailwind = "both",
-        },
-        buftypes = {},
-      }
-    end
+    opts = {
+      render = "background",
+      enable_hex = true,
+      enable_short_hex = true,
+      enable_rgb = true,
+      enable_hsl = true,
+      enable_hsl_without_function = true,
+      enable_var_usage = true,
+      enable_named_colors = false,
+      enable_tailwind = true,
+      exclude_filetypes = {},
+      exclude_buftypes = {},
+    },
   },
 
   {
     -- Make sure to set this up properly if you have lazy=true
     'MeanderingProgrammer/render-markdown.nvim',
     opts = {
-      file_types = { "markdown", "codecompanion", "Avante" },
+      file_types = { "markdown", "codecompanion" },
     },
-    ft = { "markdown", "codecompanion", "Avante" },
+    ft = { "markdown", "codecompanion" },
   },
 
   -- Rails navigation and commands
@@ -68,29 +55,5 @@ return {
     },
   },
 
-  -- Projectionist for custom navigation patterns
-  {
-    "tpope/vim-projectionist",
-    dependencies = { "tpope/vim-rails" },
-    event = "VeryLazy",
-    config = function()
-      vim.g.projectionist_heuristics = {
-        ["docker-compose.yml|docker-compose.yaml"] = {
-          ["app/*.rb"] = {
-            alternate = "spec/{}_spec.rb",
-            type = "source",
-          },
-          ["spec/*_spec.rb"] = {
-            alternate = "app/{}.rb",
-            type = "test",
-          },
-          ["lib/*.rb"] = {
-            alternate = "spec/lib/{}_spec.rb",
-            type = "source",
-          },
-        },
-      }
-    end,
-  },
 
 }

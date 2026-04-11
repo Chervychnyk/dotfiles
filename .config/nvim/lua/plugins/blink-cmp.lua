@@ -4,7 +4,6 @@ return {
   {
     "saghen/blink.cmp",
     dependencies = {
-      'Kaiser-Yang/blink-cmp-avante',
       "rafamadriz/friendly-snippets",
     },
     event = "InsertEnter",
@@ -88,7 +87,6 @@ return {
       sources = {
         default = { "lsp", "path", "snippets", "buffer", "codecompanion" },
         per_filetype = {
-          AvanteInput = { "avante", "buffer", "path" },
           markdown = { "buffer", "path" },
           sql = { 'snippets', 'dadbod', 'buffer' }
         },
@@ -115,13 +113,6 @@ return {
           codecompanion = {
             name = "CodeCompanion",
             module = "codecompanion.providers.completion.blink",
-          },
-          avante = {
-            module = 'blink-cmp-avante',
-            name = 'Avante',
-            opts = {
-              -- options for blink-cmp-avante
-            }
           },
         },
       },

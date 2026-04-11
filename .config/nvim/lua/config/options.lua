@@ -4,7 +4,9 @@ vim.opt.incsearch = true -- make search act like search in modern browsers
 vim.opt.clipboard = "unnamedplus" -- allows neovim to access the system clipboard
 vim.opt.cmdheight = 1 -- more space in the neovim command line for displaying messages
 
-vim.opt.completeopt = { "menu", "menuone", "noselect" } -- mostly just for cmp
+vim.opt.completeopt = { "menu", "menuone", "noselect", "nearest" } -- mostly just for cmp
+vim.opt.pumborder = "rounded"
+vim.opt.pummaxwidth = 40
 vim.opt.conceallevel = 0 -- so that `` is visible in markdown files
 vim.opt.fileencoding = "utf-8" -- the encoding written to a file
 vim.opt.hlsearch = true -- highlight all matches on previous search pattern

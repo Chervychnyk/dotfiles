@@ -10,8 +10,6 @@ autocmd("FileType", {
     "man",
     "lspinfo",
     "DressingSelect",
-    "Trouble",
-    "trouble",
     "query",
     "checkhealth",
     "spectre_panel",

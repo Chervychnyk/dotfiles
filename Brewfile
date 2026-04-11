@@ -17,7 +17,9 @@ brew "gh"             # GitHub CLI
 brew "git"
 brew "gnupg"
 brew "jq"             # JSON processor
-brew "mise"           # Runtime version manager
+brew "mise"           # Runtime version manager / env/task control plane
+brew "hk"             # Git hook manager that integrates with mise
+brew "fnox"           # Secrets manager with mise env integration
 brew "neovim"
 brew "protobuf"
 brew "readline"
