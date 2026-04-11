@@ -31,6 +31,7 @@ Load these with `read` when the task matches:
 - `agents-md` — create or tighten repo agent instructions
 - `cmux` — manage tabs/workspaces and long-running terminal tasks in cmux
 - `learn-codebase` — discover instructions, conventions, and change points
+- `session-reader` — inspect Pi session JSONL files and search prior sessions
 
 Skill location: `pi/agent/skills/`
 
@@ -68,6 +69,7 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `review.ts` — `/review`, `/end-review`
 - `sandbox/`
 - `session-breakdown.ts` — `/session-breakdown`
+- `session-search.ts` — `/session-search`
 - `usage-bar.ts` — `/usage`
 - `pi-web-tools` package — custom tools: `web_search`, `web_fetch`, `get_web_content`
 - `guardrails.json`
@@ -90,7 +92,6 @@ Use extension-backed workflows when relevant:
 From `pi/agent/settings.json` and `pi/agent/modes.json`:
 
 - Default provider/model: `openai-codex` / `gpt-5.4`
-- Default thinking level: `high`
 - Modes:
   - `rush` → `anthropic / claude-haiku-4-5`
   - `smart` → `anthropic / claude-opus-4-6`
