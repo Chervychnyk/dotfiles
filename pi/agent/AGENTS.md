@@ -39,8 +39,9 @@ Skill location: `pi/agent/skills/`
 
 Prefer subagents for substantial work:
 
+- `spec` — clarify intent, scope, exclusions, and success criteria before planning
 - `scout` — read-only reconnaissance and architecture mapping
-- `planner` — phased plans, ambiguity reduction, grouped questions
+- `planner` — turn a clear request or approved spec into an execution plan
 - `worker` — focused implementation once scope is clear
 - `reviewer` — read-only implementation review and regression detection
 
@@ -71,8 +72,9 @@ Installed local extensions live in `pi/agent/extensions/`:
 - `session-breakdown.ts` — `/session-breakdown`
 - `session-search.ts` — `/session-search`
 - `usage-bar.ts` — `/usage`
+- `protected-paths.ts` — blocks writes/edits to sensitive paths including `.env*`, `.git/`, `.ssh/`, credentials files, vendored deps, lockfiles, and schema artifacts
+- `permission-gate.ts` — prompts before dangerous bash commands including `rm -rf`, `sudo`, `chmod/chown 777`, force pushes, destructive Docker commands, DB drop/reset commands, and `kubectl delete`
 - `pi-web-tools` package — custom tools: `web_search`, `web_fetch`, `get_web_content`
-- `guardrails.json`
 
 Use extension-backed workflows when relevant:
 
@@ -100,7 +102,6 @@ From `pi/agent/settings.json` and `pi/agent/modes.json`:
 - Installed packages:
   - `npm:pi-interview`
   - `npm:pi-mcp-adapter`
-  - `npm:@aliou/pi-guardrails`
   - `npm:pi-subagents`
   - `npm:pi-boomerang`
 

@@ -101,8 +101,13 @@ export default function (pi: ExtensionAPI) {
                   ? 'dim'
                   : 'muted'
           const modelId = ctx.model?.id || 'no-model'
+          const thinkingLabel = thinking || 'default'
           const modelStr =
-            theme.fg(thinkColor, '◆') + ' ' + theme.fg('accent', modelId)
+            theme.fg(thinkColor, '◆') +
+            ' ' +
+            theme.fg('accent', modelId) +
+            ' ' +
+            theme.fg(thinkColor, `(${thinkingLabel})`)
 
           const sep = theme.fg('dim', ' | ')
           const leftParts = [modelStr, tokenStats, contextBar, elapsed, cwdStr]
