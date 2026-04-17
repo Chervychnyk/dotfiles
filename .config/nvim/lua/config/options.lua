@@ -2,7 +2,7 @@ vim.g.max_file = { size = 1024 * 100, lines = 10000 }
 
 vim.opt.incsearch = true -- make search act like search in modern browsers
 vim.opt.clipboard = "unnamedplus" -- allows neovim to access the system clipboard
-vim.opt.cmdheight = 1 -- more space in the neovim command line for displaying messages
+vim.opt.cmdheight = 0 -- hide the command line when not in use
 
 vim.opt.completeopt = { "menu", "menuone", "noselect", "nearest" } -- mostly just for cmp
 vim.opt.pumborder = "rounded"

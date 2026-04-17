@@ -172,13 +172,21 @@ link_file "$DOTFILES/.config/aerospace"     "$HOME/.config/aerospace"
 link_file "$DOTFILES/.config/sketchybar"    "$HOME/.config/sketchybar"
 link_file "$DOTFILES/.config/yazi"          "$HOME/.config/yazi"
 link_file "$DOTFILES/.config/zed"           "$HOME/.config/zed"
+link_file "$DOTFILES/.config/opensessions"  "$HOME/.config/opensessions"
 link_file "$DOTFILES/k9s"                   "$HOME/.config/k9s"
+link_file "$DOTFILES/bat"                   "$HOME/.config/bat"
 
 link_file "$DOTFILES/.psqlrc"       "$HOME/.psqlrc"
 link_file "$DOTFILES/.macos"        "$HOME/.macos"
 link_file "$DOTFILES/pi"            "$HOME/.pi"
 
 success "All symlinks created"
+
+if command -v bat &>/dev/null; then
+  info "Building bat theme cache..."
+  bat cache --build >/dev/null
+  success "bat theme cache built"
+fi
 
 if [[ ! -d "$HOME/.zim" ]]; then
   info "Installing Zim..."

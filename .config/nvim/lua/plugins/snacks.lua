@@ -17,6 +17,12 @@ return {
         },
         matcher = {
           frecency = true,
+          smartcase = true,
+        },
+        previewers = {
+          file = {
+            max_size = 100 * 1024,
+          },
         },
         sources = {
           explorer = {
@@ -57,7 +63,14 @@ return {
               key = "f",
               desc = "Find File",
               action = function()
-                require("fff").find_files()
+                Snacks.picker.files({
+                  finder = "files",
+                  format = "file",
+                  show_empty = true,
+                  hidden = true,
+                  supports_live = true,
+                  layout = "vscode",
+                })
               end,
             },
             { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
@@ -67,9 +80,7 @@ return {
               icon = " ",
               key = "t",
               desc = "Find Text",
-              action = function()
-                require("fff").live_grep()
-              end,
+              action = ":lua Snacks.dashboard.pick('live_grep')",
             },
             { icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
             { icon = icons.ui.Note, key = "o", desc = "Obsidian", action = ":ObsidianQuickSwitch" },
@@ -78,8 +89,12 @@ return {
               key = "c",
               desc = "Config",
               action = function()
-                require("fff").find_files({
-                  base_path = vim.fn.stdpath("config"),
+                Snacks.picker.files({
+                  finder = "files",
+                  format = "file",
+                  hidden = true,
+                  cwd = vim.fn.stdpath("config"),
+                  layout = "vscode",
                 })
               end,
             },
@@ -121,6 +136,20 @@ return {
     -- { "<leader>e",  function() Snacks.explorer({ hidden = true, ignored = true, exclude = { ".git" } }) end, desc = "File Explorer" },
     { "<leader>f",  group = "Find", nowait = true, remap = false },
     {
+      "<leader>ff",
+      function()
+        Snacks.picker.files({
+          finder = "files",
+          format = "file",
+          show_empty = true,
+          hidden = true,
+          supports_live = true,
+          layout = "vscode",
+        })
+      end,
+      desc = "Find Files",
+    },
+    {
       "<leader>fp",
       function()
         Snacks.picker.projects({
@@ -129,7 +158,9 @@ return {
       end,
       desc = "Projects"
     },
-    { "<leader>fr", function() Snacks.picker.recent() end,              desc = "Recent" },
+    { "<leader>fr", function() Snacks.picker.recent() end,                            desc = "Recent" },
+    { "<leader>ft", function() Snacks.picker.grep({ hidden = true }) end,             desc = "Grep" },
+    { "<leader>fs", function() Snacks.picker.grep_word({ hidden = true }) end,        desc = "Visual selection or word", mode = { "n", "x" } },
     { "<leader>fl", function() Snacks.picker.resume() end,                            desc = "Resume" },
     { "<leader>fc", function() Snacks.picker.commands() end,                          desc = "Commands" },
     { "<leader>fC", function() Snacks.picker.colorschemes() end,                      desc = "Colorschemes" },

@@ -15,6 +15,7 @@ brew "curl"
 brew "fzf"
 brew "gh"             # GitHub CLI
 brew "git"
+brew "git-delta"      # Syntax-highlighting pager for git/diff
 brew "gnupg"
 brew "jq"             # JSON processor
 brew "mise"           # Runtime version manager / env/task control plane

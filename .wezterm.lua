@@ -12,7 +12,7 @@ end
 
 -- This is where you actually apply your config choices
 
-config.color_scheme = 'Everforest Dark Hard (Gogh)'
+config.color_scheme = 'Everforest Dark (Gogh)'
 config.font = wezterm.font "Hack Nerd Font Mono"
 config.font_size = 16
 config.line_height = 1.2
