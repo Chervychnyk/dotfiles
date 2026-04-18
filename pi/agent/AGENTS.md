@@ -2,13 +2,34 @@
 
 These instructions apply across projects unless a repo-specific `AGENTS.md`, `AGENTS.local.md`, or similar file overrides them.
 
-## Core Rules
+## Core Principles
 
-1. Understand the target code before editing it.
-2. Prefer small, explicit changes over broad refactors.
-3. Use tools to verify facts instead of guessing.
-4. Delegate substantial or separable work to subagents.
-5. Be concise, but always include assumptions, verification, and risks.
+### Read Before You Edit
+Never propose changes without reading the target files and surrounding code. Understand existing patterns before matching or departing from them.
+
+### Try Before Asking
+Test commands, tools, and configs instead of asking whether they exist or work. Check for files, entry points, and package scripts rather than speculating.
+
+### Keep Scope Tight
+Implement what was asked, not adjacent cleanup or redesign. A bug fix doesn't need surrounding refactors; a one-shot operation doesn't need a helper abstraction.
+
+### Think Forward
+No backwards-compatibility shims, defensive fallbacks, or "just in case" error handling for scenarios that can't happen. Trust internal code and framework guarantees. Only validate at system boundaries.
+
+### Investigate Before Fixing
+Find the root cause. Don't apply shotgun patches or cargo-cult fixes. If a test fails or a command errors, understand *why* before changing anything.
+
+### Verify Before Claiming Done
+Provide evidence — actual command output, test results, or a verified behavior trace. Treat "should work now" as a red flag; run the check instead.
+
+### Clean Up After Yourself
+Remove debug prints, commented-out code, scratch files, and temporary artifacts before finishing. The diff should contain only the intended change.
+
+### Professional Objectivity
+Push back on bad ideas. Prioritize technical accuracy over validation. Don't pad responses with praise — disagreement, stated respectfully, is more useful than agreement.
+
+### Be Concise
+Short answers, grouped questions, no running commentary. Surface blockers early. Include assumptions, verification, and risks in the final summary.
 
 ## Learn the Repo First
 
@@ -23,107 +44,82 @@ Before non-trivial changes, check for local guidance in:
 
 Use the `learn-codebase` skill when the task requires repo orientation.
 
-## Available Built-in Skills
+## Subagents
 
-Load these with `read` when the task matches:
+Prefer subagents for substantial or separable work. Each agent has a narrow lane — keep it that way.
+
+| Agent      | Purpose                                                     | Model                         |
+| ---------- | ----------------------------------------------------------- | ----------------------------- |
+| `spec`     | Clarify intent, scope, exclusions, success criteria         | `openai-codex/gpt-5.4`        |
+| `scout`    | Read-only reconnaissance and architecture mapping           | `openai-codex/gpt-5.4-mini`   |
+| `planner`  | Turn a clear request or approved spec into an execution plan | `openai-codex/gpt-5.4`       |
+| `worker`   | Focused implementation once scope is clear                  | `openai-codex/gpt-5.4`        |
+| `reviewer` | Read-only implementation review and regression detection    | `openai-codex/gpt-5.4`        |
+
+Reusable chains: `bugfix`, `feature`, `refactor` — each runs scout → planner → worker → reviewer.
+
+### Delegation Patterns
+
+- **Delegate** when the task needs substantial code reading, parallel reconnaissance, or a clean context boundary.
+- **Don't delegate** trivial edits, one-line fixes, or direct questions you can answer from the current context.
+- **Run in parallel** when subagent tasks are independent — issue the calls in a single turn.
+- **Use `fork: true`** when the subagent needs the full current session context rather than a fresh one.
+
+## Built-in Skills
+
+Load with `read` when the task matches:
 
 - `add-mcp-server` — add or update Pi MCP server config
 - `agents-md` — create or tighten repo agent instructions
-- `cmux` — manage tabs/workspaces and long-running terminal tasks in cmux
+- `cmux` — manage tabs/workspaces and long-running terminal tasks
 - `learn-codebase` — discover instructions, conventions, and change points
 - `session-reader` — inspect Pi session JSONL files and search prior sessions
 
-Skill location: `pi/agent/skills/`
+Location: `pi/agent/skills/`
 
-## Current Subagents
+## Extensions & Commands
 
-Prefer subagents for substantial work:
+Installed under `pi/agent/extensions/`. Use them when relevant:
 
-- `spec` — clarify intent, scope, exclusions, and success criteria before planning
-- `scout` — read-only reconnaissance and architecture mapping
-- `planner` — turn a clear request or approved spec into an execution plan
-- `worker` — focused implementation once scope is clear
-- `reviewer` — read-only implementation review and regression detection
+- **Research**: `web_search`, `web_fetch`, `get_web_content` (from `pi-web-tools`)
+- **Docker**: `docker_services` before backend commands; `docker_exec` for Rails/Python/Node app commands; `docker_logs` for service log inspection
+- **Session flow**: `handoff` for clean transitions; `/review` + `/end-review` for interactive review in the current session (distinct from the `reviewer` subagent)
+- **Side-channel**: `/btw` opens a separate overlay thread with its own history — use for exploratory questions, planning, or quick investigations without polluting the main conversation. `/btw <text>` asks immediately; summaries can be injected back into the main thread.
+- **Multi-terminal work**: cmux tooling
+- **Memory**: `/mem`, `/remember` (via `memory-mode`)
+- **Modes**: `/mode`
+- **Introspection**: `/session-breakdown`, `/session-search`, `/usage`
 
-Reusable global chains:
+Safety rails active by default:
 
-- `bugfix` — scout → planner → worker → reviewer
-- `feature` — scout → planner → worker → reviewer
-- `refactor` — scout → planner → worker → reviewer
+- `protected-paths` — blocks writes/edits to `.env*`, `.git/`, `.ssh/`, credentials, vendored deps, lockfiles, schema artifacts
+- `permission-gate` — prompts before `rm -rf`, `sudo`, `chmod/chown 777`, force pushes, destructive Docker, DB drop/reset, `kubectl delete`
 
-If tasks are independent, delegate in parallel.
-
-## Current Extensions / Commands
-
-Installed local extensions live in `pi/agent/extensions/`:
-
-- `auto-session-name.ts`
-- `clipboard.ts` — clipboard helper tool
-- `cmux.ts`
-- `custom-footer.ts`
-- `docker-context.ts` — Docker Compose discovery plus `docker_services`, `docker_exec`, `docker_logs`
-- `go-to-bed.ts`
-- `handoff.ts` — `/handoff` command and `handoff` tool
-- `memory-mode.ts` — `/mem`, `/remember`
-- `modes.ts` — `/mode`
-- `pi-boomerang` — `/boomerang`, `/boomerang-cancel`, optional `boomerang` tool
-- `review.ts` — `/review`, `/end-review`
-- `sandbox/`
-- `session-breakdown.ts` — `/session-breakdown`
-- `session-search.ts` — `/session-search`
-- `usage-bar.ts` — `/usage`
-- `protected-paths.ts` — blocks writes/edits to sensitive paths including `.env*`, `.git/`, `.ssh/`, credentials files, vendored deps, lockfiles, and schema artifacts
-- `permission-gate.ts` — prompts before dangerous bash commands including `rm -rf`, `sudo`, `chmod/chown 777`, force pushes, destructive Docker commands, DB drop/reset commands, and `kubectl delete`
-- `pi-web-tools` package — custom tools: `web_search`, `web_fetch`, `get_web_content`
-
-Use extension-backed workflows when relevant:
-
-- `web_search` / `web_fetch` for web research and content extraction
-- `get_web_content` to retrieve stored full content from earlier web tool calls
-- `docker_services` before backend commands when Docker Compose may be involved
-- `docker_exec` for Rails, Python, Node, and other app commands that should run in containers
-- `docker_logs` for targeted service log inspection
-- `handoff` for clean session transitions
-- `review` / `end-review` for interactive review-focused iteration in the current session (not via the `reviewer` subagent)
-- `/boomerang` / `/boomerang-cancel` for autonomous task execution with context collapse
-- Prefer `--rethrow N` with `/boomerang` for repeated fresh-pass execution when iterative improvement is desired
-- cmux tooling when work benefits from multiple managed terminals
-
-## Current Pi Configuration
+## Pi Configuration
 
 From `pi/agent/settings.json` and `pi/agent/modes.json`:
 
-- Default provider/model: `openai-codex` / `gpt-5.4`
-- Modes:
-  - `rush` → `anthropic / claude-haiku-4-5`
-  - `smart` → `anthropic / claude-opus-4-6`
-  - `deep` → `openai-codex / gpt-5.4`
-  - `casual` → `anthropic / claude-sonnet-4-6`
-- Installed packages:
-  - `npm:pi-interview`
-  - `npm:pi-mcp-adapter`
-  - `npm:pi-subagents`
-  - `npm:pi-boomerang`
+- Default: `openai-codex/gpt-5.4`
+- Modes: `rush` → Haiku 4.5 · `smart` → Opus 4.6 · `deep` → Codex 5.4 · `casual` → Sonnet 4.6
+- Packages: `pi-interview`, `pi-mcp-adapter`, `pi-subagents`
 
-## Research Guidance
+## Research
 
-- Prefer `web_search` + `web_fetch` extension tools for web lookup and content extraction.
-- Wrapper skills `web-search` and `web-fetch` are provided by the `pi-web-tools` package for discoverability and `/skill:` usage.
-- Prefer `mcp` tools for configured external systems when they provide direct access.
+- Prefer `web_search` + `web_fetch` for web lookup and extraction.
+- Use `get_web_content` to retrieve stored full content from earlier web tool calls.
+- Prefer `mcp` tools for configured external systems over scraping.
 - When working on Pi itself, read the relevant Pi docs and follow linked `.md` references before changing code.
 
-## Implementation Guidance
+## Commits
 
-- Match existing project patterns and naming.
-- Preserve behavior unless the task explicitly asks for behavioral change.
-- Verify with the most relevant checks available.
-- Call out skipped validation, blockers, or follow-up work.
+- Use the `commit` skill for every commit.
+- Descriptive subject and body — no one-word messages.
+- One logical change per commit. Don't bundle unrelated edits.
 
-## Communication
+## Completion Summary
 
-- Group questions so the user can answer efficiently.
-- Surface blockers early.
-- On completion, summarize:
-  - what changed
-  - how it was verified
-  - what remains or may be risky
+On finishing a task, report:
+
+- **What changed** — files and the behavioral delta
+- **How it was verified** — commands run, output observed
+- **What remains or is risky** — skipped validation, known gaps, follow-ups

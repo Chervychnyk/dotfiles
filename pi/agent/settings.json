@@ -5,7 +5,6 @@
   "packages": [
     "npm:pi-interview",
     "npm:pi-mcp-adapter",
-    "npm:pi-boomerang",
     "~/code/pi-web-tools",
     "npm:pi-subagents"
   ],
