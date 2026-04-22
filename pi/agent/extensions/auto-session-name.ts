@@ -8,6 +8,7 @@
 import { completeSimple, type Api, type Model } from '@mariozechner/pi-ai'
 import type {
   ExtensionAPI,
+  ExtensionContext,
   SessionContext,
   SessionEntry,
 } from '@mariozechner/pi-coding-agent'
@@ -170,13 +171,7 @@ function isMeaningfullyDifferent(current: string, next: string): boolean {
   const a = normalizeForComparison(stripPrefix(current))
   const b = normalizeForComparison(stripPrefix(next))
   if (!a || !b) return false
-  if (a === b) return false
-
-  if (a.includes(b) || b.includes(a)) {
-    return Math.abs(a.length - b.length) >= 12
-  }
-
-  return true
+  return a !== b
 }
 
 function preservePrefix(prefix: string, title: string): string {
@@ -410,10 +405,12 @@ async function pickSummaryModel(ctx: {
     >
   }
 }): Promise<SummaryModel | null> {
+  // Prefer the current model to avoid auth/provider mismatches, then fall back
+  // to small/cheap summarizer models if they're available.
   const preferred = [
-    ctx.modelRegistry.find('openai-codex', 'gpt-5-mini'),
-    ctx.modelRegistry.find('anthropic', 'claude-haiku-4-5'),
     ctx.model,
+    ctx.modelRegistry.find('openai-codex', 'gpt-5.4-mini'),
+    ctx.modelRegistry.find('anthropic', 'claude-haiku-4-5'),
   ].filter(Boolean) as Model<Api>[]
 
   const seen = new Set<string>()
@@ -430,6 +427,24 @@ async function pickSummaryModel(ctx: {
   }
 
   return null
+}
+
+function buildFallbackSummaryName(
+  state: RuntimeState,
+  signals: SummarySignals,
+): string {
+  const candidate =
+    signals.latestUserText || state.firstPromptBody || state.firstUserText
+  return preservePrefix(state.prefix, candidate)
+}
+
+function applySessionName(
+  pi: ExtensionAPI,
+  ctx: ExtensionContext,
+  name: string,
+) {
+  pi.setSessionName(name)
+  ctx.ui.setTitle(name)
 }
 
 function restoreState(
@@ -508,9 +523,13 @@ export default function (pi: ExtensionAPI) {
     state = restoreState(existingName, persisted, seed)
 
     if (!existingName && state.stage !== 'external' && state.autoName) {
-      pi.setSessionName(state.autoName)
+      applySessionName(pi, ctx, state.autoName)
       persistState(pi, state)
       return
+    }
+
+    if (existingName) {
+      ctx.ui.setTitle(existingName)
     }
 
     if (persisted && state.stage !== persisted.stage) {
@@ -518,7 +537,7 @@ export default function (pi: ExtensionAPI) {
     }
   })
 
-  pi.on('input', async (event) => {
+  pi.on('input', async (event, ctx) => {
     if (event.source === 'extension') return
     if (state.stage !== 'idle') return
 
@@ -537,7 +556,7 @@ export default function (pi: ExtensionAPI) {
 
     state.stage = 'temp'
     state.autoName = name
-    pi.setSessionName(name)
+    applySessionName(pi, ctx, name)
     persistState(pi, state)
   })
 
@@ -557,60 +576,64 @@ export default function (pi: ExtensionAPI) {
     const signals = collectSummarySignals(messages)
     if (!shouldSummarize(state, signals)) return
 
-    if (!summaryModelPromise) {
-      summaryModelPromise = pickSummaryModel(ctx)
-    }
-
-    const summaryModel = await summaryModelPromise
-    if (!summaryModel) {
-      summaryModelPromise = null
-      return
-    }
-
     state.generating = true
 
     try {
-      const response = await completeSimple(
-        summaryModel.model,
-        {
-          systemPrompt: SUMMARY_PROMPT,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: buildSummaryInput(state, signals),
-                },
-              ],
-              timestamp: Date.now(),
-            },
-          ],
-        },
-        {
-          apiKey: summaryModel.apiKey,
-          headers: summaryModel.headers,
-          maxTokens: 80,
-        },
-      )
+      if (!summaryModelPromise) {
+        summaryModelPromise = pickSummaryModel(ctx)
+      }
 
-      if (response.stopReason === 'error' || response.stopReason === 'aborted')
-        return
+      const summaryModel = await summaryModelPromise
+      let nextName = ''
 
-      const summary = response.content
-        .filter(
-          (content): content is { type: 'text'; text: string } =>
-            content.type === 'text',
+      if (summaryModel) {
+        const response = await completeSimple(
+          summaryModel.model,
+          {
+            systemPrompt: SUMMARY_PROMPT,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: buildSummaryInput(state, signals),
+                  },
+                ],
+                timestamp: Date.now(),
+              },
+            ],
+          },
+          {
+            apiKey: summaryModel.apiKey,
+            headers: summaryModel.headers,
+            maxTokens: 80,
+          },
         )
-        .map((content) => content.text)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/[.!?]+$/, '')
 
-      if (!summary) return
+        if (
+          response.stopReason !== 'error' &&
+          response.stopReason !== 'aborted'
+        ) {
+          const summary = response.content
+            .filter(
+              (content): content is { type: 'text'; text: string } =>
+                content.type === 'text',
+            )
+            .map((content) => content.text)
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/[.!?]+$/, '')
 
-      const nextName = preservePrefix(state.prefix, summary)
+          if (summary) nextName = preservePrefix(state.prefix, summary)
+        }
+      }
+
+      if (!nextName) {
+        nextName = buildFallbackSummaryName(state, signals)
+      }
+
       const latestName = pi.getSessionName() ?? ''
       if (latestName && hasManualOverride(latestName, state.autoName)) {
         state.stage = 'external'
@@ -619,13 +642,14 @@ export default function (pi: ExtensionAPI) {
       }
 
       if (isMeaningfullyDifferent(latestName || state.autoName, nextName)) {
-        pi.setSessionName(nextName)
+        applySessionName(pi, ctx, nextName)
         state.autoName = nextName
       }
 
       state.stage = 'final'
     } catch {
       // Keep the temporary name. A later turn can retry if summarization failed.
+      summaryModelPromise = null
     } finally {
       state.generating = false
       persistState(pi, state)

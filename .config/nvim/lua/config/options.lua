@@ -1,47 +1,87 @@
+-- Shared "large file" limits used by plugins like snacks.nvim and gitsigns.nvim.
 vim.g.max_file = { size = 1024 * 100, lines = 10000 }
 
-vim.opt.incsearch = true -- make search act like search in modern browsers
-vim.opt.clipboard = "unnamedplus" -- allows neovim to access the system clipboard
-vim.opt.cmdheight = 0 -- hide the command line when not in use
-
-vim.opt.completeopt = { "menu", "menuone", "noselect", "nearest" } -- mostly just for cmp
-vim.opt.pumborder = "rounded"
-vim.opt.pummaxwidth = 40
-vim.opt.conceallevel = 0 -- so that `` is visible in markdown files
-vim.opt.fileencoding = "utf-8" -- the encoding written to a file
-vim.opt.hlsearch = true -- highlight all matches on previous search pattern
-vim.opt.ignorecase = true -- ignore case in search patterns
+-- Search the current buffer as you type the pattern.
+vim.opt.incsearch = true
+-- Highlight all matches for the last search pattern.
+vim.opt.hlsearch = true
+-- Ignore case in searches unless the pattern contains uppercase letters.
+vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.mouse = "a" -- allow the mouse to be used in neovim
 
-vim.opt.splitbelow = true -- force all horizontal splits to go below current window
-vim.opt.splitright = true -- force all vertical splits to go to the right of current window
-vim.opt.swapfile = false -- creates a swapfile
-vim.opt.termguicolors = true -- set term gui colors (most terminals support this)
-vim.opt.timeoutlen = 300 -- time to wait for a mapped sequence to complete (in milliseconds)
-vim.opt.updatetime = 500 -- faster completion (4000ms default)
-vim.opt.undofile = true -- enable persistent undo
-vim.opt.backup = false -- creates a backup file
-vim.opt.writebackup = false -- if a file is being edited by another program (or was written to file while editing with another program), it is not allowed to be edited
-vim.opt.expandtab = true -- convert tabs to spaces
-vim.opt.shiftwidth = 2 -- the number of spaces inserted for each indentation
-vim.opt.cursorline = false -- highlight the current line
-vim.opt.number = true -- set numbered lines
-vim.opt.breakindent = true -- wrap lines with indent
+-- Use the system clipboard for yank / paste.
+vim.opt.clipboard = "unnamedplus"
+-- Enable mouse support in all modes.
+vim.opt.mouse = "a"
+-- Hide the command line when idle; Neovim 0.12 handles this well.
+vim.opt.cmdheight = 0
+-- Ask for confirmation instead of failing on modified buffers.
+vim.opt.confirm = true
+-- Disable the old ruler display; statusline/UIs already cover this.
+vim.opt.ruler = false
+-- Disable the legacy showcmd area; cmdheight=0 makes it unnecessary.
+vim.opt.showcmd = false
 
-vim.opt.signcolumn = "yes" -- always show the sign column, otherwise it would shift the text each time
-vim.opt.wrap = false -- display lines as one long line
-vim.opt.pumheight = 5 -- set the max-popup height to 5 items
-vim.opt.scrolloff = 8 -- Makes sure there are always eight lines of context
-vim.opt.sidescrolloff = 8 -- Makes sure there are always eight lines of context
-vim.opt.showcmd = false -- Don't show the command in the last line
-vim.opt.ruler = false -- Don't show the ruler
-vim.opt.confirm = true -- confirm to save changes before exiting modified buffer
-vim.opt.fillchars = { eob = " " } -- change the character at the end of buffer
+-- Completion popup behavior tuned for Neovim 0.12 + blink/native popup menus.
+vim.opt.completeopt = { "menu", "menuone", "noselect", "popup", "fuzzy", "nearest" }
+-- Use rounded borders for popup menus.
+vim.opt.pumborder = "rounded"
+-- Limit popup menu height so it stays compact.
+vim.opt.pumheight = 5
+-- Keep popup menu width under control.
+vim.opt.pummaxwidth = 40
+-- Use rounded borders for generic floating windows in 0.12.
+vim.opt.winborder = "rounded"
 
+-- Keep markdown code fences and other concealed text visible.
+vim.opt.conceallevel = 0
+-- Show line numbers.
+vim.opt.number = true
+-- Do not highlight the current line.
+vim.opt.cursorline = false
+-- Always keep the sign column visible to avoid text shifting.
+vim.opt.signcolumn = "yes"
+-- Keep some context above and below the cursor while scrolling.
+vim.opt.scrolloff = 8
+-- Keep some context left and right of the cursor while side-scrolling.
+vim.opt.sidescrolloff = 8
+-- Do not wrap long lines by default.
+vim.opt.wrap = false
+-- Preserve indentation on wrapped lines when wrapping is enabled locally.
+vim.opt.breakindent = true
+-- Hide end-of-buffer tildes for a cleaner look.
+vim.opt.fillchars = { eob = " " }
+-- Start with folds disabled globally.
 vim.opt.foldenable = false
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+
+-- Open horizontal splits below the current window.
+vim.opt.splitbelow = true
+-- Open vertical splits to the right of the current window.
+vim.opt.splitright = true
+-- Disable swap files.
+vim.opt.swapfile = false
+-- Disable backup files.
+vim.opt.backup = false
+-- Disable writebackup files.
+vim.opt.writebackup = false
+-- Enable persistent undo across sessions.
+vim.opt.undofile = true
+-- Reduce mapped-sequence wait time.
+vim.opt.timeoutlen = 300
+-- Faster CursorHold-style updates for plugins and diagnostics.
+vim.opt.updatetime = 500
+-- Enable truecolor in supported terminals.
+vim.opt.termguicolors = true
+
+-- Expand tabs into spaces.
+vim.opt.expandtab = true
+-- Use two spaces for each indentation level.
+vim.opt.shiftwidth = 2
+
+-- Allow the terminal/window title to be updated.
+vim.opt.title = true
+-- Default title text; autocmds.lua updates this when the cwd changes.
+vim.opt.titlestring = "%t"
 
 vim.api.nvim_create_user_command("ReloadConfig", function()
   require("config.utils").ReloadConfig()

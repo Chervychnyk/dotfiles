@@ -1,12 +1,12 @@
 {
-  "lastChangelogVersion": "0.67.2",
+  "lastChangelogVersion": "0.68.1",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.4",
+  "defaultModel": "gpt-5.3-codex",
   "packages": [
+    "npm:pi-subagents",
     "npm:pi-interview",
     "npm:pi-mcp-adapter",
-    "~/code/pi-web-tools",
-    "npm:pi-subagents"
+    "~/code/pi-web-tools"
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",

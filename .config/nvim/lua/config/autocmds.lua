@@ -1,9 +1,12 @@
-local augroup = vim.api.nvim_create_augroup
 local autocmd = vim.api.nvim_create_autocmd
+
+local function augroup(name)
+  return vim.api.nvim_create_augroup("config_" .. name, { clear = true })
+end
 
 -- Close helper/utility windows with `q`
 autocmd("FileType", {
-  group = augroup("close_with_q", { clear = true }),
+  group = augroup("close_with_q"),
   pattern = {
     "qf",
     "help",
@@ -17,6 +20,7 @@ autocmd("FileType", {
     "neotest-output",
     "neotest-summary",
   },
+  desc = "Make helper windows easy to close",
   callback = function(args)
     vim.bo[args.buf].buflisted = false
     vim.keymap.set("n", "q", "<cmd>close<cr>", {
@@ -30,28 +34,30 @@ autocmd("FileType", {
 
 -- Reload externally changed files
 autocmd({ "FocusGained", "TermClose", "TermLeave", "BufEnter" }, {
-  group = augroup("checktime", { clear = true }),
+  group = augroup("checktime"),
+  desc = "Check for file changes on disk",
   callback = function()
     if vim.fn.mode() ~= "c" then
-      vim.cmd("checktime")
+      vim.cmd.checktime()
     end
   end,
 })
 
--- Keep terminal/window title aligned with current working directory
+-- Keep the terminal/window title aligned with the current working directory
 local function update_title()
-  local cwd = vim.fn.getcwd()
-  vim.opt.titlestring = vim.fn.fnamemodify(cwd, ":t")
+  vim.opt.titlestring = vim.fn.fnamemodify(vim.uv.cwd() or vim.fn.getcwd(), ":t")
 end
 
-autocmd({ "VimEnter", "BufEnter", "DirChanged" }, {
-  group = augroup("title", { clear = true }),
+autocmd({ "VimEnter", "DirChanged" }, {
+  group = augroup("title"),
+  desc = "Refresh window title",
   callback = update_title,
 })
 
 -- Highlight on yank
 autocmd("TextYankPost", {
-  group = augroup("yank_highlight", { clear = true }),
+  group = augroup("yank_highlight"),
+  desc = "Highlight yanked text",
   callback = function()
     vim.hl.on_yank()
   end,
@@ -59,8 +65,9 @@ autocmd("TextYankPost", {
 
 -- Disable folds on dashboards/startup screens
 autocmd("FileType", {
-  group = augroup("startup_no_folds", { clear = true }),
+  group = augroup("startup_no_folds"),
   pattern = { "alpha", "snacks_dashboard" },
+  desc = "Disable folds on startup buffers",
   callback = function()
     vim.opt_local.foldenable = false
   end,
@@ -68,8 +75,9 @@ autocmd("FileType", {
 
 -- Writing-friendly buffers
 autocmd("FileType", {
-  group = augroup("writing", { clear = true }),
+  group = augroup("writing"),
   pattern = { "gitcommit", "markdown", "NeogitCommitMessage" },
+  desc = "Enable wrapping and spellcheck for prose",
   callback = function()
     vim.opt_local.wrap = true
     vim.opt_local.spell = true
@@ -78,9 +86,10 @@ autocmd("FileType", {
 
 -- Explicit custom extension mapping
 autocmd({ "BufRead", "BufNewFile" }, {
-  group = augroup("wpy_filetype", { clear = true }),
+  group = augroup("wpy_filetype"),
   pattern = "*.wpy",
-  callback = function()
-    vim.bo.filetype = "vue"
+  desc = "Treat WPy files as Vue",
+  callback = function(args)
+    vim.bo[args.buf].filetype = "vue"
   end,
 })

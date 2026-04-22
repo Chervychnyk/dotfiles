@@ -1,0 +1,48 @@
+{
+  "defaultMode": "ask",
+  "allow": [
+    "read",
+    "grep",
+    "find",
+    "ls"
+  ],
+  "deny": [
+    "read(.env*)",
+    "read(*.env*)",
+    "read(*auth.json)",
+    "read(*credentials*)",
+    "read(*credentials.yml.enc)",
+    "read(*master.key)",
+    "read(*secrets.yml)",
+    "read(*.npmrc)",
+    "read(*.netrc)",
+    "bash(rm -rf *)",
+    "bash(sudo *)",
+    "bash(chmod * 777*)",
+    "bash(chown * 777*)",
+    "bash(kubectl delete *)",
+    "bash(docker system prune*)",
+    "bash(git push --force*)",
+    "bash(git reset --hard*)",
+    "bash(* rm -rf *)",
+    "bash(* sudo *)",
+    "bash(* chmod * 777*)",
+    "bash(* chown * 777*)",
+    "bash(* kubectl delete *)",
+    "bash(* docker system prune*)",
+    "bash(* git push --force*)",
+    "bash(* git reset --hard*)"
+  ],
+  "ask": [
+    "bash",
+    "edit",
+    "write",
+    "bash(git push *)",
+    "bash(* git push *)",
+    "bash(docker compose down*)",
+    "bash(* docker compose down*)"
+  ],
+  "keybindings": {
+    "autoAcceptEdits": "ctrl+shift+y"
+  }
+}

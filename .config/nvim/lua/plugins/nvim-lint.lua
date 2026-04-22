@@ -4,13 +4,15 @@ return {
   config = function()
     local lint = require("lint")
     local docker = require("util.docker")
+    local augroup = vim.api.nvim_create_augroup("config_lint", { clear = true })
 
     local rubocop = lint.linters.rubocop
 
-    -- Custom rubocop linter configuration
+    -- Run RuboCop either on the host or through docker compose, depending on project layout.
     lint.linters.rubocop = function()
       local current_file = vim.api.nvim_buf_get_name(0)
-      local root = vim.fn.getcwd()
+      local root = vim.fs.root(current_file, { "Gemfile", ".git", "docker-compose.yml", "docker-compose.yaml" })
+        or vim.fn.getcwd()
 
       local has_docker, service = docker.detect(root)
 
@@ -18,8 +20,8 @@ return {
       local args = {
         "exec",
         "rubocop",
-        '--format',
-        'json',
+        "--format",
+        "json",
         current_file,
       }
 
@@ -34,18 +36,20 @@ return {
           "bundle",
           "exec",
           "rubocop",
-          '--format',
-          'json',
-          function() return string.sub(current_file, #root + 2) end,
+          "--format",
+          "json",
+          function()
+            return vim.fs.relpath(root, current_file) or current_file
+          end,
         }
       end
 
       return {
         cmd = cmd,
         args = args,
-        stdin = true,
+        stdin = false,
         ignore_exitcode = true,
-        parser = rubocop.parser
+        parser = rubocop.parser,
       }
     end
 
@@ -60,10 +64,11 @@ return {
       python = { "ruff" },
     }
 
-    -- Create an autocmd to trigger linting
-    vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost" }, {
-      callback = function()
-        lint.try_lint()
+    vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost", "InsertLeave" }, {
+      group = augroup,
+      desc = "Run configured linters for the current buffer",
+      callback = function(args)
+        lint.try_lint(nil, { bufnr = args.buf })
       end,
     })
   end,

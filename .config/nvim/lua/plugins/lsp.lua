@@ -11,6 +11,27 @@ return {
   event = { "BufReadPre", "BufNewFile" },
 
   config = function()
+    local servers = {
+      "basedpyright",
+      "cssls",
+      "dockerls",
+      "docker_compose_language_service",
+      "elixirls",
+      "emmet_ls",
+      -- "gitlab_ci_ls",
+      "jsonls",
+      "lemminx",
+      -- "lexical",
+      "lua_ls",
+      "marksman",
+      "ruby_lsp",
+      "ruff",
+      -- "solargraph",
+      "vtsls",
+      "vue_ls",
+      "yamlls",
+    }
+
     -- ========================================
     -- Diagnostic Configuration
     -- ========================================
@@ -138,26 +159,8 @@ return {
 
     -- List of servers for mason to install
     mason_lspconfig.setup({
-      ensure_installed = {
-        "basedpyright",
-        "cssls",
-        "dockerls",
-        "docker_compose_language_service",
-        "elixirls",
-        "emmet_ls",
-        -- "gitlab_ci_ls",
-        "jsonls",
-        "lemminx",
-        -- "lexical",
-        "lua_ls",
-        "marksman",
-        "ruby_lsp",
-        "ruff",
-        -- "solargraph",
-        "vtsls",
-        "vue_ls",
-        "yamlls",
-      },
+      ensure_installed = servers,
+      automatic_enable = false,
     })
 
     -- Mason tool installer for formatters and linters
@@ -174,15 +177,15 @@ return {
     -- ========================================
     -- LSP Server Configuration
     -- ========================================
-    local servers = mason_lspconfig.get_installed_servers()
+    local base_capabilities = capabilities()
 
     for _, server_name in ipairs(servers) do
       local opts = {
         on_attach = on_attach,
-        capabilities = capabilities(),
+        capabilities = vim.deepcopy(base_capabilities),
       }
 
-      -- Load server-specific configuration if available
+      -- Load server-specific configuration if available.
       local has_custom_opts, server_custom_opts = pcall(require, "config.lsp.settings." .. server_name)
       if has_custom_opts then
         opts = vim.tbl_deep_extend("force", opts, server_custom_opts)

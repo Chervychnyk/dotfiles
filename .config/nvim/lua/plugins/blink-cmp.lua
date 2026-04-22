@@ -23,7 +23,7 @@ return {
       end,
 
       cmdline = {
-        enabled = false
+        enabled = false,
       },
 
       completion = {
@@ -93,8 +93,8 @@ return {
         providers = {
           dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
           lsp = {
-            min_keyword_length = 2, -- Number of characters to trigger porvider
-            score_offset = 0,       -- Boost/penalize the score of the items
+            min_keyword_length = 2, -- Number of characters required before LSP completion starts.
+            score_offset = 0, -- Adjust LSP item ranking relative to other sources.
           },
           snippets = {
             min_keyword_length = 1,

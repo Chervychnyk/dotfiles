@@ -9,9 +9,12 @@
  */
 
 import type {
+  CustomEntry,
   ExtensionAPI,
   ExtensionCommandContext,
   ExtensionContext,
+  SessionEntry,
+  SessionMessageEntry,
   ToolResultEvent,
 } from '@mariozechner/pi-coding-agent'
 import { DynamicBorder } from '@mariozechner/pi-coding-agent'
@@ -161,21 +164,55 @@ function buildSkillIndex(pi: ExtensionAPI, cwd: string): SkillIndexEntry[] {
 }
 
 const SKILL_LOADED_ENTRY = 'context:skill_loaded'
+const TOOL_USED_ENTRY = 'context:tool_used'
 
 type SkillLoadedEntryData = {
   name: string
   path: string
 }
 
+type ToolUsedEntryData = {
+  name: string
+}
+
+function isCustomEntry<T = unknown>(entry: SessionEntry): entry is CustomEntry<T> {
+  return entry.type === 'custom'
+}
+
+function isMessageEntry(entry: SessionEntry): entry is SessionMessageEntry {
+  return entry.type === 'message'
+}
+
 function getLoadedSkillsFromSession(ctx: ExtensionContext): Set<string> {
   const out = new Set<string>()
   for (const e of ctx.sessionManager.getEntries()) {
-    if ((e as any)?.type !== 'custom') continue
-    if ((e as any)?.customType !== SKILL_LOADED_ENTRY) continue
-    const data = (e as any)?.data as SkillLoadedEntryData | undefined
+    if (!isCustomEntry<SkillLoadedEntryData>(e)) continue
+    if (e.customType !== SKILL_LOADED_ENTRY) continue
+    const data = e.data
     if (data?.name) out.add(data.name)
   }
   return out
+}
+
+function getUsedToolCountsFromSession(
+  ctx: ExtensionContext | ExtensionCommandContext,
+): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const e of ctx.sessionManager.getEntries()) {
+    if (!isCustomEntry<ToolUsedEntryData>(e)) continue
+    if (e.customType !== TOOL_USED_ENTRY) continue
+    const data = e.data
+    if (!data?.name) continue
+    counts.set(data.name, (counts.get(data.name) ?? 0) + 1)
+  }
+  return counts
+}
+
+function formatUsedToolCounts(counts: Map<string, number>): string {
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => `${name} ${count}`)
+    .join(', ')
 }
 
 function extractCostTotal(usage: any): number {
@@ -210,9 +247,9 @@ function sumSessionUsage(ctx: ExtensionCommandContext): {
   let totalCost = 0
 
   for (const entry of ctx.sessionManager.getEntries()) {
-    if ((entry as any)?.type !== 'message') continue
-    const msg = (entry as any)?.message
-    if (!msg || msg.role !== 'assistant') continue
+    if (!isMessageEntry(entry)) continue
+    const msg = entry.message
+    if (msg.role !== 'assistant') continue
     const usage = msg.usage
     if (!usage) continue
     input += Number(usage.inputTokens ?? 0) || 0
@@ -260,9 +297,9 @@ function renderUsageBar(
   while (sys + tools + con + rem > w && rem > 0) rem--
 
   const block = '█'
-  const sysStr = theme.fg('accent', block.repeat(sys))
+  const sysStr = theme.fg('customMessageLabel', block.repeat(sys))
   const toolsStr = theme.fg('warning', block.repeat(tools))
-  const conStr = theme.fg('success', block.repeat(con))
+  const conStr = theme.fg('accent', block.repeat(con))
   const remStr = theme.fg('dim', block.repeat(rem))
   return `${sysStr}${toolsStr}${conStr}${remStr}`
 }
@@ -292,6 +329,9 @@ type ContextViewData = {
     agentTokens: number
     toolsTokens: number
     activeTools: number
+    usedTools: number
+    usedToolCalls: number
+    usedToolSummary: string
   } | null
   agentFiles: string[]
   extensions: string[]
@@ -376,13 +416,13 @@ class ContextView implements Component {
         ) +
         ' ' +
         dim('sys') +
-        this.theme.fg('accent', '█') +
+        this.theme.fg('customMessageLabel', '█') +
         ' ' +
         dim('tools') +
         this.theme.fg('warning', '█') +
         ' ' +
         dim('convo') +
-        this.theme.fg('success', '█') +
+        this.theme.fg('accent', '█') +
         ' ' +
         dim('free') +
         this.theme.fg('dim', '█')
@@ -400,10 +440,17 @@ class ContextView implements Component {
           muted(` (AGENTS ~${u.agentTokens.toLocaleString()})`),
       )
       lines.push(
-        muted('Tools: ') +
+        muted('Tool defs: ') +
           text(`~${u.toolsTokens.toLocaleString()} tok`) +
-          muted(` (${u.activeTools} active)`),
+          muted(` (${u.activeTools} available)`),
       )
+      lines.push(
+        muted('Tool usage: ') +
+          text(`${u.usedTools} used`) +
+          muted(' · ') +
+          text(`${u.usedToolCalls} calls`),
+      )
+      lines.push(muted('Used tools: ') + text(u.usedToolSummary || '(none)'))
     }
 
     lines.push(
@@ -504,9 +551,18 @@ export default function contextExtension(pi: ExtensionAPI) {
   }
 
   pi.on('tool_result', (event: ToolResultEvent, ctx: ExtensionContext) => {
-    // Only count successful reads.
-    if ((event as any).toolName !== 'read') return
     if ((event as any).isError) return
+
+    const toolName =
+      typeof (event as any).toolName === 'string' ? (event as any).toolName : ''
+    if (toolName) {
+      pi.appendEntry<ToolUsedEntryData>(TOOL_USED_ENTRY, {
+        name: toolName,
+      })
+    }
+
+    // Track loaded skills from successful read calls.
+    if (toolName !== 'read') return
 
     const input = (event as any).input as { path?: unknown } | undefined
     const p = typeof input?.path === 'string' ? input.path : ''
@@ -581,6 +637,12 @@ export default function contextExtension(pi: ExtensionAPI) {
         ctxWindow > 0 ? Math.max(0, ctxWindow - effectiveTokens) : 0
 
       const sessionUsage = sumSessionUsage(ctx)
+      const usedToolCounts = getUsedToolCountsFromSession(ctx)
+      const usedToolCalls = [...usedToolCounts.values()].reduce(
+        (sum, count) => sum + count,
+        0,
+      )
+      const usedToolSummary = formatUsedToolCounts(usedToolCounts)
 
       const makePlainText = () => {
         const lines: string[] = []
@@ -596,8 +658,12 @@ export default function contextExtension(pi: ExtensionAPI) {
           `System: ~${systemPromptTokens.toLocaleString()} tok (AGENTS ~${agentTokens.toLocaleString()})`,
         )
         lines.push(
-          `Tools: ~${toolsTokens.toLocaleString()} tok (${activeToolNames.length} active)`,
+          `Tool defs: ~${toolsTokens.toLocaleString()} tok (${activeToolNames.length} available)`,
         )
+        lines.push(
+          `Tool usage: ${usedToolCounts.size} used · ${usedToolCalls} calls`,
+        )
+        lines.push(`Used tools: ${usedToolSummary || '(none)'}`)
         lines.push(
           `AGENTS: ${agentFilePaths.length ? joinComma(agentFilePaths) : '(none)'}`,
         )
@@ -637,6 +703,9 @@ export default function contextExtension(pi: ExtensionAPI) {
               agentTokens,
               toolsTokens,
               activeTools: activeToolNames.length,
+              usedTools: usedToolCounts.size,
+              usedToolCalls,
+              usedToolSummary,
             }
           : null,
         agentFiles: agentFilePaths,

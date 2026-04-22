@@ -12,14 +12,16 @@ return {
       desc = "Format buffer",
     },
   },
-  opts = {
-  },
+  opts = {},
   config = function()
+    local conform = require("conform")
     local util = require("conform.util")
 
-    local has_docker, service = docker.detect()
+    local root = vim.fs.root(0, { "docker-compose.yml", "docker-compose.yaml", "Dockerfile", ".git" })
+      or vim.fn.getcwd()
+    local has_docker, service = docker.detect(root)
 
-    require("conform").setup({
+    conform.setup({
       formatters_by_ft = {
         javascript = { "eslint", "prettier" },
         typescript = { "eslint", "prettier" },
@@ -62,11 +64,19 @@ return {
           },
           cwd = util.root_file({
             "Dockerfile",
-            "docker-compose.yml"
+            "docker-compose.yml",
+            "docker-compose.yaml",
           }),
           exit_codes = { 0, 1 },
-        }
+        },
       },
+      format_on_save = function(bufnr)
+        if vim.bo[bufnr].buftype ~= "" then
+          return nil
+        end
+
+        return { timeout_ms = 3000, lsp_format = "fallback" }
+      end,
     })
   end,
 }

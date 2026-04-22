@@ -45,7 +45,11 @@ interface UsageSnapshot {
 
 const PI_AUTH_PATH = path.join(getAgentDir(), 'auth.json')
 const HOME_DIR = process.env.HOME || os.homedir()
-const GEMINI_OAUTH_CREDS_PATH = path.join(HOME_DIR, '.gemini', 'oauth_creds.json')
+const GEMINI_OAUTH_CREDS_PATH = path.join(
+  HOME_DIR,
+  '.gemini',
+  'oauth_creds.json',
+)
 const CODEX_HOME = process.env.CODEX_HOME || path.join(HOME_DIR, '.codex')
 
 const STATUS_URLS: Record<string, string> = {
@@ -170,10 +174,7 @@ async function loadClaudeToken(pi: ExtensionAPI): Promise<string | undefined> {
     if (!keychainData) return undefined
     const parsed = JSON.parse(keychainData)
     const scopes = parsed.claudeAiOauth?.scopes || []
-    if (
-      scopes.includes('user:profile') &&
-      parsed.claudeAiOauth?.accessToken
-    ) {
+    if (scopes.includes('user:profile') && parsed.claudeAiOauth?.accessToken) {
       return parsed.claudeAiOauth.accessToken
     }
   } catch {}
@@ -399,7 +400,9 @@ async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
   if (!token) {
     try {
       if (fs.existsSync(GEMINI_OAUTH_CREDS_PATH)) {
-        const data = JSON.parse(fs.readFileSync(GEMINI_OAUTH_CREDS_PATH, 'utf-8'))
+        const data = JSON.parse(
+          fs.readFileSync(GEMINI_OAUTH_CREDS_PATH, 'utf-8'),
+        )
         token = data.access_token
       }
     } catch {}
@@ -867,12 +870,21 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
       })
     }
 
-    // Secondary window (usually daily)
+    // Secondary window (daily for some plans, weekly for others)
     if (data.rate_limit?.secondary_window) {
       const sw = data.rate_limit.secondary_window
       const resetDate = sw.reset_at ? new Date(sw.reset_at * 1000) : undefined
-      const windowHours = Math.round((sw.limit_window_seconds || 86400) / 3600)
-      const label = windowHours >= 24 ? 'Day' : `${windowHours}h`
+      const windowSeconds = sw.limit_window_seconds || 86400
+      const windowHours = Math.round(windowSeconds / 3600)
+      const windowDays = Math.round(windowSeconds / 86400)
+      const label =
+        windowDays === 7
+          ? 'Week'
+          : windowDays === 1
+            ? 'Day'
+            : windowHours >= 24
+              ? `${windowDays}d`
+              : `${windowHours}h`
       windows.push({
         label,
         usedPercent: sw.used_percent || 0,
@@ -941,7 +953,9 @@ async function fetchKiroUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
     )
     if (!usage || usage.code !== 0) {
       throw new Error(
-        usage?.stderr?.trim() || usage?.stdout?.trim() || 'kiro-cli usage failed',
+        usage?.stderr?.trim() ||
+          usage?.stdout?.trim() ||
+          'kiro-cli usage failed',
       )
     }
 
