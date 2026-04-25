@@ -8,6 +8,24 @@ import type { AssistantMessage } from '@mariozechner/pi-ai'
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 import { truncateToWidth } from '@mariozechner/pi-tui'
 
+function sanitizeStatusText(text: string): string {
+  return text
+    .replace(/[\r\n\t]/g, ' ')
+    .replace(/ +/g, ' ')
+    .trim()
+}
+
+const STATUS_ORDER: Record<string, number> = {
+  mcp: 0,
+  'mcp-auth': 1,
+  sandbox: 2,
+  permission: 999,
+}
+
+function getStatusOrder(key: string): number {
+  return STATUS_ORDER[key] ?? 100
+}
+
 export default function (pi: ExtensionAPI) {
   let sessionStart = Date.now()
 
@@ -114,7 +132,28 @@ export default function (pi: ExtensionAPI) {
           if (branchStr) leftParts.push(branchStr)
           const left = leftParts.join(sep)
 
-          return [truncateToWidth(left, width)]
+          const lines = [truncateToWidth(left, width)]
+
+          const extensionStatuses = footerData.getExtensionStatuses()
+          if (extensionStatuses.size > 0) {
+            const statusLine = Array.from(extensionStatuses.entries())
+              .sort(([a], [b]) => {
+                const orderDiff = getStatusOrder(a) - getStatusOrder(b)
+                if (orderDiff !== 0) return orderDiff
+                return a.localeCompare(b)
+              })
+              .map(([key, text]) => {
+                const cleaned = sanitizeStatusText(text)
+                if (key === 'permission') {
+                  return theme.fg('warning', cleaned)
+                }
+                return cleaned
+              })
+              .join(' ')
+            lines.push(truncateToWidth(statusLine, width, theme.fg('dim', '...')))
+          }
+
+          return lines
         },
       }
     })

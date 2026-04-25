@@ -24,7 +24,7 @@ import {
   convertToLlm,
   serializeConversation,
 } from '@mariozechner/pi-coding-agent'
-import { Type } from '@sinclair/typebox'
+import { Type } from 'typebox'
 
 const HANDOFF_THRESHOLD_PERCENT = 85
 const MAX_RELEVANT_FILES = 10
@@ -240,11 +240,17 @@ export default function handoffExtension(pi: ExtensionAPI) {
       pi.events.emit('editor:remove-label', { key: 'handoff' })
     }
 
-    const switchResult = await ctx.newSession({ parentSession: parent })
-    if (switchResult.cancelled) return false
-
-    pi.sendUserMessage(prompt)
-    return true
+    try {
+      const switchResult = await ctx.newSession({
+        parentSession: parent,
+        withSession: async (nextCtx: any) => {
+          await nextCtx.sendUserMessage(prompt)
+        },
+      })
+      return !switchResult.cancelled
+    } catch {
+      return false
+    }
   }
 
   function markReady(ctx: ExtensionContext, label: string) {
@@ -386,7 +392,8 @@ export default function handoffExtension(pi: ExtensionAPI) {
       if (!switched) {
         storedHandoffPrompt = prompt
         handoffPending = true
-        if (ctx.hasUI) ctx.ui.notify('session switch cancelled', 'info')
+        if (ctx.hasUI)
+          ctx.ui.notify('handoff failed or session switch cancelled', 'info')
       }
     },
   })

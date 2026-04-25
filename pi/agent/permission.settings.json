@@ -14,8 +14,6 @@
     "read(*credentials.yml.enc)",
     "read(*master.key)",
     "read(*secrets.yml)",
-    "read(*.npmrc)",
-    "read(*.netrc)",
     "bash(rm -rf *)",
     "bash(sudo *)",
     "bash(chmod * 777*)",

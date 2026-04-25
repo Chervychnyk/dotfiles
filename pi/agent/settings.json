@@ -1,16 +1,17 @@
 {
-  "lastChangelogVersion": "0.68.1",
+  "lastChangelogVersion": "0.70.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.3-codex",
   "packages": [
     "npm:pi-subagents",
     "npm:pi-interview",
     "npm:pi-mcp-adapter",
+    "npm:pi-intercom",
     "~/code/pi-web-tools"
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",
-  "defaultThinkingLevel": "low",
+  "defaultThinkingLevel": "high",
   "quietStartup": true,
   "collapseChangelog": true,
   "hideThinkingBlock": true,

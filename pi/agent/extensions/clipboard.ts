@@ -9,7 +9,7 @@
  *   Ask the LLM: "write me a draft reply and put it into clipboard!"
  */
 
-import { Type } from '@sinclair/typebox'
+import { Type } from 'typebox'
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 
 /**
