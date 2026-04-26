@@ -43,7 +43,7 @@ eval "$(starship init zsh)"
 setopt promptsubst
 
 # Bat theme
-export BAT_THEME=base16
+export BAT_THEME="Everforest Dark"
 
 # Completion and enhancement plugins are now handled by Zim
 # Configure styles after Zim init

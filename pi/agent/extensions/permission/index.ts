@@ -43,13 +43,13 @@ import {
 import { loadExtensionSettings } from '../__lib/extension-settings.ts'
 import { showScrollableApproval } from './approval-ui.ts'
 import {
-  SIDE_BY_SIDE_MIN_WIDTH,
   formatEditPrompt,
   formatWritePrompt,
   getEditPreview,
   getWritePreview,
   resolvePreviewContentForWidth,
-} from './mutation-preview.ts'
+  type MutationPreview,
+} from './file-preview.ts'
 import { getMatchValue, resolveMode, type Mode } from './rules.ts'
 
 const EXTENSION = 'permission'
@@ -60,6 +60,8 @@ interface PermissionSettings {
   allow?: string[]
   deny?: string[]
   ask?: string[]
+  diffRenderer?: 'delta' | 'shiki'
+  shikiTheme?: string
   keybindings?: {
     autoAcceptEdits?: string
   }
@@ -194,6 +196,7 @@ export default function (pi: ExtensionAPI) {
           event.toolName,
           argValue,
           event.input as Record<string, unknown>,
+          settings,
         )
       }
     }
@@ -209,6 +212,8 @@ function mergePermissions(
     allow: [...(base.allow ?? []), ...(override.allow ?? [])],
     deny: [...(base.deny ?? []), ...(override.deny ?? [])],
     ask: [...(base.ask ?? []), ...(override.ask ?? [])],
+    diffRenderer: override.diffRenderer ?? base.diffRenderer,
+    shikiTheme: override.shikiTheme ?? base.shikiTheme,
     keybindings: { ...base.keybindings, ...override.keybindings },
   }
 }
@@ -244,6 +249,7 @@ async function promptToolPermission(
   toolName: string,
   argValue: string | undefined,
   input: Record<string, unknown>,
+  settings: PermissionSettings,
 ): Promise<PermissionDecision> {
   notifyCmuxPermissionPrompt(pi, ctx, toolName)
 
@@ -261,6 +267,7 @@ async function promptToolPermission(
           toolName,
           argValue,
           input,
+          settings,
         )
       }
       case 'bash': {
@@ -299,12 +306,31 @@ async function promptFileMutationPermission(
   toolName: 'edit' | 'write',
   targetPath: string,
   input: Record<string, unknown>,
+  settings: PermissionSettings,
 ): Promise<PermissionDecision> {
+  const previewOptions = {
+    diffRenderer: settings.diffRenderer,
+    shikiTheme: settings.shikiTheme,
+  }
+  const preview =
+    toolName === 'write'
+      ? await getWritePreview(targetPath, input, ctx.cwd, previewOptions)
+      : await getEditPreview(targetPath, input, ctx.cwd, previewOptions)
+
+  const unsafeWarning = getUnsafeFileMutationWarning(toolName, preview)
+  if (unsafeWarning) {
+    return {
+      block: true,
+      reason: `${STATUS_REJECTED} ${unsafeWarning} Please read the latest file contents and retry with updated edit blocks. File unchanged.`,
+    }
+  }
+
   const choice = await showFileMutationApproval(
     ctx,
     toolName,
     targetPath,
     input,
+    preview,
   )
   if (isChoiceApproved(choice, toolName, targetPath, ctx)) {
     return undefined
@@ -371,18 +397,30 @@ function rejectToolCall(
   return { block: true, reason }
 }
 
+function getUnsafeFileMutationWarning(
+  toolName: 'edit' | 'write',
+  preview: MutationPreview,
+): string | undefined {
+  if (toolName !== 'edit') return undefined
+
+  return preview.warnings.find((warning) =>
+    warning.includes('Target file not found') ||
+    warning.includes('Could not read target file') ||
+    warning.includes('oldText is empty') ||
+    warning.includes('oldText was not found') ||
+    warning.includes('oldText matched multiple locations') ||
+    warning.includes('overlap the same region'),
+  )
+}
+
 async function showFileMutationApproval(
   ctx: ExtensionContext,
   toolName: 'edit' | 'write',
   targetPath: string,
   input: Record<string, unknown>,
+  preview: MutationPreview,
 ): Promise<string | null> {
-  const preview =
-    toolName === 'write'
-      ? getWritePreview(targetPath, input, ctx.cwd)
-      : getEditPreview(targetPath, input, ctx.cwd)
-
-  const previewCache = new Map<string, string>()
+  const previewCache = new Map<string, string | undefined>()
   const contentForWidth = (width: number) => {
     const resolvedPreview = resolvePreviewContentForWidth(
       preview,
@@ -396,16 +434,13 @@ async function showFileMutationApproval(
 
   const warningLabel =
     preview.warnings.length > 0 ? ` · warnings:${preview.warnings.length}` : ''
-  const viewLabel = preview.diffSource
-    ? ` · view:auto(side-by-side>=${SIDE_BY_SIDE_MIN_WIDTH})`
-    : ''
 
   return showScrollableApproval(
     ctx,
     toolName,
     contentForWidth,
     getPermissionChoices(toolName),
-    `${targetPath} · preview:${preview.renderer}${warningLabel}${viewLabel}`,
+    `${targetPath} · preview:${preview.renderer}${warningLabel}`,
   )
 }
 

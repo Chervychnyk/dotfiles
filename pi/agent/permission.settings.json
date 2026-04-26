@@ -40,6 +40,8 @@
     "bash(docker compose down*)",
     "bash(* docker compose down*)"
   ],
+  "diffRenderer": "shiki",
+  "shikiTheme": "everforest-dark",
   "keybindings": {
     "autoAcceptEdits": "ctrl+shift+y"
   }
