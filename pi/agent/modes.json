@@ -9,12 +9,12 @@
     },
     "smart": {
       "provider": "anthropic",
-      "modelId": "claude-opus-4-6",
+      "modelId": "claude-opus-4-7",
       "thinkingLevel": "low"
     },
     "deep": {
       "provider": "openai-codex",
-      "modelId": "gpt-5.4",
+      "modelId": "gpt-5.5",
       "thinkingLevel": "low"
     },
     "casual": {

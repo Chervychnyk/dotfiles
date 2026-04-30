@@ -42,72 +42,76 @@ Before non-trivial changes, check for local guidance in:
 - `.claude/rules/**`, `.claude/commands/**`, `.claude/skills/**`
 - `README.md`, `CONTRIBUTING.md`, and task-relevant docs
 
-Use the `learn-codebase` skill when the task requires repo orientation.
+Use the `learn-codebase` skill at the start of unfamiliar work, before changes that depend on repo conventions, and before touching build/run/security-sensitive areas. Stop once you know the relevant rules, entry points, commands, and validation path; do not turn orientation into a full audit unless asked.
 
 ## Subagents
 
-Prefer subagents for substantial or separable work. Each agent has a narrow lane — keep it that way.
+Use `pi-subagents` for non-trivial work while keeping the main agent as orchestrator and final decision-maker. Before launch, run `subagent({ action: "list" })`; load the `pi-subagents` skill for custom chains, async/control, worktrees, or agent management.
 
-| Agent      | Purpose                                                     | Model                         |
-| ---------- | ----------------------------------------------------------- | ----------------------------- |
-| `spec`     | Clarify intent, scope, exclusions, success criteria         | `openai-codex/gpt-5.4`        |
-| `scout`    | Read-only reconnaissance and architecture mapping           | `openai-codex/gpt-5.4-mini`   |
-| `planner`  | Turn a clear request or approved spec into an execution plan | `openai-codex/gpt-5.4`       |
-| `worker`   | Focused implementation once scope is clear                  | `openai-codex/gpt-5.4`        |
-| `reviewer` | Read-only implementation review and regression detection    | `openai-codex/gpt-5.4`        |
+Default routing:
 
-Reusable chains: `bugfix`, `feature`, `refactor` — each runs scout → planner → worker → reviewer.
+- trivial lookup, one-line edit, or direct answer → handle directly
+- unclear scope or product intent → `spec`
+- unfamiliar code path or >3 relevant files → `scout`
+- bug / feature / behavior-preserving cleanup → `bugfix`, `feature`, or `refactor` chain
+- multi-step work without a saved chain → `scout`/`spec` → `planner` → `worker` → `reviewer`
+- external/current facts plus local code context → run `researcher` and `scout` in parallel
+- drift or assumption check against current session history → `oracle` with `context: "fork"`
 
-### Delegation Patterns
+Operational rules:
 
-- **Delegate** when the task needs substantial code reading, parallel reconnaissance, or a clean context boundary.
-- **Don't delegate** trivial edits, one-line fixes, or direct questions you can answer from the current context.
-- **Run in parallel** when subagent tasks are independent — issue the calls in a single turn.
-- **Use `fork: true`** when the subagent needs the full current session context rather than a fresh one.
+- Use one writer by default: one `worker` in the shared tree; use `worktree: true` only for intentional parallel write experiments on a clean git tree.
+- Prefer fresh context for adversarial `reviewer` runs; use `context: "fork"` only when the child should inherit parent history.
+- Use `reviewer` before finalizing risky changes: security, data integrity, concurrency, auth, payments, migrations, or public APIs.
+- Ask the user only for decisions that materially affect scope, product behavior, or risk.
+- Use async/status for long-running work; interrupt only on clear `needs_attention`, drift, or user request.
 
-## Built-in Skills
+## Skills
 
-Load with `read` when the task matches:
+Load a skill's instructions with `read` when the task matches. Do not rely on memory for specialized workflows.
 
-- `add-mcp-server` — add or update Pi MCP server config
-- `agents-md` — create or tighten repo agent instructions
-- `cmux` — manage tabs/workspaces and long-running terminal tasks
-- `learn-codebase` — discover instructions, conventions, and change points
-- `session-reader` — inspect Pi session JSONL files and search prior sessions
+Common triggers:
 
-Location: `pi/agent/skills/`
+- MCP server setup → `add-mcp-server`
+- Repo agent instructions → `agents-md`
+- Long-running terminals/browser workflows → `cmux`
+- Repo orientation/conventions/security sweep → `learn-codebase`
+- Session history analysis → `session-reader`
+- Commits/MRs or provider-specific workflows → use the matching installed skill when available
 
-## Extensions & Commands
+Skill locations and availability can vary by machine; check the current skill list rather than hardcoding paths or assuming a skill exists.
 
-Installed under `pi/agent/extensions/`. Use them when relevant:
+## Tool Selection
 
-- **Research**: `web_search`, `web_fetch`, `get_web_content` (from `pi-web-tools`)
-- **Docker**: `docker_services` before backend commands; `docker_exec` for Rails/Python/Node app commands; `docker_logs` for service log inspection
-- **Session flow**: `handoff` for clean transitions; `/review` + `/end-review` for interactive review in the current session (distinct from the `reviewer` subagent)
-- **Side-channel**: `/btw` opens a separate overlay thread with its own history — use for exploratory questions, planning, or quick investigations without polluting the main conversation. `/btw <text>` asks immediately; summaries can be injected back into the main thread.
-- **Multi-terminal work**: cmux tooling
-- **Memory**: `/mem`, `/remember` (via `memory-mode`)
-- **Modes**: `/mode`
-- **Introspection**: `/session-breakdown`, `/session-search`, `/usage`
+Use the right tool for the job and avoid tool calls that only add noise.
 
-Safety rails active by default:
+- **File reads**: use `read` for specific files; use `rg`, `find`, or `ls` via shell for discovery.
+- **Edits**: use `edit` for precise replacements; use `write` only for new files or intentional full rewrites.
+- **Shell**: use targeted commands. Avoid broad, slow, or destructive commands unless the task requires them.
+- **Docker**: when a repo runs app commands in Docker Compose, call `docker_services` first, then use `docker_exec` for Rails/Python/Node/runtime commands and `docker_logs` for service failures. Use local shell only when the repo is not containerized or the command is purely file/git inspection.
+- **Python**: prefer `uv` workflows (`uv run`, `uv add`, `uv sync`, `uv venv`) over raw Python, pip, or Poetry commands when practical.
+- **Web**: use `web_search`/`web_fetch` only for current or external facts, documentation, standards, and third-party APIs — not for repo-local questions.
+- **MCP**: prefer configured MCP tools for external systems they cover; do not scrape or manually work around an available MCP integration.
+- **Interview**: use `interview` when several requirements or tradeoffs need structured user input; ask simple clarifying questions directly in chat.
+- **cmux**: use for long-running servers, test watchers, browser workflows, or multi-terminal coordination.
 
-- `protected-paths` — blocks writes/edits to `.env*`, `.git/`, `.ssh/`, credentials, vendored deps, lockfiles, schema artifacts
-- `permission-gate` — prompts before `rm -rf`, `sudo`, `chmod/chown 777`, force pushes, destructive Docker, DB drop/reset, `kubectl delete`
+## Safety Rails
 
-## Pi Configuration
+Safety extensions may block or prompt for sensitive operations. Treat that as a signal to reassess scope and risk, not as friction to bypass.
 
-From `pi/agent/settings.json` and `pi/agent/modes.json`:
+- Protected paths include secrets, `.env*`, `.git/`, `.ssh/`, vendored dependencies, lockfiles, and generated schema artifacts.
+- Permission gates apply to destructive or high-risk actions such as `rm -rf`, `sudo`, unsafe chmod/chown, force pushes, destructive Docker, database resets, and cluster deletes.
+- Never expose secrets in output. If a secret is encountered, stop using it, avoid repeating it, and report only that a secret-like value exists and where it was found.
 
-- Default: `openai-codex/gpt-5.4`
-- Modes: `rush` → Haiku 4.5 · `smart` → Opus 4.6 · `deep` → Codex 5.4 · `casual` → Sonnet 4.6
-- Packages: `pi-interview`, `pi-mcp-adapter`, `pi-subagents`
+## Pi Runtime Configuration
+
+Do not duplicate live model, mode, package, or extension configuration in this guide. Check `~/.pi/agent/settings.json`, `~/.pi/agent/modes.json`, project `.pi/settings.json`, or tool discovery commands when runtime details matter.
 
 ## Research
 
-- Prefer `web_search` + `web_fetch` for web lookup and extraction.
+- Prefer `web_search` to find sources, then `web_fetch` for the specific pages you need.
 - Use `get_web_content` to retrieve stored full content from earlier web tool calls.
-- Prefer `mcp` tools for configured external systems over scraping.
+- Cite or summarize only sources you actually fetched or inspected.
 - When working on Pi itself, read the relevant Pi docs and follow linked `.md` references before changing code.
 
 ## Commits
@@ -118,8 +122,10 @@ From `pi/agent/settings.json` and `pi/agent/modes.json`:
 
 ## Completion Summary
 
-On finishing a task, report:
+On finishing a task, report only what is useful for handoff:
 
-- **What changed** — files and the behavioral delta
-- **How it was verified** — commands run, output observed
-- **What remains or is risky** — skipped validation, known gaps, follow-ups
+- **What changed** — files touched and the behavioral delta.
+- **Verification** — exact commands/checks run and the observed result; do not imply unrun tests passed.
+- **Risks / gaps** — skipped validation with reasons, known edge cases, blockers, or follow-ups.
+
+If no files changed, say so. If verification was not run, state why.

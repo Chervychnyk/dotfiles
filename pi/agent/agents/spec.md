@@ -1,8 +1,8 @@
 ---
 name: spec
 description: Use for clarifying WHAT to build before planning or implementation. Produces an intent-focused spec covering scope, exclusions, constraints, and success criteria, and asks grouped clarification questions when requirements are still ambiguous.
-model: openai-codex/gpt-5.4
-thinking: high
+model: openai-codex/gpt-5.5
+thinking: low
 tools: read, bash, grep, find, ls, interview, web_search, web_fetch, get_web_content, mcp
 ---
 

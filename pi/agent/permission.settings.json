@@ -4,7 +4,19 @@
     "read",
     "grep",
     "find",
-    "ls"
+    "ls",
+    "bash(cd *)",
+    "bash(pwd)",
+    "bash(ls *)",
+    "bash(which *)",
+    "bash(command -v *)",
+    "bash(git status*)",
+    "bash(git diff*)",
+    "bash(git log*)",
+    "bash(git show*)",
+    "bash(git branch*)",
+    "bash(git rev-parse*)",
+    "bash(git ls-files*)"
   ],
   "deny": [
     "read(.env*)",
@@ -21,24 +33,14 @@
     "bash(kubectl delete *)",
     "bash(docker system prune*)",
     "bash(git push --force*)",
-    "bash(git reset --hard*)",
-    "bash(* rm -rf *)",
-    "bash(* sudo *)",
-    "bash(* chmod * 777*)",
-    "bash(* chown * 777*)",
-    "bash(* kubectl delete *)",
-    "bash(* docker system prune*)",
-    "bash(* git push --force*)",
-    "bash(* git reset --hard*)"
+    "bash(git reset --hard*)"
   ],
   "ask": [
     "bash",
     "edit",
     "write",
     "bash(git push *)",
-    "bash(* git push *)",
-    "bash(docker compose down*)",
-    "bash(* docker compose down*)"
+    "bash(docker compose down*)"
   ],
   "diffRenderer": "shiki",
   "shikiTheme": "everforest-dark",

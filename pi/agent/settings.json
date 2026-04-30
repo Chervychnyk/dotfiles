@@ -1,7 +1,7 @@
 {
-  "lastChangelogVersion": "0.70.0",
+  "lastChangelogVersion": "0.70.6",
   "defaultProvider": "openai-codex",
-  "defaultModel": "gpt-5.3-codex",
+  "defaultModel": "gpt-5.5",
   "packages": [
     "npm:pi-subagents",
     "npm:pi-interview",
@@ -11,14 +11,11 @@
   ],
   "theme": "everforest-dark-hard",
   "workingVibe": "zen",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "low",
   "quietStartup": true,
   "collapseChangelog": true,
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "steeringMode": "all",
   "followUpMode": "all",
-  "doubleEscapeAction": "tree",
-  "compaction": {
-    "enabled": false
-  }
+  "doubleEscapeAction": "tree"
 }

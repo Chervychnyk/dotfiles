@@ -3,6 +3,14 @@ name: refactor
 description: Analyze an existing code path, plan a safe incremental refactor, implement it, and review for behavior preservation.
 ---
 
+Use this chain for behavior-preserving structural changes where codebase analysis and regression control matter. Avoid for cosmetic one-file cleanups. The main agent should run `subagent({ action: "list" })` before launch and remain the final decision-maker.
+
+Handoff contract:
+- `scout` documents current behavior, coupling, safe seams, and validation clues.
+- `planner` creates the smallest incremental behavior-preserving plan.
+- `worker` implements the approved plan only and verifies focused behavior.
+- `reviewer` checks behavior preservation, accidental scope expansion, and verification quality.
+
 ## scout
 output: context.md
 

@@ -5,11 +5,12 @@
  * restrictions on bash commands at the OS level (sandbox-exec on macOS,
  * bubblewrap on Linux).
  *
- * Config files (merged, project takes precedence):
- * - ~/.pi/agent/extensions/sandbox.json (global)
- * - <cwd>/.pi/sandbox.json (project-local)
+ * Config files (merged, later tiers take precedence):
+ * - ~/.pi/agent/sandbox.settings.json (global)
+ * - <repo-root>/.agents/sandbox.settings.json (project)
+ * - <repo-root>/.agents/sandbox.settings.local.json (local)
  *
- * Example .pi/sandbox.json:
+ * Example .agents/sandbox.settings.json:
  * ```json
  * {
  *   "enabled": true,
@@ -38,8 +39,7 @@
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import {
   SandboxManager,
   type SandboxRuntimeConfig,
@@ -48,8 +48,8 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
 import {
   type BashOperations,
   createBashTool,
-  getAgentDir,
 } from '@mariozechner/pi-coding-agent'
+import { loadExtensionSettings } from '../__lib/extension-settings.ts'
 
 interface SandboxConfig extends SandboxRuntimeConfig {
   enabled?: boolean
@@ -80,29 +80,12 @@ const DEFAULT_CONFIG: SandboxConfig = {
 }
 
 function loadConfig(cwd: string): SandboxConfig {
-  const projectConfigPath = join(cwd, '.pi', 'sandbox.json')
-  const globalConfigPath = join(getAgentDir(), 'extensions', 'sandbox.json')
-
-  let globalConfig: Partial<SandboxConfig> = {}
-  let projectConfig: Partial<SandboxConfig> = {}
-
-  if (existsSync(globalConfigPath)) {
-    try {
-      globalConfig = JSON.parse(readFileSync(globalConfigPath, 'utf-8'))
-    } catch (e) {
-      console.error(`Warning: Could not parse ${globalConfigPath}: ${e}`)
-    }
-  }
-
-  if (existsSync(projectConfigPath)) {
-    try {
-      projectConfig = JSON.parse(readFileSync(projectConfigPath, 'utf-8'))
-    } catch (e) {
-      console.error(`Warning: Could not parse ${projectConfigPath}: ${e}`)
-    }
-  }
-
-  return deepMerge(deepMerge(DEFAULT_CONFIG, globalConfig), projectConfig)
+  const settings = loadExtensionSettings<SandboxConfig>(
+    'sandbox',
+    cwd,
+    deepMerge,
+  )
+  return deepMerge(DEFAULT_CONFIG, settings)
 }
 
 function deepMerge(

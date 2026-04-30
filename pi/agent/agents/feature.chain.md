@@ -3,6 +3,14 @@ name: feature
 description: Analyze a feature request, plan the work, implement it, and review the result.
 ---
 
+Use this chain for clear feature requests that need codebase analysis, planning, implementation, and review. If product intent or scope is ambiguous, run `spec` before this chain. The main agent should run `subagent({ action: "list" })` before launch and remain the final decision-maker.
+
+Handoff contract:
+- `scout` maps affected files, patterns, boundaries, and validation clues.
+- `planner` converts that context into a scoped implementation plan.
+- `worker` implements the approved plan only and verifies focused behavior.
+- `reviewer` checks the result against the original request, plan, and user-visible behavior.
+
 ## scout
 output: context.md
 

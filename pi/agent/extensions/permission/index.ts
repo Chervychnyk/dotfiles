@@ -40,7 +40,10 @@ import {
   type ExtensionContext,
 } from '@mariozechner/pi-coding-agent'
 
-import { loadExtensionSettings } from '../__lib/extension-settings.ts'
+import {
+  getExtensionSettingsPaths,
+  loadExtensionSettings,
+} from '../__lib/extension-settings.ts'
 import { showScrollableApproval } from './approval-ui.ts'
 import {
   formatEditPrompt,
@@ -50,7 +53,13 @@ import {
   resolvePreviewContentForWidth,
   type MutationPreview,
 } from './file-preview.ts'
-import { getMatchValue, resolveMode, type Mode } from './rules.ts'
+import {
+  getMatchValue,
+  resolveMode,
+  resolveModeWithTrace,
+  type Mode,
+  type PermissionTrace,
+} from './rules.ts'
 
 const EXTENSION = 'permission'
 const CMUX_SOCKET = process.env.CMUX_SOCKET_PATH
@@ -138,8 +147,18 @@ export default function (pi: ExtensionAPI) {
         derivedSkillAllowState.rules,
       )
       const overrides = Object.fromEntries(SessionModeOverrides)
+      const paths = getExtensionSettingsPaths(EXTENSION, ctx.cwd)
       const output = JSON.stringify(
         {
+          settingsPaths: Object.fromEntries(
+            Object.entries(paths).map(([scope, filePath]) => [
+              scope,
+              {
+                path: filePath,
+                exists: fs.existsSync(filePath),
+              },
+            ]),
+          ),
           settings,
           derivedSkillAllowRules: derivedSkillAllowState.rules,
           skillRuleSources: derivedSkillAllowState.sources,
@@ -150,6 +169,38 @@ export default function (pi: ExtensionAPI) {
         2,
       )
       await ctx.ui.editor('Resolved permission settings', output)
+    },
+  })
+
+  pi.registerCommand('permission-explain', {
+    description: 'Explain permission decision for a tool call',
+    handler: async (_args, ctx) => {
+      const tool = await ctx.ui.input('Tool name', 'e.g. bash, edit, read')
+      if (!tool) return
+      const arg = await ctx.ui.input('Argument to match', 'command, path, or URL')
+      if (arg === undefined) return
+
+      const derivedSkillAllowState = getDerivedSkillAllowState(pi)
+      const settings = mergeSkillAllowRules(
+        loadSettings(ctx.cwd),
+        derivedSkillAllowState.rules,
+      )
+      const trace = resolveModeWithTrace(settings, tool, arg, {
+        cwd: ctx.cwd,
+        sessionModeOverrides: SessionModeOverrides,
+        sessionAllowRules: SessionAllowRules,
+      })
+      const output = JSON.stringify(
+        {
+          tool,
+          argument: arg,
+          decision: trace,
+          source: explainTraceSource(trace, ctx.cwd, derivedSkillAllowState),
+        },
+        null,
+        2,
+      )
+      await ctx.ui.editor('Permission explanation', output)
     },
   })
 
@@ -224,6 +275,62 @@ function loadSettings(cwd: string) {
     cwd,
     mergePermissions,
   )
+}
+
+function explainTraceSource(
+  trace: PermissionTrace,
+  cwd: string,
+  derivedSkillAllowState: DerivedSkillAllowState,
+) {
+  if (trace.reason === 'sessionOverride') return { scope: 'sessionOverride' }
+  if (trace.reason === 'sessionAllow') return { scope: 'sessionAllow' }
+  if (trace.reason === 'defaultMode') return findDefaultModeSource(cwd)
+  if (!trace.rule) return undefined
+
+  const settingKey = trace.reason === 'deny' || trace.reason === 'ask' || trace.reason === 'allow'
+    ? trace.reason
+    : undefined
+  if (!settingKey) return undefined
+
+  const settingsSource = findRuleSource(cwd, settingKey, trace.rule)
+  if (settingsSource) return settingsSource
+
+  const skillSource = derivedSkillAllowState.sources.find((source) =>
+    source.rules.includes(trace.rule!),
+  )
+  if (skillSource) return { scope: 'skill', ...skillSource }
+
+  return undefined
+}
+
+function findRuleSource(cwd: string, key: 'allow' | 'deny' | 'ask', rule: string) {
+  const paths = getExtensionSettingsPaths(EXTENSION, cwd)
+  for (const [scope, filePath] of Object.entries(paths)) {
+    const settings = readSettingsFile(filePath)
+    if (settings?.[key]?.includes(rule)) return { scope, path: filePath, key }
+  }
+  return undefined
+}
+
+function findDefaultModeSource(cwd: string) {
+  const paths = getExtensionSettingsPaths(EXTENSION, cwd)
+  let source: { scope: string; path: string; key: string; value: Mode } | undefined
+  for (const [scope, filePath] of Object.entries(paths)) {
+    const settings = readSettingsFile(filePath)
+    if (settings?.defaultMode) {
+      source = { scope, path: filePath, key: 'defaultMode', value: settings.defaultMode }
+    }
+  }
+  return source
+}
+
+function readSettingsFile(filePath: string): Partial<PermissionSettings> | undefined {
+  if (!fs.existsSync(filePath)) return undefined
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+  } catch {
+    return undefined
+  }
 }
 
 function toggleAutoAcceptEdits(ctx: ExtensionContext) {

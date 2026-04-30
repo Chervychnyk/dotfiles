@@ -20,6 +20,14 @@ interface ResolveModeOptions {
   sessionAllowRules?: Iterable<string>
 }
 
+export interface PermissionTrace {
+  mode: Mode
+  reason: 'sessionOverride' | 'deny' | 'sessionAllow' | 'ask' | 'allow' | 'defaultMode' | 'outputRedirection'
+  rule?: string
+  segment?: string
+  candidates: string[]
+}
+
 function parseRule(rule: string): ParsedRule {
   const match = rule.match(/^([^(]+)\((.+)\)$/)
   if (match) {
@@ -37,14 +45,14 @@ function matchPattern(pattern: string, value: string): boolean {
   return new RegExp(`^${adjusted}$`).test(value)
 }
 
-function matchesAnyRule(
+function findMatchingRule(
   rules: string[],
   toolName: string,
   argValues: string[],
-): boolean {
+): string | undefined {
   const candidates = argValues.length > 0 ? argValues : ['']
 
-  return rules.some((rule) => {
+  return rules.find((rule) => {
     const parsed = parseRule(rule)
     if (!matchPattern(parsed.toolPattern, toolName)) return false
     if (parsed.argPattern) {
@@ -53,6 +61,14 @@ function matchesAnyRule(
     }
     return true
   })
+}
+
+function matchesAnyRule(
+  rules: string[],
+  toolName: string,
+  argValues: string[],
+): boolean {
+  return findMatchingRule(rules, toolName, argValues) !== undefined
 }
 
 export function getMatchValue(
@@ -107,6 +123,45 @@ function getArgMatchCandidates(
   return candidates
 }
 
+function resolveSingleTrace(
+  settings: PermissionRuleSettings,
+  toolName: string,
+  argCandidates: string[],
+  sessionModeOverrides: Map<string, Mode>,
+  sessionAllowRules: string[],
+): PermissionTrace {
+  const override = sessionModeOverrides.get(toolName)
+  if (override) {
+    return { mode: override, reason: 'sessionOverride', candidates: argCandidates }
+  }
+
+  const denyRule = findMatchingRule(settings.deny ?? [], toolName, argCandidates)
+  if (denyRule) return { mode: 'deny', reason: 'deny', rule: denyRule, candidates: argCandidates }
+
+  const sessionAllowRule = findMatchingRule(sessionAllowRules, toolName, argCandidates)
+  if (sessionAllowRule) return { mode: 'allow', reason: 'sessionAllow', rule: sessionAllowRule, candidates: argCandidates }
+
+  const askRules = settings.ask ?? []
+  const specificAskRule = findMatchingRule(
+    askRules.filter((rule) => parseRule(rule).argPattern !== undefined),
+    toolName,
+    argCandidates,
+  )
+  if (specificAskRule) return { mode: 'ask', reason: 'ask', rule: specificAskRule, candidates: argCandidates }
+
+  const allowRule = findMatchingRule(settings.allow ?? [], toolName, argCandidates)
+  if (allowRule) return { mode: 'allow', reason: 'allow', rule: allowRule, candidates: argCandidates }
+
+  const blanketAskRule = findMatchingRule(
+    askRules.filter((rule) => parseRule(rule).argPattern === undefined),
+    toolName,
+    argCandidates,
+  )
+  if (blanketAskRule) return { mode: 'ask', reason: 'ask', rule: blanketAskRule, candidates: argCandidates }
+
+  return { mode: settings.defaultMode ?? 'ask', reason: 'defaultMode', candidates: argCandidates }
+}
+
 function resolveSingleMode(
   settings: PermissionRuleSettings,
   toolName: string,
@@ -114,15 +169,13 @@ function resolveSingleMode(
   sessionModeOverrides: Map<string, Mode>,
   sessionAllowRules: string[],
 ): Mode {
-  const override = sessionModeOverrides.get(toolName)
-  if (override) return override
-
-  if (matchesAnyRule(settings.deny ?? [], toolName, argCandidates)) return 'deny'
-  if (matchesAnyRule(sessionAllowRules, toolName, argCandidates)) return 'allow'
-  if (matchesAnyRule(settings.ask ?? [], toolName, argCandidates)) return 'ask'
-  if (matchesAnyRule(settings.allow ?? [], toolName, argCandidates)) return 'allow'
-
-  return settings.defaultMode ?? 'ask'
+  return resolveSingleTrace(
+    settings,
+    toolName,
+    argCandidates,
+    sessionModeOverrides,
+    sessionAllowRules,
+  ).mode
 }
 
 /**
@@ -161,7 +214,7 @@ export function resolveMode(
     const mode = resolveSingleMode(
       settings,
       toolName,
-      [segment],
+      getBashArgCandidates(segment),
       sessionModeOverrides,
       sessionAllowRules,
     )
@@ -174,6 +227,95 @@ export function resolveMode(
   }
 
   return worst
+}
+
+export function resolveModeWithTrace(
+  settings: PermissionRuleSettings,
+  toolName: string,
+  argValue: string,
+  options: ResolveModeOptions = {},
+): PermissionTrace {
+  const sessionModeOverrides = options.sessionModeOverrides ?? new Map<string, Mode>()
+  const sessionAllowRules = options.sessionAllowRules
+    ? [...options.sessionAllowRules]
+    : []
+
+  if (toolName !== 'bash' || !argValue) {
+    return resolveSingleTrace(
+      settings,
+      toolName,
+      getArgMatchCandidates(toolName, argValue, options.cwd),
+      sessionModeOverrides,
+      sessionAllowRules,
+    )
+  }
+
+  const normalized = options.cwd ? normalizeBashForPermission(argValue, options.cwd) : argValue
+  const segments = splitShellCommand(normalized)
+  let worst: PermissionTrace = { mode: 'allow', reason: 'defaultMode', candidates: [normalized] }
+
+  for (const segment of segments) {
+    const trace = resolveSingleTrace(
+      settings,
+      toolName,
+      getBashArgCandidates(segment),
+      sessionModeOverrides,
+      sessionAllowRules,
+    )
+    trace.segment = segment
+    if (trace.mode === 'deny') return trace
+    if (trace.mode === 'ask') worst = trace
+    if (trace.mode === 'allow' && worst.reason === 'defaultMode') worst = trace
+  }
+
+  if (worst.mode === 'allow' && hasShellOutputRedirection(normalized)) {
+    return {
+      mode: 'ask',
+      reason: 'outputRedirection',
+      segment: normalized,
+      candidates: [normalized],
+    }
+  }
+
+  return worst
+}
+
+function getBashArgCandidates(segment: string): string[] {
+  const candidates = [segment]
+
+  for (const embedded of extractEmbeddedShellCommands(segment)) {
+    if (embedded && !candidates.includes(embedded)) {
+      candidates.push(embedded)
+    }
+  }
+
+  return candidates
+}
+
+function extractEmbeddedShellCommands(segment: string): string[] {
+  const commands: string[] = []
+
+  const shellCommandPattern = /\b(?:sh|bash|zsh)\s+-c\s+(["'])((?:\\.|(?!\1).)*)\1/g
+  for (const match of segment.matchAll(shellCommandPattern)) {
+    commands.push(unescapeShellQuoted(match[2], match[1]))
+  }
+
+  const commandSubstitutionPattern = /\$\(((?:[^()]|\([^()]*\))*)\)/g
+  for (const match of segment.matchAll(commandSubstitutionPattern)) {
+    commands.push(match[1].trim())
+  }
+
+  const backtickPattern = /`([^`]*)`/g
+  for (const match of segment.matchAll(backtickPattern)) {
+    commands.push(match[1].trim())
+  }
+
+  return commands.flatMap(splitShellCommand)
+}
+
+function unescapeShellQuoted(value: string, quote: string): string {
+  if (quote === "'") return value
+  return value.replace(/\\(["`$\\])/g, '$1')
 }
 
 function normalizeBashForPermission(command: string, cwd: string): string {

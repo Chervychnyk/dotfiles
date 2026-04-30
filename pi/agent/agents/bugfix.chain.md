@@ -3,6 +3,14 @@ name: bugfix
 description: Investigate a bug, plan a minimal fix, implement it, and review the result.
 ---
 
+Use this chain for non-trivial bugs where root cause, safe fix, or regression risk is not already obvious. Keep the fix minimal. The main agent should run `subagent({ action: "list" })` before launch and remain the final decision-maker.
+
+Handoff contract:
+- `scout` identifies evidence-backed root cause and validation clues.
+- `planner` turns that context into the smallest safe fix plan.
+- `worker` implements the approved plan only and verifies focused behavior.
+- `reviewer` checks the result against the original bug report, plan, and observed behavior.
+
 ## scout
 output: context.md
 
