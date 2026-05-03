@@ -865,7 +865,11 @@ function normalizeTodoSettings(raw: Partial<TodoSettings>): TodoSettings {
 
 function readTodoSettings(cwd: string): TodoSettings {
   return normalizeTodoSettings(
-    loadExtensionSettings<TodoSettings>(TODO_SETTINGS_NAME, cwd, mergeTodoSettings),
+    loadExtensionSettings<TodoSettings>(
+      TODO_SETTINGS_NAME,
+      cwd,
+      mergeTodoSettings,
+    ),
   )
 }
 

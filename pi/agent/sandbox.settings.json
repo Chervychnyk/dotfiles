@@ -23,6 +23,8 @@
       "/tmp",
       "/private/tmp",
       "~/.cache",
+      "~/.local/share/nvim",
+      "~/.local/state/nvim",
       "~/.pi/cache"
     ],
     "denyWrite": [".env", ".env.*", "*.pem", "*.key"]

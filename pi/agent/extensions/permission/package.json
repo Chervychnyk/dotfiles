@@ -1,9 +1,0 @@
-{
-  "name": "pi-permission-extension",
-  "private": true,
-  "type": "module",
-  "dependencies": {
-    "diff": "^7.0.0",
-    "shiki": "^4.0.2"
-  }
-}

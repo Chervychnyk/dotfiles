@@ -22,6 +22,9 @@ Find the root cause. Don't apply shotgun patches or cargo-cult fixes. If a test 
 ### Verify Before Claiming Done
 Provide evidence — actual command output, test results, or a verified behavior trace. Treat "should work now" as a red flag; run the check instead.
 
+### Stop on Permission Errors
+If a command or tool fails with a permission, approval, sandbox, or operation-not-permitted error, stop immediately. Report the blocker and wait for the user to decide whether to retry, adjust permissions, or skip that step. Do not attempt alternative workarounds, different paths, environment overrides, or follow-up commands unless the user explicitly asks.
+
 ### Clean Up After Yourself
 Remove debug prints, commented-out code, scratch files, and temporary artifacts before finishing. The diff should contain only the intended change.
 

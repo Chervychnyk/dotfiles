@@ -34,8 +34,11 @@ import type {
 import { DynamicBorder, BorderedLoader } from '@mariozechner/pi-coding-agent'
 import {
   Container,
+  fuzzyFilter,
+  Input,
   type SelectItem,
   SelectList,
+  Spacer,
   Text,
 } from '@mariozechner/pi-tui'
 import path from 'node:path'
@@ -51,6 +54,7 @@ let reviewCustomInstructions: string | undefined = undefined
 let reviewLoopInProgress = false
 
 const REVIEW_STATE_TYPE = 'review-session'
+const REVIEW_ANCHOR_TYPE = 'review-anchor'
 const REVIEW_SETTINGS_TYPE = 'review-settings'
 const REVIEW_LOOP_MAX_ITERATIONS = 10
 const REVIEW_LOOP_START_TIMEOUT_MS = 15000
@@ -1272,34 +1276,66 @@ export default function reviewExtension(pi: ExtensionAPI) {
     }))
 
     const result = await ctx.ui.custom<string | null>(
-      (tui, theme, _kb, done) => {
+      (tui, theme, keybindings, done) => {
         const container = new Container()
         container.addChild(new DynamicBorder((str) => theme.fg('accent', str)))
         container.addChild(
           new Text(theme.fg('accent', theme.bold('Select base branch'))),
         )
 
-        const selectList = new SelectList(items, Math.min(items.length, 10), {
-          selectedPrefix: (text) => theme.fg('accent', text),
-          selectedText: (text) => theme.fg('accent', text),
-          description: (text) => theme.fg('muted', text),
-          scrollInfo: (text) => theme.fg('dim', text),
-          noMatch: (text) => theme.fg('warning', text),
-        })
+        const searchInput = new Input()
+        container.addChild(searchInput)
+        container.addChild(new Spacer(1))
 
-        // Enable search
-        selectList.searchable = true
-
-        selectList.onSelect = (item) => done(item.value)
-        selectList.onCancel = () => done(null)
-
-        container.addChild(selectList)
+        const listContainer = new Container()
+        container.addChild(listContainer)
         container.addChild(
           new Text(
             theme.fg('dim', 'Type to filter • enter to select • esc to cancel'),
           ),
         )
         container.addChild(new DynamicBorder((str) => theme.fg('accent', str)))
+
+        let filteredItems = items
+        let selectList: SelectList | null = null
+
+        const updateList = () => {
+          listContainer.clear()
+          if (filteredItems.length === 0) {
+            selectList = null
+            return
+          }
+
+          selectList = new SelectList(
+            filteredItems,
+            Math.min(filteredItems.length, 10),
+            {
+              selectedPrefix: (text) => theme.fg('accent', text),
+              selectedText: (text) => theme.fg('accent', text),
+              description: (text) => theme.fg('muted', text),
+              scrollInfo: (text) => theme.fg('dim', text),
+              noMatch: (text) => theme.fg('warning', text),
+            },
+          )
+
+          selectList.onSelect = (item) => done(item.value)
+          selectList.onCancel = () => done(null)
+          listContainer.addChild(selectList)
+        }
+
+        const applyFilter = () => {
+          const query = searchInput.getValue()
+          filteredItems = query
+            ? fuzzyFilter(
+                items,
+                query,
+                (item) => `${item.label} ${item.value} ${item.description ?? ''}`,
+              )
+            : items
+          updateList()
+        }
+
+        applyFilter()
 
         return {
           render(width: number) {
@@ -1309,7 +1345,23 @@ export default function reviewExtension(pi: ExtensionAPI) {
             container.invalidate()
           },
           handleInput(data: string) {
-            selectList.handleInput(data)
+            if (
+              keybindings.matches(data, 'tui.select.up') ||
+              keybindings.matches(data, 'tui.select.down') ||
+              keybindings.matches(data, 'tui.select.confirm') ||
+              keybindings.matches(data, 'tui.select.cancel')
+            ) {
+              if (selectList) {
+                selectList.handleInput(data)
+              } else if (keybindings.matches(data, 'tui.select.cancel')) {
+                done(null)
+              }
+              tui.requestRender()
+              return
+            }
+
+            searchInput.handleInput(data)
+            applyFilter()
             tui.requestRender()
           },
         }
@@ -1340,41 +1392,73 @@ export default function reviewExtension(pi: ExtensionAPI) {
     }))
 
     const result = await ctx.ui.custom<{ sha: string; title: string } | null>(
-      (tui, theme, _kb, done) => {
+      (tui, theme, keybindings, done) => {
         const container = new Container()
         container.addChild(new DynamicBorder((str) => theme.fg('accent', str)))
         container.addChild(
           new Text(theme.fg('accent', theme.bold('Select commit to review'))),
         )
 
-        const selectList = new SelectList(items, Math.min(items.length, 10), {
-          selectedPrefix: (text) => theme.fg('accent', text),
-          selectedText: (text) => theme.fg('accent', text),
-          description: (text) => theme.fg('muted', text),
-          scrollInfo: (text) => theme.fg('dim', text),
-          noMatch: (text) => theme.fg('warning', text),
-        })
+        const searchInput = new Input()
+        container.addChild(searchInput)
+        container.addChild(new Spacer(1))
 
-        // Enable search
-        selectList.searchable = true
-
-        selectList.onSelect = (item) => {
-          const commit = commits.find((c) => c.sha === item.value)
-          if (commit) {
-            done(commit)
-          } else {
-            done(null)
-          }
-        }
-        selectList.onCancel = () => done(null)
-
-        container.addChild(selectList)
+        const listContainer = new Container()
+        container.addChild(listContainer)
         container.addChild(
           new Text(
             theme.fg('dim', 'Type to filter • enter to select • esc to cancel'),
           ),
         )
         container.addChild(new DynamicBorder((str) => theme.fg('accent', str)))
+
+        let filteredItems = items
+        let selectList: SelectList | null = null
+
+        const updateList = () => {
+          listContainer.clear()
+          if (filteredItems.length === 0) {
+            selectList = null
+            return
+          }
+
+          selectList = new SelectList(
+            filteredItems,
+            Math.min(filteredItems.length, 10),
+            {
+              selectedPrefix: (text) => theme.fg('accent', text),
+              selectedText: (text) => theme.fg('accent', text),
+              description: (text) => theme.fg('muted', text),
+              scrollInfo: (text) => theme.fg('dim', text),
+              noMatch: (text) => theme.fg('warning', text),
+            },
+          )
+
+          selectList.onSelect = (item) => {
+            const commit = commits.find((c) => c.sha === item.value)
+            if (commit) {
+              done(commit)
+            } else {
+              done(null)
+            }
+          }
+          selectList.onCancel = () => done(null)
+          listContainer.addChild(selectList)
+        }
+
+        const applyFilter = () => {
+          const query = searchInput.getValue()
+          filteredItems = query
+            ? fuzzyFilter(
+                items,
+                query,
+                (item) => `${item.label} ${item.value} ${item.description ?? ''}`,
+              )
+            : items
+          updateList()
+        }
+
+        applyFilter()
 
         return {
           render(width: number) {
@@ -1384,7 +1468,23 @@ export default function reviewExtension(pi: ExtensionAPI) {
             container.invalidate()
           },
           handleInput(data: string) {
-            selectList.handleInput(data)
+            if (
+              keybindings.matches(data, 'tui.select.up') ||
+              keybindings.matches(data, 'tui.select.down') ||
+              keybindings.matches(data, 'tui.select.confirm') ||
+              keybindings.matches(data, 'tui.select.cancel')
+            ) {
+              if (selectList) {
+                selectList.handleInput(data)
+              } else if (keybindings.matches(data, 'tui.select.cancel')) {
+                done(null)
+              }
+              tui.requestRender()
+              return
+            }
+
+            searchInput.handleInput(data)
+            applyFilter()
             tui.requestRender()
           },
         }
@@ -1559,16 +1659,18 @@ export default function reviewExtension(pi: ExtensionAPI) {
 
     // Handle fresh session mode
     if (useFreshSession) {
-      // Store current position (where we'll return to)
-      const originId = ctx.sessionManager.getLeafId() ?? undefined
+      // Store current position (where we'll return to).
+      // In an empty session there is no leaf yet, so create a lightweight anchor first.
+      let originId = ctx.sessionManager.getLeafId() ?? undefined
+      if (!originId) {
+        pi.appendEntry(REVIEW_ANCHOR_TYPE, { createdAt: new Date().toISOString() })
+        originId = ctx.sessionManager.getLeafId() ?? undefined
+      }
       if (!originId) {
         if (originalGitSnapshot) {
           await restoreGitRef(pi, originalGitSnapshot)
         }
-        ctx.ui.notify(
-          'Failed to determine review origin. Try again from a session with messages.',
-          'error',
-        )
+        ctx.ui.notify('Failed to determine review origin.', 'error')
         return false
       }
       reviewOriginId = originId
@@ -1582,47 +1684,40 @@ export default function reviewExtension(pi: ExtensionAPI) {
         (e) => e.type === 'message' && e.message.role === 'user',
       )
 
-      if (!firstUserMessage) {
-        if (originalGitSnapshot) {
-          await restoreGitRef(pi, originalGitSnapshot)
-        }
-        ctx.ui.notify('No user message found in session', 'error')
-        reviewOriginId = undefined
-        return false
-      }
-
-      // Navigate to first user message to create a new branch from that point
-      // Label it as "code-review" so it's visible in the tree
-      try {
-        const result = await ctx.navigateTree(firstUserMessage.id, {
-          summarize: false,
-          label: 'code-review',
-        })
-        if (result.cancelled) {
+      if (firstUserMessage) {
+        // Navigate to first user message to create a new branch from that point
+        // Label it as "code-review" so it's visible in the tree
+        try {
+          const result = await ctx.navigateTree(firstUserMessage.id, {
+            summarize: false,
+            label: 'code-review',
+          })
+          if (result.cancelled) {
+            if (originalGitSnapshot) {
+              await restoreGitRef(pi, originalGitSnapshot)
+            }
+            reviewOriginId = undefined
+            return false
+          }
+        } catch (error) {
+          // Clean up state if navigation fails
           if (originalGitSnapshot) {
             await restoreGitRef(pi, originalGitSnapshot)
           }
           reviewOriginId = undefined
+          ctx.ui.notify(
+            `Failed to start review: ${error instanceof Error ? error.message : String(error)}`,
+            'error',
+          )
           return false
         }
-      } catch (error) {
-        // Clean up state if navigation fails
-        if (originalGitSnapshot) {
-          await restoreGitRef(pi, originalGitSnapshot)
-        }
-        reviewOriginId = undefined
-        ctx.ui.notify(
-          `Failed to start review: ${error instanceof Error ? error.message : String(error)}`,
-          'error',
-        )
-        return false
+
+        // Clear the editor (navigating to user message fills it with the message text)
+        ctx.ui.setEditorText('')
       }
 
       // Restore origin after navigation events (session_tree can reset it)
       reviewOriginId = lockedOriginId
-
-      // Clear the editor (navigating to user message fills it with the message text)
-      ctx.ui.setEditorText('')
 
       const previousActiveTools = disableSubagentTool(pi)
 
