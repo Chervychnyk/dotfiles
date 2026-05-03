@@ -21,12 +21,41 @@ return {
   },
 
   {
-    -- Make sure to set this up properly if you have lazy=true
-    'MeanderingProgrammer/render-markdown.nvim',
-    opts = {
-      file_types = { "markdown", "codecompanion" },
+    "OXY2DEV/markview.nvim",
+    lazy = false,
+    dependencies = {
+      "nvim-tree/nvim-web-devicons",
     },
-    ft = { "markdown", "codecompanion" },
+    opts = {
+      markdown = {
+        code_blocks = {
+          pad_amount = 4,
+          pad_char = " ",
+        },
+      },
+      preview = {
+        callbacks = {
+          on_splitview_open = function(_, _, win)
+            vim.wo[win].conceallevel = 3
+            vim.wo[win].concealcursor = "n"
+            vim.wo[win].spell = false
+          end,
+        },
+        filetypes = { "markdown", "codecompanion" },
+        icon_provider = "devicons",
+        max_buf_lines = 5000,
+        modes = { "n", "no", "c" },
+        hybrid_modes = { "n" },
+      },
+    },
+    config = function(_, opts)
+      vim.treesitter.language.register("markdown", "codecompanion")
+      require("markview").setup(opts)
+    end,
+    keys = {
+      { "<leader>mp", "<cmd>Markview Toggle<cr>", desc = "Toggle markdown preview" },
+      { "<leader>ms", "<cmd>Markview splitToggle<cr>", desc = "Toggle markdown split preview" },
+    },
   },
 
   -- Rails navigation and commands
