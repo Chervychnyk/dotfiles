@@ -5,11 +5,11 @@
       "ctrl-h": "workspace::ActivatePaneLeft",
       "ctrl-l": "workspace::ActivatePaneRight",
       "ctrl-k": "workspace::ActivatePaneUp",
-      "ctrl-j": "workspace::ActivatePaneDown"
-    }
+      "ctrl-j": "workspace::ActivatePaneDown",
+    },
   },
   {
-    "context": "Editor && vim_mode == normal && !VimWaiting && !menu",
+    "context": "Editor && vim_mode == normal && vim_mode != waiting && !menu",
     "bindings": {
       // put key-bindings here if you want them to work only in normal mode
       // Window movement bindings
@@ -23,6 +23,7 @@
       ", c a": "editor::ToggleCodeActions",
       ", r n": "editor::Rename",
       ", f f": "file_finder::Toggle",
+      ", p": "file_finder::Toggle",
       "g d": "editor::GoToDefinition",
       "g D": "editor::GoToDefinitionSplit",
       "g i": "editor::GoToImplementation",
@@ -46,15 +47,18 @@
       "ctrl-q": "pane::CloseActiveItem",
       ", b d": "pane::CloseActiveItem",
       // Close other items
-      ", b o": "pane::CloseInactiveItems",
-      // Show project panel with current file
-      ", e": "pane::RevealInProjectPanel",
-      ", a c": "agent::ToggleFocus"
+      ", b o": "pane::CloseOtherItems",
+      // File tree / panels
+      ", e": "project_panel::ToggleFocus",
+      ", E": "pane::RevealInProjectPanel",
+      ", g g": "git_panel::ToggleFocus",
+      ", o": "outline_panel::ToggleFocus",
+      ", t": "terminal_panel::Toggle",
       // Toogle inline completions
-    }
+    },
   },
   {
-    "context": "Editor && (vim_mode == normal || vim_mode == visual) && !VimWaiting && !menu",
+    "context": "Editor && (vim_mode == normal || vim_mode == visual) && vim_mode != waiting && !menu",
     "bindings": {
       // Open markdown preview
       ", m p": "markdown::OpenPreview",
@@ -64,25 +68,30 @@
       ", f p": "projects::OpenRecent",
       // Search word under cursor
       ", f t": "pane::DeploySearch",
+      ", /": "pane::DeploySearch",
 
-      // Chat with AI
+      // Agent
+      ", a a": "agent::ToggleFocus",
       ", a c": "agent::ToggleFocus",
-      "cmd-i": "assistant::InlineAssist"
-    }
+      ", a n": "agent::NewExternalAgentThread",
+      ", a h": "agents_sidebar::ToggleThreadSwitcher",
+      ", a s": "agent::AddSelectionToThread",
+      "cmd-i": "assistant::InlineAssist",
+    },
   },
   {
     "context": "Terminal",
     "bindings": {
-      "cmd-i": "assistant::InlineAssist"
-    }
+      "cmd-i": "assistant::InlineAssist",
+    },
   },
   {
-    "context": "Agent",
+    "context": "AgentPanel",
     "bindings": {
-      "cmd-n": "agent::NewThread",
-      ", a h": "agent::OpenHistory",
-      "ctrl-h": "workspace::ActivatePaneLeft"
-    }
+      "cmd-n": "agent::NewExternalAgentThread",
+      ", a h": "agents_sidebar::ToggleThreadSwitcher",
+      "ctrl-l": "workspace::ActivatePaneRight",
+    },
   },
   {
     "context": "ProjectPanel && not_editing",
@@ -95,26 +104,28 @@
       "c": "project_panel::Copy",
       "p": "project_panel::Paste",
       "ctrl-v": "pane::SplitRight",
+      "ctrl-h": "workspace::ActivatePaneLeft",
       // Close project panel as project file panel on the right
-      ", e": "workspace::ToggleLeftDock",
-      "q": "workspace::ToggleLeftDock"
-    }
+      ", e": "workspace::ToggleRightDock",
+      "q": "workspace::ToggleRightDock",
+    },
   },
   {
     "context": "Editor",
     "bindings": {
-      ", e": "workspace::ToggleLeftDock"
-    }
+      ", e": "project_panel::ToggleFocus",
+      ", a a": "agent::ToggleFocus",
+    },
   },
 
   // Comment code
   {
-    "context": "Editor && vim_mode == visual && !VimWaiting && !menu",
+    "context": "Editor && vim_mode == visual && vim_mode != waiting && !menu",
     "bindings": {
       // visual, visual line & visual block modes
       "g c": "editor::ToggleComments",
-      "a q": "assistant::QuoteSelection"
-    }
+      "a q": "agent::AddSelectionToThread",
+    },
   },
   // Better escape
   {
@@ -122,7 +133,7 @@
     "bindings": {
       "j k": "vim::NormalBefore", // remap jk in insert mode to escape
       "ctrl-i": "assistant::InlineAssist",
-      "ctrl-l": "editor::AcceptEditPrediction"
-    }
-  }
+      "ctrl-l": "editor::AcceptEditPrediction",
+    },
+  },
 ]
