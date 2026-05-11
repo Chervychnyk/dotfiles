@@ -2,9 +2,9 @@ import type {
   ExtensionAPI,
   ExtensionContext,
   ExtensionCommandContext,
-} from '@mariozechner/pi-coding-agent'
+} from '@earendil-works/pi-coding-agent'
 import { Type } from 'typebox'
-import { Text } from '@mariozechner/pi-tui'
+import { Text } from '@earendil-works/pi-tui'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { spawn } from 'node:child_process'

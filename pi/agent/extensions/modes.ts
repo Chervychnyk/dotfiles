@@ -1,13 +1,13 @@
 import type {
   ExtensionAPI,
   ExtensionContext,
-} from '@mariozechner/pi-coding-agent'
+} from '@earendil-works/pi-coding-agent'
 import {
   CustomEditor,
   ModelSelectorComponent,
   SettingsManager,
   getAgentDir,
-} from '@mariozechner/pi-coding-agent'
+} from '@earendil-works/pi-coding-agent'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 

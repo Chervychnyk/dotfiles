@@ -44,11 +44,11 @@ import {
   SandboxManager,
   type SandboxRuntimeConfig,
 } from '@anthropic-ai/sandbox-runtime'
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent'
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
 import {
   type BashOperations,
   createBashTool,
-} from '@mariozechner/pi-coding-agent'
+} from '@earendil-works/pi-coding-agent'
 import { loadExtensionSettings } from '../__lib/extension-settings.ts'
 
 interface SandboxConfig extends SandboxRuntimeConfig {

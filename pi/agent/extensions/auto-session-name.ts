@@ -5,13 +5,13 @@
  * once when enough session context becomes available. Auto-name state is
  * persisted so resumed and reloaded sessions can still perform the upgrade.
  */
-import { completeSimple, type Api, type Model } from '@mariozechner/pi-ai'
+import { completeSimple, type Api, type Model } from '@earendil-works/pi-ai'
 import type {
   ExtensionAPI,
   ExtensionContext,
   SessionContext,
   SessionEntry,
-} from '@mariozechner/pi-coding-agent'
+} from '@earendil-works/pi-coding-agent'
 
 const CUSTOM_STATE_TYPE = 'auto-session-name'
 const STATE_VERSION = 1

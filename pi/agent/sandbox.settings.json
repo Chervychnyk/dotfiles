@@ -14,19 +14,34 @@
       "raw.githubusercontent.com",
       "localhost",
       "127.0.0.1"
-    ]
+    ],
+    "allowUnixSockets": [
+      "~/.colima/default/docker.sock",
+      "/var/run/docker.sock"
+    ],
+    "allowLocalBinding": true
   },
   "filesystem": {
-    "denyRead": ["~/.ssh", "~/.aws", "~/.gnupg"],
+    "denyRead": [
+      "~/.ssh",
+      "~/.aws",
+      "~/.gnupg"
+    ],
     "allowWrite": [
       ".",
       "/tmp",
       "/private/tmp",
       "~/.cache",
+      "~/.npm",
       "~/.local/share/nvim",
       "~/.local/state/nvim",
       "~/.pi/cache"
     ],
-    "denyWrite": [".env", ".env.*", "*.pem", "*.key"]
+    "denyWrite": [
+      ".env",
+      ".env.*",
+      "*.pem",
+      "*.key"
+    ]
   }
 }
