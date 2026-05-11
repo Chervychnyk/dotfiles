@@ -2,7 +2,10 @@
 name: worker
 description: Use for focused implementation, file edits, and verification once the task and plan are clear.
 model: openai-codex/gpt-5.3-codex
+fallbackModels:
+  - moonshotai/kimi-k2.6
 thinking: off
+defaultContext: fork
 tools: read, edit, write, bash, grep, find, ls, docker_services, docker_exec, docker_logs, web_search, web_fetch, get_web_content, mcp
 defaultProgress: true
 ---

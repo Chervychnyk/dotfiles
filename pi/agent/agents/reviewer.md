@@ -2,6 +2,8 @@
 name: reviewer
 description: Use for read-only implementation review, regression detection, and verification after a change is made.
 model: openai-codex/gpt-5.5
+fallbackModels:
+  - moonshotai/kimi-k2.6
 thinking: low
 tools: read, bash, grep, find, ls, docker_services, docker_exec, docker_logs, web_search, web_fetch, get_web_content, mcp
 ---

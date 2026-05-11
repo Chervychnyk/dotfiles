@@ -2,7 +2,10 @@
 name: planner
 description: Use for turning a clear request or approved spec into a phased, executable plan before implementation.
 model: openai-codex/gpt-5.5
+fallbackModels:
+  - moonshotai/kimi-k2.6
 thinking: low
+defaultContext: fork
 tools: read, bash, grep, find, ls, web_search, web_fetch, get_web_content, mcp
 ---
 
