@@ -1,0 +1,49 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gotgenes/pi-permission-system/main/schemas/permissions.schema.json",
+  "debugLog": false,
+  "permissionReviewLog": false,
+  "yoloMode": false,
+  "permission": {
+    "*": "allow",
+    "path": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow"
+    },
+    "docker_exec": {
+      "*": "ask"
+    },
+    "bash": {
+      "*": "ask",
+      "git status": "allow",
+      "git status *": "allow",
+      "git diff": "allow",
+      "git diff *": "allow",
+      "pwd": "allow",
+      "ls *": "allow",
+      "test -f *": "allow",
+      "uv run */session-reader/scripts/*": "allow",
+      "node --check *": "allow",
+      "rm -rf *": "deny"
+    },
+    "mcp": {
+      "*": "ask",
+      "mcp_status": "allow",
+      "mcp_list": "allow",
+      "mcp_search": "allow",
+      "mcp_describe": "allow"
+    },
+    "skill": {
+      "*": "ask",
+      "learn-codebase": "allow",
+      "session-reader": "allow",
+      "commit": "allow"
+    },
+    "external_directory": {
+      "*": "ask",
+      "~/.agents/skills/*": "allow",
+      "~/.pi/cache/web-tools/*": "allow"
+    }
+  }
+}

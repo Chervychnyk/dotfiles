@@ -35,8 +35,8 @@ return {
         width = 40,
         mappings = {
           ["P"] = { "toggle_preview", config = { use_float = false } },
-          ["s"] = "open_vsplit",
-          ["S"] = "open_split",
+          ["<C-v>"] = "open_vsplit",
+          ["<C-s>"] = "open_split",
           ["l"] = "open",
           ["h"] = "close_node",
           ["<tab>"] = "toggle_node",

@@ -17,7 +17,7 @@ macos-auto-secure-input = true
 macos-titlebar-proxy-icon = hidden
 mouse-hide-while-typing = true
 
-scrollback-limit = 500000
+scrollback-limit = 50_000_000
 
 theme = Everforest Dark Hard
 keybind = shift+enter=text:\n

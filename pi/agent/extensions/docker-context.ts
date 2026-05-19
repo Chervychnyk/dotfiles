@@ -58,6 +58,7 @@ const DEFAULT_SERVICE_CANDIDATES = [
   'django',
 ]
 const MAX_DOCKER_EXEC_QUEUE_PER_SERVICE = 3 // waiting commands, excluding the currently running one
+const REFRESH_CACHE_TTL_MS = 5_000
 
 function uniq(values: string[]): string[] {
   return [...new Set(values)]
@@ -160,6 +161,21 @@ function inferDockerExecTimeoutSeconds(command: string): number {
   return 300
 }
 
+function formatDurationMs(durationMs: number): string {
+  if (durationMs < 1000) return `${durationMs}ms`
+
+  const seconds = durationMs / 1000
+  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 2 : 1)}s`
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.round(seconds % 60)
+  return `${minutes}m ${remainingSeconds}s`
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`
+}
+
 function renderExecHeader(
   theme: any,
   options: {
@@ -171,6 +187,8 @@ function renderExecHeader(
     service: string
     command: string
     exitCode?: number
+    durationMs?: number
+    timeout?: number
   },
 ): string {
   const {
@@ -182,7 +200,11 @@ function renderExecHeader(
     service,
     command,
     exitCode,
+    durationMs,
+    timeout,
   } = options
+  const duration =
+    typeof durationMs === 'number' ? ` in ${formatDurationMs(durationMs)}` : ''
 
   if (isPartial) {
     if (queued) {
@@ -196,14 +218,21 @@ function renderExecHeader(
   }
 
   if (timedOut) {
-    return theme.fg('warning', `timed out ${mode} [${service}] exit ${exitCode ?? 124}`)
+    const timeoutText = timeout ? ` after ${timeout}s` : ''
+    return theme.fg(
+      'warning',
+      `timed out ${mode} [${service}]${timeoutText}${duration}`,
+    )
   }
 
   if (exitCode === 0) {
-    return theme.fg('success', `done ${mode} [${service}] exit 0`)
+    return theme.fg('success', `done ${mode} [${service}]${duration}`)
   }
 
-  return theme.fg('error', `failed ${mode} [${service}] exit ${exitCode ?? '?'}`)
+  return theme.fg(
+    'error',
+    `failed ${mode} [${service}] exit ${exitCode ?? '?'}${duration}`,
+  )
 }
 
 function renderLogsHeader(
@@ -513,12 +542,29 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
     detected: false,
     reason: 'Not initialized yet',
   }
+  let lastRefreshAt = 0
+  let lastRefreshCwd: string | undefined
   const runningExecs = new Map<string, PendingCommand>()
   const execQueues = new Map<string, QueueEntry>()
 
-  async function refresh(ctx: ExtensionContext): Promise<DockerContextState> {
+  async function refresh(
+    ctx: ExtensionContext,
+    force = false,
+  ): Promise<DockerContextState> {
+    const now = Date.now()
+    if (
+      !force &&
+      lastRefreshCwd === ctx.cwd &&
+      now - lastRefreshAt < REFRESH_CACHE_TTL_MS &&
+      state.reason !== 'Not initialized yet'
+    ) {
+      return state
+    }
+
     const persisted = getPersistedState(ctx)
     const composeDir = await findComposeDir(ctx.cwd)
+    lastRefreshAt = now
+    lastRefreshCwd = ctx.cwd
 
     if (!composeDir) {
       state = {
@@ -593,6 +639,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
     command: string,
     service: string | undefined,
     workdir: string | undefined,
+    env?: Record<string, string>,
   ) {
     const current = requireDetectedState()
     const targetService = service || current.defaultService
@@ -605,15 +652,31 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       throw new Error(`Unknown Docker service: ${targetService}`)
     }
 
+    const envEntries = Object.entries(env ?? {})
+    const invalidEnvKey = envEntries.find(
+      ([key]) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key),
+    )?.[0]
+    if (invalidEnvKey)
+      throw new Error(`Invalid environment variable name: ${invalidEnvKey}`)
+
+    const envPrefix = envEntries
+      .map(([key, value]) => `${key}=${shellQuote(String(value))}`)
+      .join(' ')
+    const commandWithEnv = envPrefix ? `${envPrefix} ${command}` : command
     const shellCommand = workdir
-      ? `cd ${JSON.stringify(workdir)} && ${command}`
-      : command
+      ? `cd ${shellQuote(workdir)} && ${commandWithEnv}`
+      : commandWithEnv
 
     const mode = current.runningServicesKnown
       ? current.runningServices?.includes(targetService)
         ? 'exec'
         : 'run'
       : 'run'
+    const modeReason = current.runningServicesKnown
+      ? mode === 'exec'
+        ? 'service running'
+        : 'service not running; using one-off container startup'
+      : 'running service status unknown; using one-off container startup'
 
     const args =
       mode === 'exec'
@@ -664,6 +727,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       composeDir: current.composeDir,
       service: targetService,
       mode,
+      modeReason,
       args,
     }
   }
@@ -705,7 +769,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       }
 
       if (trimmed === 'refresh') {
-        await refresh(ctx)
+        await refresh(ctx, true)
         ctx.ui.notify(
           formatContext(state),
           state.detected ? 'success' : 'warning',
@@ -766,7 +830,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       ),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      if (params.refresh) await refresh(ctx)
+      await refresh(ctx, Boolean(params.refresh))
       return {
         content: [{ type: 'text', text: formatContext(state) }],
         details: state,
@@ -802,6 +866,16 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
             'Working directory inside the container before running the command',
         }),
       ),
+      env: Type.Optional(
+        Type.Record(
+          Type.String(),
+          Type.String(),
+          {
+            description:
+              'Environment variables to set for this command, e.g. { "RAILS_ENV": "test" }.',
+          },
+        ),
+      ),
       timeout: Type.Optional(
         Type.Number({
           description:
@@ -815,6 +889,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         params.command,
         params.service,
         params.workdir,
+        params.env as Record<string, string> | undefined,
       )
 
       const timeoutSeconds = Number.isFinite(params.timeout)
@@ -852,6 +927,8 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
             queuePosition,
             queuedCount,
             runningCommand: active?.command,
+            modeReason: execSpec.modeReason,
+            env: params.env,
           },
         }
       }
@@ -885,6 +962,8 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
             queued: true,
             queuePosition,
             runningCommand: active?.command,
+            modeReason: execSpec.modeReason,
+            env: params.env,
           },
         })
 
@@ -900,7 +979,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         content: [
           {
             type: 'text',
-            text: `service: ${execSpec.service}\nmode: ${execSpec.mode}\ncommand: ${params.command}\ntimeout: ${timeoutSeconds}s`,
+            text: `service: ${execSpec.service}\nmode: ${execSpec.mode} (${execSpec.modeReason})\ncommand: ${params.command}\ntimeout: ${timeoutSeconds}s`,
           },
         ],
         details: {
@@ -910,12 +989,15 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
           workdir: params.workdir,
           mode: execSpec.mode,
           composeArgs: execSpec.args,
+          modeReason: execSpec.modeReason,
+          env: params.env,
           timeout: timeoutSeconds,
           streaming: true,
         },
       })
 
       const targetService = execSpec.service
+      const startedAt = Date.now()
 
       try {
         const result = await streamCommandInDir(
@@ -925,12 +1007,14 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
           onUpdate,
           timeoutSeconds * 1000,
         )
+        const durationMs = Date.now() - startedAt
         const summary = [
           `service: ${targetService}`,
-          `mode: ${execSpec.mode}`,
+          `mode: ${execSpec.mode} (${execSpec.modeReason})`,
           `command: ${params.command}`,
           `timeout: ${timeoutSeconds}s`,
-          `exit code: ${result.code}`,
+          `duration: ${formatDurationMs(durationMs)}`,
+          result.code === 0 ? undefined : `exit code: ${result.code}`,
           result.stdout?.trim()
             ? `stdout:\n${result.stdout.trim()}`
             : undefined,
@@ -952,7 +1036,10 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
             workdir: params.workdir,
             mode: execSpec.mode,
             composeArgs: execSpec.args,
+            modeReason: execSpec.modeReason,
+            env: params.env,
             timeout: timeoutSeconds,
+            durationMs,
             exitCode: result.code,
             stdout: result.stdout,
             stderr: result.stderr,
@@ -961,15 +1048,17 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       } catch (error: unknown) {
         const { message, timedOut, stdout, stderr, exitCode } =
           getStreamErrorDetails(error)
+        const durationMs = Date.now() - startedAt
         const summary = [
           `service: ${targetService}`,
-          `mode: ${execSpec.mode}`,
+          `mode: ${execSpec.mode} (${execSpec.modeReason})`,
           `command: ${params.command}`,
           `timeout: ${timeoutSeconds}s`,
+          `duration: ${formatDurationMs(durationMs)}`,
           timedOut ? 'status: timed out' : `error: ${message}`,
-          `exit code: ${exitCode}`,
-          stdout.trim() ? `stdout:\n${stdout.trim()}` : undefined,
+          timedOut ? undefined : `exit code: ${exitCode}`,
           stderr.trim() ? `stderr:\n${stderr.trim()}` : undefined,
+          stdout.trim() ? `stdout:\n${stdout.trim()}` : undefined,
         ]
           .filter(Boolean)
           .join('\n\n')
@@ -984,8 +1073,11 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
             command: params.command,
             workdir: params.workdir,
             mode: execSpec.mode,
+            modeReason: execSpec.modeReason,
             composeArgs: execSpec.args,
+            env: params.env,
             timeout: timeoutSeconds,
+            durationMs,
             timedOut,
             exitCode,
             stdout,
@@ -1009,6 +1101,10 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       if (args.workdir) {
         text += theme.fg('dim', ` (cd ${args.workdir as string})`)
       }
+      const envKeys = Object.keys((args.env as Record<string, string>) ?? {})
+      if (envKeys.length > 0) {
+        text += theme.fg('dim', ` env=${envKeys.join(',')}`)
+      }
       if (args.timeout) {
         text += theme.fg('dim', ` timeout=${args.timeout as number}s`)
       }
@@ -1023,6 +1119,9 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
       const stdout = String(details.stdout ?? '')
       const stderr = String(details.stderr ?? '')
       const exitCode = details.exitCode as number | undefined
+      const durationMs = details.durationMs as number | undefined
+      const timeout = details.timeout as number | undefined
+      const modeReason = details.modeReason as string | undefined
 
       const timedOut = details.timedOut as boolean | undefined
       const queued = details.queued as boolean | undefined
@@ -1038,13 +1137,25 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         service,
         command,
         exitCode,
+        durationMs,
+        timeout,
       })
 
+      const output =
+        exitCode && exitCode !== 0
+          ? [
+              stderr.trim() ? `stderr:\n${stderr.trimEnd()}` : '',
+              stdout.trim() ? `stdout:\n${stdout.trimEnd()}` : '',
+            ]
+          : [
+              stdout.trim() ? `stdout:\n${stdout.trimEnd()}` : '',
+              stderr.trim() ? `stderr:\n${stderr.trimEnd()}` : '',
+            ]
       const combined = [
+        modeReason ? `mode:\n${mode} (${modeReason})` : '',
         queued && queuePosition ? `queue position:\n${queuePosition}` : '',
         queued && runningCommand ? `waiting for:\n${runningCommand}` : '',
-        stdout.trim() ? `stdout:\n${stdout.trimEnd()}` : '',
-        stderr.trim() ? `stderr:\n${stderr.trimEnd()}` : '',
+        ...output,
       ]
         .filter(Boolean)
         .join('\n\n')

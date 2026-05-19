@@ -175,7 +175,9 @@ type ToolUsedEntryData = {
   name: string
 }
 
-function isCustomEntry<T = unknown>(entry: SessionEntry): entry is CustomEntry<T> {
+function isCustomEntry<T = unknown>(
+  entry: SessionEntry,
+): entry is CustomEntry<T> {
   return entry.type === 'custom'
 }
 

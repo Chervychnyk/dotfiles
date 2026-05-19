@@ -12,12 +12,12 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
 
 const CMUX_SOCKET = process.env.CMUX_SOCKET_PATH
 
-// Colors
-const GREEN = '#22C55E'
-const AMBER = '#F59E0B'
-const PURPLE = '#8B5CF6'
-const BLUE = '#3B82F6'
-const GRAY = '#6B7280'
+// Everforest dark hard palette (matches pi/agent/themes/everforest-dark-hard.json)
+const GREEN = '#a7c080'
+const AMBER = '#dbbc7f'
+const PURPLE = '#d699b6'
+const BLUE = '#7fbbb3'
+const GRAY = '#859289'
 
 // Status keys we own — cleared on shutdown
 const STATUS_KEYS = [
