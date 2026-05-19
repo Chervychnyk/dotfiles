@@ -1,0 +1,62 @@
+{
+  "enabled": true,
+  "cloakCharacter": "*",
+  "cloakLength": null,
+  "tryAllPatterns": true,
+  "patterns": [
+    {
+      "filePattern": [
+        "**/.npmrc",
+        "**/.netrc",
+        "**/.pypirc",
+        "**/.gem/credentials",
+        "**/.bundle/config",
+        "**/.docker/config.json",
+        "**/credentials",
+        "**/credentials.*",
+        "**/*config*",
+        "**/*.json",
+        "**/*.yml",
+        "**/*.yaml",
+        "**/*.toml",
+        "**/*.ini"
+      ],
+      "cloakPattern": [
+        {
+          "pattern": "(token|api[_-]?key|secret|password|passwd|pwd|authorization|bearer|access[_-]?key|client[_-]?secret)(\\s*[:=]\\s*)['\\\"]?([^'\\\"\\s]+)",
+          "replace": "$1$2REDACTED",
+          "flags": "i"
+        },
+        {
+          "pattern": "(authorization:?[\\s=]+bearer\\s+)[A-Za-z0-9._~+/-]+=*",
+          "replace": "$1REDACTED",
+          "flags": "i"
+        },
+        {
+          "pattern": "gh[pousr]_[A-Za-z0-9_]{20,}",
+          "replace": "gh_REDACTED"
+        },
+        {
+          "pattern": "github_pat_[A-Za-z0-9_]{20,}",
+          "replace": "github_pat_REDACTED"
+        },
+        {
+          "pattern": "sk-[A-Za-z0-9_-]{20,}",
+          "replace": "sk-REDACTED"
+        },
+        {
+          "pattern": "xox[baprs]-[A-Za-z0-9-]{20,}",
+          "replace": "xox-REDACTED"
+        },
+        {
+          "pattern": "AKIA[0-9A-Z]{16}",
+          "replace": "AKIA_REDACTED"
+        },
+        {
+          "pattern": "-----BEGIN (OPENSSH|RSA|DSA|EC|PGP) PRIVATE KEY-----[\\s\\S]*?-----END \\1 PRIVATE KEY-----",
+          "replace": "-----BEGIN $1 PRIVATE KEY-----\nREDACTED\n-----END $1 PRIVATE KEY-----"
+        }
+      ]
+    }
+  ]
+}
