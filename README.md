@@ -164,47 +164,15 @@ fnox-env = "https://github.com/jdx/mise-env-fnox"
 _.fnox-env = { tools = true }
 ```
 
-## Custom Homebrew tap
+## Custom Homebrew formulae
 
-This setup expects a custom Homebrew tap for legacy formulae:
+Legacy formulae are stored in this repo under `homebrew/Formula/` so they can be copied into a tap later or installed directly by `setup.sh`:
 
-- tap: `$USER/versions`
-- formula: `$USER/versions/taglib@1.13.1`
+- `homebrew/Formula/openssl@1.1.rb`
+- `homebrew/Formula/taglib@1.13.1.rb`
 
-`setup.sh` taps it, installs `taglib@1.13.1`, and pins it.
+`setup.sh` copies these files into a local Homebrew tap named `$USER/versions`, installs from that tap, and pins `taglib@1.13.1`.
 `~/.zshrc` also prefers `TAGLIB_DIR` from `taglib@1.13.1` when available.
-
-### Creating or updating the tap
-
-If the tap does not exist yet:
-
-```bash
-brew tap-new $USER/versions
-cd "$(brew --repository $USER/versions)"
-mkdir -p Formula
-```
-
-Add the formula as:
-
-```text
-Formula/taglib@1.13.1.rb
-```
-
-If you already have the tap locally, open its checkout directly:
-
-```bash
-cd "$(brew --repository $USER/versions)"
-```
-
-Then add or edit formula files under `Formula/`, commit, and push the tap repo.
-
-You can try extracting the historical formula automatically first:
-
-```bash
-brew extract --version=1.13.1 taglib $USER/versions
-```
-
-If that does not work, create the formula file manually in the tap.
 
 ## Colima / Docker on the new machine
 

@@ -9,6 +9,7 @@ tap "manaflow-ai/cmux"
 # -----------------------------------------------------------------------------
 brew "ansible"
 brew "atuin"
+brew "automake"
 brew "bat"            # Better cat with syntax highlighting
 brew "coreutils"      # GNU coreutils newer than macOS defaults
 brew "curl"
@@ -18,10 +19,10 @@ brew "git"
 brew "git-delta"      # Syntax-highlighting pager for git/diff
 brew "gnupg"
 brew "jq"             # JSON processor
+brew "libpng"
 brew "mise"           # Runtime version manager / env/task control plane
-brew "hk"             # Git hook manager that integrates with mise
-brew "fnox"           # Secrets manager with mise env integration
 brew "neovim"
+brew "ouch"
 brew "protobuf"
 brew "readline"
 brew "ripgrep"
@@ -40,14 +41,16 @@ brew "zoxide"
 brew "bitwarden-cli"
 brew "gettext"
 brew "libpq"
+brew "libsndfile"
 brew "libsodium"
 brew "libxml2"
 brew "libyaml"
 brew "openssl@3"
 brew "pgcli"          # Better PostgreSQL CLI
-brew "pyenv"
-brew "pyenv-virtualenv"
-brew "redis"
+brew "postgresql@17", restart_service: :changed, link: true
+brew "redis", restart_service: :changed
+brew "tree-sitter"
+brew "vips"
 brew "zlib"           # Needed for some native builds
 
 # -----------------------------------------------------------------------------
@@ -58,9 +61,12 @@ brew "docker"         # Docker CLI
 brew "docker-compose"
 brew "k9s"
 brew "kubectx"
+brew "kubernetes-cli"
 brew "lazydocker"     # Docker TUI
+brew "rtk"
 brew "sst/tap/opencode"
-brew "syncthing"
+brew "syncthing", restart_service: :changed
+brew "teleport"
 
 # -----------------------------------------------------------------------------
 # Data, media, and utilities
@@ -72,12 +78,15 @@ brew "lazygit"        # Git TUI
 brew "mas"
 brew "mole"
 brew "stripe"
+brew "stripe-cli"
+brew "tree-sitter-cli"
 
 # -----------------------------------------------------------------------------
 # GUI apps
 # -----------------------------------------------------------------------------
 cask "anytype"
 cask "arc"
+cask "blockblock"
 cask "claude-code"
 cask "cmux"
 cask "cyberduck"
@@ -85,14 +94,18 @@ cask "element"
 cask "figma"
 cask "firefox"
 cask "fork"
-cask "ghostty"
+cask "gcloud-cli"
 cask "google-drive"
 cask "keepassxc"
 cask "keka"
+cask "localsend"
+cask "logi-options+"
+cask "lulu"
 cask "microsoft-teams"
 cask "mullvad-vpn"
 cask "notion-calendar"
 cask "obsidian"
+cask "openmtp"
 cask "optimage"
 cask "postman"
 cask "qlcolorcode"
@@ -111,6 +124,7 @@ cask "zoom"
 # -----------------------------------------------------------------------------
 cask "font-fira-code"
 cask "font-hack"
+cask "font-jetbrains-mono-nerd-font"
 cask "font-martian-mono"
 cask "font-monaspace"
 cask "font-sn-pro"
@@ -122,6 +136,7 @@ cask "font-source-code-pro"
 mas "Amphetamine", id: 937984704
 mas "Bitwarden", id: 1352778147
 mas "Flow", id: 1423210932
+mas "Keynote", id: 409183694
 mas "Monosnap", id: 540348655
 mas "Numbers", id: 409203825
 mas "Pages", id: 409201541

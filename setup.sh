@@ -120,15 +120,26 @@ info "Updating Homebrew and installing packages..."
 brew update
 brew bundle --file="$DOTFILES/Brewfile"
 
-info "Installing TagLib 1.13.1 from custom tap..."
-brew tap $USER/versions
-if brew list --versions taglib >/dev/null 2>&1; then
+info "Installing custom versioned formulae from dotfiles..."
+LOCAL_TAP="$(brew --repository)/Library/Taps/$USER/homebrew-versions"
+mkdir -p "$LOCAL_TAP/Formula"
+cp "$DOTFILES/homebrew/Formula/openssl@1.1.rb" "$LOCAL_TAP/Formula/openssl@1.1.rb"
+cp "$DOTFILES/homebrew/Formula/taglib@1.13.1.rb" "$LOCAL_TAP/Formula/taglib@1.13.1.rb"
+
+if brew list --versions openssl@1.1 >/dev/null 2>&1; then
+  success "openssl@1.1 already installed"
+else
+  brew install "$USER/versions/openssl@1.1"
+  success "Installed openssl@1.1"
+fi
+
+if brew list --versions taglib@1.13.1 >/dev/null 2>&1; then
   success "taglib@1.13.1 already installed"
 else
-  brew install $USER/versions/taglib
+  brew install "$USER/versions/taglib@1.13.1"
   success "Installed taglib@1.13.1"
 fi
-brew pin taglib >/dev/null 2>&1 || true
+brew pin taglib@1.13.1 >/dev/null 2>&1 || true
 
 brew cleanup
 success "Packages installed"

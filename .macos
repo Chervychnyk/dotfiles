@@ -56,7 +56,6 @@ defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
 defaults write NSGlobalDomain NSScrollAnimationEnabled -bool false
 defaults write NSGlobalDomain QLPanelAnimationDuration -float 0
-defaults write NSGlobalDomain NSScrollViewRubberbanding -bool false
 defaults write NSGlobalDomain NSDocumentRevisionsWindowTransformAnimation -bool false
 defaults write NSGlobalDomain NSToolbarFullScreenAnimationDuration -float 0
 defaults write NSGlobalDomain NSBrowserColumnAnimationSpeedMultiplier -float 0
@@ -65,8 +64,6 @@ defaults write NSGlobalDomain NSBrowserColumnAnimationSpeedMultiplier -float 0
 defaults write NSGlobalDomain KeyRepeat -int 2
 defaults write NSGlobalDomain InitialKeyRepeat -int 15
 
-# Stop media key hijacking by legacy iTunes helper.
-launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2> /dev/null || true
 
 ###############################################################################
 # Power / security                                                            #
@@ -78,7 +75,7 @@ sudo systemsetup -setrestartfreeze on 2>/dev/null
 
 # Display and sleep preferences.
 sudo pmset -a displaysleep 15
-sudo pmset -c sleep 0
+sudo pmset -c sleep 30
 sudo pmset -b displaysleep 5 sleep 10
 
 # Require password immediately after sleep/screensaver.
@@ -205,7 +202,6 @@ safari_write AutoFillMiscellaneousForms -bool false
 safari_write WarnAboutFraudulentWebsites -bool true
 safari_write WebKitJavaScriptCanOpenWindowsAutomatically -bool false
 safari_write com.apple.Safari.ContentPageGroupIdentifier.WebKit2JavaScriptCanOpenWindowsAutomatically -bool false
-safari_write SendDoNotTrackHTTPHeader -bool true
 safari_write InstallExtensionUpdatesAutomatically -bool true
 
 # Activity Monitor defaults.
