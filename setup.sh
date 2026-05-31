@@ -146,7 +146,12 @@ else
   warn "No email provided — skipping git email config"
 fi
 git config --global user.name "$git_name"
-success "Git configured ($git_name${git_email:+ <$git_email>})"
+
+# Defensive default after the recent hook compromise: ignore per-repository hooks
+# unless explicitly overridden for a trusted project.
+mkdir -p "$HOME/.config/git/empty-hooks"
+git config --global core.hooksPath "$HOME/.config/git/empty-hooks"
+success "Git configured ($git_name${git_email:+ <$git_email>}) with global empty hooksPath"
 
 info "Creating symlinks..."
 
