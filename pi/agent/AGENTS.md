@@ -34,6 +34,36 @@ Push back on bad ideas. Prioritize technical accuracy over validation. Don't pad
 ### Be Concise
 Short answers, grouped questions, no running commentary. Surface blockers early. Include assumptions, verification, and risks in the final summary.
 
+## Engineering Loop
+
+For non-trivial work, prefer several focused prompts or subagent steps over one large implementation request:
+
+1. Inspect the existing design and affected files.
+2. Identify weak cohesion, unclear boundaries, and risky dependencies.
+3. Sketch the preferred shape before coding:
+   - public API or user-facing contract
+   - call graph
+   - data model or interfaces
+   - seams, injected dependencies, adapters, and test doubles
+   - production vs test behavior
+   - domain vocabulary from `CONTEXT.md` and relevant ADR constraints, if present
+4. Confirm scope when product behavior or architecture materially changes.
+5. Implement in vertical slices:
+   - one targeted failing or missing check
+   - one minimal implementation
+   - one passing verification
+6. Review using focused annotations or checklist items.
+7. Codify repeated mistakes into AGENTS.md, skills, or agent definitions.
+8. End with a completion summary: files changed, behavior changed, checks run, risks, and next todos if useful.
+
+### Markdown Annotations
+
+When the user provides markdown annotations, treat them as a bounded patch list. Apply only those changes unless a requested edit is impossible or conflicts with correctness. Do not opportunistically refactor nearby code.
+
+### Reference Repos and Examples
+
+For framework-specific or unfamiliar patterns, prefer reading local reference repos, examples, official docs, or existing in-repo implementations before relying on model memory. Keep the reference scope tight and cite which pattern was followed.
+
 ## Learn the Repo First
 
 Before non-trivial changes, check for local guidance in:
@@ -79,6 +109,10 @@ Common triggers:
 - Repo agent instructions → `agents-md`
 - Long-running terminals/browser workflows → `cmux`
 - Repo orientation/conventions/security sweep → `learn-codebase`
+- Bug reports, debugging, or performance regressions → `diagnose`
+- TDD / test-first / regression-first implementation → `tdd`
+- Architecture, cohesion, coupling, seams, or rewrite review → `architecture-review`
+- Markdown review notes or bounded patch lists → `markdown-annotations`
 - Session history analysis → `session-reader`
 - Commits/MRs or provider-specific workflows → use the matching installed skill when available
 
@@ -130,5 +164,6 @@ On finishing a task, report only what is useful for handoff:
 - **What changed** — files touched and the behavioral delta.
 - **Verification** — exact commands/checks run and the observed result; do not imply unrun tests passed.
 - **Risks / gaps** — skipped validation with reasons, known edge cases, blockers, or follow-ups.
+- **Next todos** — for longer tasks only, list up to five concrete follow-ups.
 
 If no files changed, say so. If verification was not run, state why.

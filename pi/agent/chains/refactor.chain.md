@@ -7,8 +7,8 @@ Use this chain for behavior-preserving structural changes where codebase analysi
 
 Handoff contract:
 - `scout` documents current behavior, coupling, safe seams, and validation clues.
-- `planner` creates the smallest incremental behavior-preserving plan.
-- `worker` implements the approved plan only and verifies focused behavior.
+- `planner` creates the smallest incremental behavior-preserving plan with explicit seams and verification slices.
+- `worker` implements the approved plan only and verifies focused behavior after each meaningful slice.
 - `reviewer` checks behavior preservation, accidental scope expansion, and verification quality.
 
 ## scout
@@ -32,7 +32,8 @@ Using context.md, produce a safe, incremental refactor plan for: {task}
 
 Include:
 - refactor goals and explicit non-goals
-- the smallest sequence of low-risk changes
+- the smallest sequence of low-risk vertical slices
+- public API/call graph/seams that should stay stable or change intentionally
 - how behavior will be preserved
 - targeted verification steps after each meaningful change
 
