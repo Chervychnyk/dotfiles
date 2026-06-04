@@ -53,36 +53,9 @@ return {
       require("markview").setup(opts)
     end,
     keys = {
-      { "<leader>mp", "<cmd>Markview Toggle<cr>", desc = "Toggle markdown preview" },
+      { "<leader>mp", "<cmd>Markview Toggle<cr>",      desc = "Toggle markdown preview" },
       { "<leader>ms", "<cmd>Markview splitToggle<cr>", desc = "Toggle markdown split preview" },
     },
   },
-
-  -- Rails navigation and commands
-  {
-    "tpope/vim-rails",
-    ft = { "ruby", "eruby", "haml", "slim" },
-    cmd = {
-      "Rails",
-      "Rake",
-      "A",
-      "R",
-      "Emodel",
-      "Econtroller",
-      "Eview",
-      "Ehelper",
-      "Espec",
-      "Emigration",
-    },
-    keys = {
-      { "<leader>ra", "<cmd>A<cr>", desc = "Rails alternate file" },
-      { "<leader>rr", "<cmd>R<cr>", desc = "Rails related file" },
-      { "<leader>rm", "<cmd>Emodel<cr>", desc = "Rails model" },
-      { "<leader>rc", "<cmd>Econtroller<cr>", desc = "Rails controller" },
-      { "<leader>rv", "<cmd>Eview<cr>", desc = "Rails view" },
-      { "<leader>rs", "<cmd>Espec<cr>", desc = "Rails spec" },
-    },
-  },
-
 
 }

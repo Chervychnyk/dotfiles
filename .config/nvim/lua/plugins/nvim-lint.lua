@@ -12,7 +12,7 @@ return {
     lint.linters.rubocop = function()
       local current_file = vim.api.nvim_buf_get_name(0)
       local root = vim.fs.root(current_file, { "Gemfile", ".git", "docker-compose.yml", "docker-compose.yaml" })
-        or vim.fn.getcwd()
+          or vim.fn.getcwd()
 
       local has_docker, service = docker.detect(root)
 
