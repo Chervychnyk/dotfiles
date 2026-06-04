@@ -3,12 +3,11 @@
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.5",
   "packages": [
-    "npm:pi-subagents",
     "npm:pi-interview",
     "npm:pi-mcp-adapter",
-    "npm:pi-intercom",
+    "~/code/pi-code-previews",
     "~/code/pi-web-tools",
-    "npm:pi-code-previews",
+    "npm:@gotgenes/pi-subagents",
     "npm:@gotgenes/pi-permission-system"
   ],
   "theme": "everforest-dark-hard",
