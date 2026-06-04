@@ -124,7 +124,7 @@ info "Installing custom versioned formulae from dotfiles..."
 LOCAL_TAP="$(brew --repository)/Library/Taps/$USER/homebrew-versions"
 mkdir -p "$LOCAL_TAP/Formula"
 cp "$DOTFILES/homebrew/Formula/openssl@1.1.rb" "$LOCAL_TAP/Formula/openssl@1.1.rb"
-cp "$DOTFILES/homebrew/Formula/taglib@1.13.1.rb" "$LOCAL_TAP/Formula/taglib@1.13.1.rb"
+cp "$DOTFILES/homebrew/Formula/taglib.rb" "$LOCAL_TAP/Formula/taglib.rb"
 
 if brew list --versions openssl@1.1 >/dev/null 2>&1; then
   success "openssl@1.1 already installed"
@@ -133,13 +133,13 @@ else
   success "Installed openssl@1.1"
 fi
 
-if brew list --versions taglib@1.13.1 >/dev/null 2>&1; then
+if brew list --versions taglib >/dev/null 2>&1; then
   success "taglib@1.13.1 already installed"
 else
-  brew install "$USER/versions/taglib@1.13.1"
+  brew install "$USER/versions/taglib"
   success "Installed taglib@1.13.1"
 fi
-brew pin taglib@1.13.1 >/dev/null 2>&1 || true
+brew pin taglib >/dev/null 2>&1 || true
 
 brew cleanup
 success "Packages installed"

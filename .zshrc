@@ -191,9 +191,7 @@ if command -v brew >/dev/null 2>&1; then
   # Java / other libs
   [[ -d "$HOMEBREW_PREFIX/opt/openjdk/bin" ]] && export PATH="$HOMEBREW_PREFIX/opt/openjdk/bin:$PATH"
 
-  if [[ -d "$HOMEBREW_PREFIX/opt/taglib@1.13.1" ]]; then
-    export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib@1.13.1"
-  elif [[ -d "$HOMEBREW_PREFIX/opt/taglib" ]]; then
+  if [[ -d "$HOMEBREW_PREFIX/opt/taglib" ]]; then
     export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib"
   fi
 fi

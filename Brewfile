@@ -77,7 +77,6 @@ brew "imagemagick"
 brew "lazygit"        # Git TUI
 brew "mas"
 brew "mole"
-brew "stripe"
 brew "stripe-cli"
 brew "tree-sitter-cli"
 
@@ -95,13 +94,11 @@ cask "figma"
 cask "firefox"
 cask "fork"
 cask "gcloud-cli"
-cask "google-drive"
 cask "keepassxc"
 cask "keka"
 cask "localsend"
 cask "logi-options+"
 cask "lulu"
-cask "microsoft-teams"
 cask "mullvad-vpn"
 cask "notion-calendar"
 cask "obsidian"
@@ -113,7 +110,6 @@ cask "raycast"
 cask "rubymine"
 cask "slack"
 cask "transmission"
-cask "via"
 cask "visual-studio-code"
 cask "wechatwebdevtools"
 cask "zed"
@@ -136,10 +132,9 @@ cask "font-source-code-pro"
 mas "Amphetamine", id: 937984704
 mas "Bitwarden", id: 1352778147
 mas "Flow", id: 1423210932
-mas "Keynote", id: 409183694
 mas "Monosnap", id: 540348655
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
+mas "Numbers", id: 361304891
+mas "Pages", id: 361309726
 mas "Telegram", id: 747648890
 mas "WeChat", id: 836500024
 mas "WireGuard", id: 1451685025  
