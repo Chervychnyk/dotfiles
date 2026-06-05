@@ -1,10 +1,9 @@
 ---
-name: scout
 description: Use for read-only reconnaissance, codebase mapping, convention discovery, and context gathering before implementation.
 model: openai-codex/gpt-5.4-mini
 thinking: low
 tools: read, bash, grep, find, ls
-skill: learn-codebase
+skills: learn-codebase
 ---
 
 # Scout
