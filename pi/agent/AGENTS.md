@@ -56,10 +56,6 @@ For non-trivial work, prefer several focused prompts or subagent steps over one 
 7. Codify repeated mistakes into AGENTS.md, skills, or agent definitions.
 8. End with a completion summary: files changed, behavior changed, checks run, risks, and next todos if useful.
 
-### Markdown Annotations
-
-When the user provides markdown annotations, treat them as a bounded patch list. Apply only those changes unless a requested edit is impossible or conflicts with correctness. Do not opportunistically refactor nearby code.
-
 ### Reference Repos and Examples
 
 For framework-specific or unfamiliar patterns, prefer reading local reference repos, examples, official docs, or existing in-repo implementations before relying on model memory. Keep the reference scope tight and cite which pattern was followed.
@@ -77,27 +73,39 @@ Before non-trivial changes, check for local guidance in:
 
 Use the `learn-codebase` skill at the start of unfamiliar work, before changes that depend on repo conventions, and before touching build/run/security-sensitive areas. Stop once you know the relevant rules, entry points, commands, and validation path; do not turn orientation into a full audit unless asked.
 
+## Todos
+
+Use the `todo` tool for non-trivial or interruptible work:
+
+- At task start, run `todo({ action: "list" })` and check for relevant assigned/open todos.
+- Create a todo when work will span multiple steps, sessions, agents, or meaningful follow-up.
+- Claim a todo before modifying it: `todo({ action: "claim", id })`.
+- Append concise progress notes, decisions, blockers, and verification evidence as work proceeds.
+- Mark completed todos `closed`; release claimed todos when handing off or abandoning work.
+- Use `force: true` only for explicit handoff/override situations, and note why in the todo body.
+
 ## Subagents
 
-Use `pi-subagents` for non-trivial work while keeping the main agent as orchestrator and final decision-maker. Before launch, run `subagent({ action: "list" })`; load the `pi-subagents` skill for custom chains, async/control, worktrees, or agent management.
+Use subagents for non-trivial work while keeping the main agent as orchestrator and final decision-maker. This setup uses `@gotgenes/pi-subagents`, whose primary tools are `subagent`, `get_subagent_result`, and `steer_subagent`.
 
 Default routing:
 
 - trivial lookup, one-line edit, or direct answer → handle directly
-- unclear scope or product intent → `spec`
-- unfamiliar code path or >3 relevant files → `scout`
-- bug / feature / behavior-preserving cleanup → `bugfix`, `feature`, or `refactor` chain
-- multi-step work without a saved chain → `scout`/`spec` → `planner` → `worker` → `reviewer`
-- external/current facts plus local code context → run `researcher` and `scout` in parallel
-- drift or assumption check against current session history → `oracle` with `context: "fork"`
+- unclear scope or product intent → use a custom `spec` agent if available, otherwise ask concise grouped questions
+- unfamiliar code path or >3 relevant files → launch a read-only scout/explore-style agent
+- bug / feature / behavior-preserving cleanup → gather context, plan, implement with one writer, then review
+- multi-step work → run scout/spec first, then planner, then one worker, then reviewer
+- external/current facts plus local code context → run researcher-style and scout/explore-style agents in parallel when available
+- drift or assumption check against current session history → use `inherit_context: true` with a reviewer/oracle-style agent if available
 
 Operational rules:
 
-- Use one writer by default: one `worker` in the shared tree; use `worktree: true` only for intentional parallel write experiments on a clean git tree.
-- Prefer fresh context for adversarial `reviewer` runs; use `context: "fork"` only when the child should inherit parent history.
-- Use `reviewer` before finalizing risky changes: security, data integrity, concurrency, auth, payments, migrations, or public APIs.
+- Launch with explicit `prompt`, `description`, and `subagent_type`; use `run_in_background: true` for parallel or long-running work.
+- Retrieve background results with `get_subagent_result({ agent_id, wait })`; redirect running agents with `steer_subagent({ agent_id, message })`.
+- Use one writer by default in the shared tree. Use `isolation: "worktree"` only when the installed subagent/worktree support is verified for the current Pi package set.
+- Prefer fresh context for adversarial review; set `inherit_context: true` only when the child needs parent conversation history.
+- Use a reviewer-style agent before finalizing risky changes: security, data integrity, concurrency, auth, payments, migrations, or public APIs.
 - Ask the user only for decisions that materially affect scope, product behavior, or risk.
-- Use async/status for long-running work; interrupt only on clear `needs_attention`, drift, or user request.
 
 ## Skills
 
@@ -112,7 +120,6 @@ Common triggers:
 - Bug reports, debugging, or performance regressions → `diagnose`
 - TDD / test-first / regression-first implementation → `tdd`
 - Architecture, cohesion, coupling, seams, or rewrite review → `architecture-review`
-- Markdown review notes or bounded patch lists → `markdown-annotations`
 - Session history analysis → `session-reader`
 - Commits/MRs or provider-specific workflows → use the matching installed skill when available
 
@@ -129,7 +136,7 @@ Use the right tool for the job and avoid tool calls that only add noise.
 - **Python**: prefer `uv` workflows (`uv run`, `uv add`, `uv sync`, `uv venv`) over raw Python, pip, or Poetry commands when practical.
 - **Web**: use `web_search`/`web_fetch` only for current or external facts, documentation, standards, and third-party APIs — not for repo-local questions.
 - **MCP**: prefer configured MCP tools for external systems they cover; do not scrape or manually work around an available MCP integration.
-- **Interview**: use `interview` when several requirements or tradeoffs need structured user input; ask simple clarifying questions directly in chat.
+- **Interview**: use `interview` when structured input is better than chat. Prefer it when there are 2+ independent decisions, options with meaningful tradeoffs, UX/product/scope/risk choices, or recommendations the user should review before answering. Ask directly in chat only for one short clarification or a yes/no decision.
 - **cmux**: use for long-running servers, test watchers, browser workflows, or multi-terminal coordination.
 
 ## Safety Rails
@@ -142,7 +149,7 @@ Safety extensions may block or prompt for sensitive operations. Treat that as a 
 
 ## Pi Runtime Configuration
 
-Do not duplicate live model, mode, package, or extension configuration in this guide. Check `~/.pi/agent/settings.json`, `~/.pi/agent/modes.json`, project `.pi/settings.json`, or tool discovery commands when runtime details matter.
+Do not duplicate live model, package, or extension configuration in this guide. Check `~/.pi/agent/settings.json`, project `.pi/settings.json`, or tool discovery commands when runtime details matter.
 
 ## Research
 

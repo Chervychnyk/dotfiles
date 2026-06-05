@@ -6,7 +6,7 @@
  *
  * File format:
  * - The file starts with a JSON object (not YAML) containing the front matter:
- *   { id, title, tags, status, created_at, assigned_to_session }
+ *   { id, title, tags, status, created_at, closed_at, assigned_to_session }
  * - After the JSON block comes optional markdown body text separated by a blank line.
  * - Example:
  *   {
@@ -15,6 +15,7 @@
  *     "tags": ["qa"],
  *     "status": "open",
  *     "created_at": "2026-01-25T17:00:00.000Z",
+ *     "closed_at": null,
  *     "assigned_to_session": "session.json"
  *   }
  *
@@ -27,7 +28,7 @@
  * Defaults:
  * {
  *   "gc": true,   // delete closed todos older than gcDays on startup
- *   "gcDays": 7   // age threshold for GC (days since created_at)
+ *   "gcDays": 7   // age threshold for GC (days since closed_at)
  * }
  *
  * Use `/todos` to bring up the visual todo manager or just let the LLM use them
@@ -79,6 +80,15 @@ const DEFAULT_TODO_SETTINGS = {
   gcDays: 7,
 }
 const LOCK_TTL_MS = 30 * 60 * 1000
+const MAX_TITLE_LENGTH = 500
+const MAX_BODY_LENGTH = 100_000
+const VALID_TODO_STATUSES = [
+  'open',
+  'in_progress',
+  'blocked',
+  'closed',
+  'done',
+] as const
 
 interface TodoFrontMatter {
   id: string
@@ -86,6 +96,7 @@ interface TodoFrontMatter {
   tags: string[]
   status: string
   created_at: string
+  closed_at?: string
   assigned_to_session?: string
 }
 
@@ -121,14 +132,20 @@ const TodoParams = Type.Object({
     Type.String({ description: 'Todo id (TODO-<hex> or raw hex filename)' }),
   ),
   title: Type.Optional(
-    Type.String({ description: 'Short summary shown in lists' }),
+    Type.String({
+      description: `Short summary shown in lists (max ${MAX_TITLE_LENGTH} chars)`,
+    }),
   ),
-  status: Type.Optional(Type.String({ description: 'Todo status' })),
+  status: Type.Optional(
+    Type.String({
+      description: 'Todo status: open, in_progress, blocked, closed, or done',
+    }),
+  ),
   tags: Type.Optional(Type.Array(Type.String({ description: 'Todo tag' }))),
   body: Type.Optional(
     Type.String({
       description:
-        'Long-form details (markdown). Update replaces; append adds.',
+        `Long-form details (markdown, max ${MAX_BODY_LENGTH} chars). Update replaces; append adds.`,
     }),
   ),
   force: Type.Optional(
@@ -207,14 +224,54 @@ function displayTodoId(id: string): string {
   return formatTodoId(normalizeTodoId(id))
 }
 
+function normalizeTodoStatus(status: string | undefined): string {
+  const normalized = (status || 'open').trim().toLowerCase()
+  if (!normalized) return 'open'
+  if (
+    VALID_TODO_STATUSES.includes(
+      normalized as (typeof VALID_TODO_STATUSES)[number],
+    )
+  ) {
+    return normalized
+  }
+  throw new Error(
+    `Invalid todo status "${status}". Expected one of: ${VALID_TODO_STATUSES.join(', ')}.`,
+  )
+}
+
 function isTodoClosed(status: string): boolean {
   return ['closed', 'done'].includes(status.toLowerCase())
 }
 
-function clearAssignmentIfClosed(todo: TodoFrontMatter): void {
+function applyStatusSideEffects(
+  todo: TodoFrontMatter,
+  previousStatus?: string,
+): void {
+  todo.status = normalizeTodoStatus(todo.status)
   if (isTodoClosed(getTodoStatus(todo))) {
     todo.assigned_to_session = undefined
+    if (!todo.closed_at || (previousStatus && !isTodoClosed(previousStatus))) {
+      todo.closed_at = new Date().toISOString()
+    }
+  } else {
+    todo.closed_at = undefined
   }
+}
+
+function normalizeTodoTextFields(todo: TodoRecord): { error?: string } {
+  todo.title = (todo.title || '').trim()
+  todo.body = todo.body ?? ''
+  todo.tags = (todo.tags ?? []).map((tag) => tag.trim()).filter(Boolean)
+  if (!todo.title) {
+    return { error: 'Title required' }
+  }
+  if (todo.title.length > MAX_TITLE_LENGTH) {
+    return { error: `Title too long. Maximum ${MAX_TITLE_LENGTH} characters.` }
+  }
+  if (todo.body.length > MAX_BODY_LENGTH) {
+    return { error: `Body too long. Maximum ${MAX_BODY_LENGTH} characters.` }
+  }
+  return {}
 }
 
 function sortTodos(todos: TodoFrontMatter[]): TodoFrontMatter[] {
@@ -898,9 +955,9 @@ async function garbageCollectTodos(
           const { frontMatter } = splitFrontMatter(content)
           const parsed = parseFrontMatter(frontMatter, id)
           if (!isTodoClosed(parsed.status)) return
-          const createdAt = Date.parse(parsed.created_at)
-          if (!Number.isFinite(createdAt)) return
-          if (createdAt < cutoff) {
+          const closedAt = Date.parse(parsed.closed_at || parsed.created_at || '')
+          if (!Number.isFinite(closedAt)) return
+          if (closedAt < cutoff) {
             await fs.unlink(filePath)
           }
         } catch {
@@ -925,6 +982,7 @@ function parseFrontMatter(text: string, idFallback: string): TodoFrontMatter {
     tags: [],
     status: 'open',
     created_at: '',
+    closed_at: undefined,
     assigned_to_session: undefined,
   }
 
@@ -936,10 +994,17 @@ function parseFrontMatter(text: string, idFallback: string): TodoFrontMatter {
     if (!parsed || typeof parsed !== 'object') return data
     if (typeof parsed.id === 'string' && parsed.id) data.id = parsed.id
     if (typeof parsed.title === 'string') data.title = parsed.title
-    if (typeof parsed.status === 'string' && parsed.status)
-      data.status = parsed.status
+    if (typeof parsed.status === 'string' && parsed.status) {
+      try {
+        data.status = normalizeTodoStatus(parsed.status)
+      } catch {
+        data.status = 'open'
+      }
+    }
     if (typeof parsed.created_at === 'string')
       data.created_at = parsed.created_at
+    if (typeof parsed.closed_at === 'string' && parsed.closed_at.trim())
+      data.closed_at = parsed.closed_at
     if (
       typeof parsed.assigned_to_session === 'string' &&
       parsed.assigned_to_session.trim()
@@ -1027,6 +1092,7 @@ function parseTodoContent(content: string, idFallback: string): TodoRecord {
     tags: parsed.tags ?? [],
     status: parsed.status,
     created_at: parsed.created_at,
+    closed_at: parsed.closed_at,
     assigned_to_session: parsed.assigned_to_session,
     body: body ?? '',
   }
@@ -1038,8 +1104,9 @@ function serializeTodo(todo: TodoRecord): string {
       id: todo.id,
       title: todo.title,
       tags: todo.tags ?? [],
-      status: todo.status,
+      status: normalizeTodoStatus(todo.status),
       created_at: todo.created_at,
+      closed_at: todo.closed_at || undefined,
       assigned_to_session: todo.assigned_to_session || undefined,
     },
     null,
@@ -1162,6 +1229,24 @@ async function withTodoLock<T>(
   }
 }
 
+function requireTodoAssignment(
+  todo: TodoRecord,
+  ctx: ExtensionContext,
+  force = false,
+): { error?: string } {
+  if (force) return {}
+  const sessionId = ctx.sessionManager.getSessionId()
+  if (todo.assigned_to_session === sessionId) return {}
+  if (todo.assigned_to_session) {
+    return {
+      error: `Todo ${displayTodoId(todo.id)} is assigned to session ${todo.assigned_to_session}. Use force to override.`,
+    }
+  }
+  return {
+    error: `Todo ${displayTodoId(todo.id)} is not claimed. Claim it before modifying, or use force to override.`,
+  }
+}
+
 async function listTodos(todosDir: string): Promise<TodoFrontMatter[]> {
   let entries: string[] = []
   try {
@@ -1185,6 +1270,7 @@ async function listTodos(todosDir: string): Promise<TodoFrontMatter[]> {
         tags: parsed.tags ?? [],
         status: parsed.status,
         created_at: parsed.created_at,
+        closed_at: parsed.closed_at,
         assigned_to_session: parsed.assigned_to_session,
       })
     } catch {
@@ -1218,6 +1304,7 @@ function listTodosSync(todosDir: string): TodoFrontMatter[] {
         tags: parsed.tags ?? [],
         status: parsed.status,
         created_at: parsed.created_at,
+        closed_at: parsed.closed_at,
         assigned_to_session: parsed.assigned_to_session,
       })
     } catch {
@@ -1455,6 +1542,7 @@ async function updateTodoStatus(
   id: string,
   status: string,
   ctx: ExtensionContext,
+  force = false,
 ): Promise<TodoRecord | { error: string }> {
   const validated = validateTodoId(id)
   if ('error' in validated) {
@@ -1470,8 +1558,15 @@ async function updateTodoStatus(
     const existing = await ensureTodoExists(filePath, normalizedId)
     if (!existing)
       return { error: `Todo ${displayTodoId(id)} not found` } as const
+    const assignment = requireTodoAssignment(existing, ctx, force)
+    if (assignment.error) return { error: assignment.error } as const
+    const previousStatus = existing.status
     existing.status = status
-    clearAssignmentIfClosed(existing)
+    try {
+      applyStatusSideEffects(existing, previousStatus)
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) } as const
+    }
     await writeTodoFile(filePath, existing)
     return existing
   })
@@ -1571,6 +1666,7 @@ async function deleteTodo(
   todosDir: string,
   id: string,
   ctx: ExtensionContext,
+  force = false,
 ): Promise<TodoRecord | { error: string }> {
   const validated = validateTodoId(id)
   if ('error' in validated) {
@@ -1586,6 +1682,8 @@ async function deleteTodo(
     const existing = await ensureTodoExists(filePath, normalizedId)
     if (!existing)
       return { error: `Todo ${displayTodoId(id)} not found` } as const
+    const assignment = requireTodoAssignment(existing, ctx, force)
+    if (assignment.error) return { error: assignment.error } as const
     await fs.unlink(filePath)
     return existing
   })
@@ -1697,6 +1795,22 @@ export default function todosExtension(pi: ExtensionAPI) {
             created_at: new Date().toISOString(),
             body: params.body ?? '',
           }
+          try {
+            applyStatusSideEffects(todo)
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            return {
+              content: [{ type: 'text', text: message }],
+              details: { action: 'create', error: message },
+            }
+          }
+          const textValidation = normalizeTodoTextFields(todo)
+          if (textValidation.error) {
+            return {
+              content: [{ type: 'text', text: textValidation.error }],
+              details: { action: 'create', error: textValidation.error },
+            }
+          }
 
           const result = await withTodoLock(todosDir, id, ctx, async () => {
             await writeTodoFile(filePath, todo)
@@ -1748,6 +1862,10 @@ export default function todosExtension(pi: ExtensionAPI) {
               if (!existing)
                 return { error: `Todo ${displayId} not found` } as const
 
+              const assignment = requireTodoAssignment(existing, ctx, Boolean(params.force))
+              if (assignment.error) return { error: assignment.error } as const
+
+              const previousStatus = existing.status
               existing.id = normalizedId
               if (params.title !== undefined) existing.title = params.title
               if (params.status !== undefined) existing.status = params.status
@@ -1755,7 +1873,13 @@ export default function todosExtension(pi: ExtensionAPI) {
               if (params.body !== undefined) existing.body = params.body
               if (!existing.created_at)
                 existing.created_at = new Date().toISOString()
-              clearAssignmentIfClosed(existing)
+              try {
+                applyStatusSideEffects(existing, previousStatus)
+              } catch (error) {
+                return { error: error instanceof Error ? error.message : String(error) } as const
+              }
+              const textValidation = normalizeTodoTextFields(existing)
+              if (textValidation.error) return { error: textValidation.error } as const
 
               await writeTodoFile(filePath, existing)
               return existing
@@ -1809,8 +1933,15 @@ export default function todosExtension(pi: ExtensionAPI) {
               const existing = await ensureTodoExists(filePath, normalizedId)
               if (!existing)
                 return { error: `Todo ${displayId} not found` } as const
+              const assignment = requireTodoAssignment(existing, ctx, Boolean(params.force))
+              if (assignment.error) return { error: assignment.error } as const
               if (!params.body || !params.body.trim()) {
                 return existing
+              }
+              const spacer = existing.body.trim().length ? '\n\n' : ''
+              const nextBody = `${existing.body.replace(/\s+$/, '')}${spacer}${params.body.trim()}\n`
+              if (nextBody.length > MAX_BODY_LENGTH) {
+                return { error: `Body too long. Maximum ${MAX_BODY_LENGTH} characters.` } as const
               }
               const updated = await appendTodoBody(
                 filePath,
@@ -1908,7 +2039,7 @@ export default function todosExtension(pi: ExtensionAPI) {
               details: { action: 'delete', error: validated.error },
             }
           }
-          const result = await deleteTodo(todosDir, validated.id, ctx)
+          const result = await deleteTodo(todosDir, validated.id, ctx, Boolean(params.force))
           if (typeof result === 'object' && 'error' in result) {
             return {
               content: [{ type: 'text', text: result.error }],
@@ -2181,7 +2312,7 @@ export default function todosExtension(pi: ExtensionAPI) {
           }
 
           if (action === 'delete') {
-            const result = await deleteTodo(todosDir, record.id, ctx)
+            const result = await deleteTodo(todosDir, record.id, ctx, true)
             if ('error' in result) {
               ctx.ui.notify(result.error, 'error')
               return 'stay'
@@ -2198,6 +2329,7 @@ export default function todosExtension(pi: ExtensionAPI) {
             record.id,
             nextStatus,
             ctx,
+            true,
           )
           if ('error' in result) {
             ctx.ui.notify(result.error, 'error')
