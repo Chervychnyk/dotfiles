@@ -4,6 +4,7 @@
 .state/
 .pi/
 pi/agent/auth.json
+pi/agent/trust.json
 pi/agent/mcp.json
 pi/agent/mcp-cache.json
 pi/agent/mcp-npx-cache.json

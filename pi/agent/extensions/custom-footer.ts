@@ -104,12 +104,10 @@ function formatGitStatus(status: GitStatus | undefined, fallbackBranch?: string)
   const parts = branch ? [`⎇ ${branch}`] : []
   if (!status) return parts.join(' ')
 
-  if (status.ahead > 0) parts.push(`↑${status.ahead}`)
-  if (status.behind > 0) parts.push(`↓${status.behind}`)
-  if (status.staged > 0) parts.push(`●${status.staged}`)
-  if (status.unstaged > 0) parts.push(`✚${status.unstaged}`)
-  if (status.untracked > 0) parts.push(`?${status.untracked}`)
-  if (parts.length === 1) parts.push('✓')
+  if (status.staged > 0 || status.unstaged > 0 || status.untracked > 0) {
+    parts[0] = parts[0] ? `${parts[0]}*` : '*'
+  }
+  if (status.ahead > 0) parts.push(`[${status.ahead}]`)
 
   return parts.join(' ')
 }
