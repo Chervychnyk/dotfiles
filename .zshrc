@@ -217,22 +217,8 @@ export BITWARDENCLI_APPDATA_DIR=~/.bw/
 fpath=(~/.zsh/functions $fpath)
 autoload -Uz unlock_bitwarden
 
-# Load RVM if available
-if [[ -s "$HOME/.rvm/scripts/rvm" ]]; then
-  source "$HOME/.rvm/scripts/rvm"
-  export PATH="$PATH:$HOME/.rvm/bin"
-fi
-
 # Consolidated PATH additions (add to end for proper precedence)
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.yarn/bin:$PATH"
 
 # zprof  # Uncomment to show profiling results
-
-# bun completions
-[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
-
-# bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
