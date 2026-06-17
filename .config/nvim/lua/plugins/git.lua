@@ -87,26 +87,56 @@ return {
     end,
   },
 
-  -- Diffview - Advanced diff and merge tool
+  -- CodeDiff - VSCode-style diff and merge tool
   {
-    "sindrets/diffview.nvim",
+    "esmuellert/codediff.nvim",
     event = "VeryLazy",
-    cmd = { "DiffviewOpen", "DiffviewClose", "DiffviewToggleFiles", "DiffviewFocusFiles" },
+    cmd = "CodeDiff",
     keys = {
-      {
-        "<leader>gd",
-        function()
-          if vim.t.diffview_view_initialized then
-            return vim.cmd.DiffviewClose()
-          end
-
-          return vim.cmd.DiffviewOpen()
-        end,
-        silent = true,
-        desc = "Toggle diff",
-      },
-      { "<leader>gh", ":DiffviewFileHistory %<CR>", silent = true, desc = "Git file history" },
+      { "<leader>gd", "<cmd>CodeDiff<cr>",           silent = true, desc = "Open diff" },
+      { "<leader>gh", "<cmd>CodeDiff history %<cr>", silent = true, desc = "Git file history" },
     },
+    opts = {
+      diff = {
+        layout = "side-by-side",
+      },
+      keymaps = {
+        view = {
+          toggle_stage = "s",
+          stage_hunk = "s",
+          unstage_hunk = "u",
+        },
+        explorer = {
+          stage_all = "S",
+          unstage_all = "U",
+        },
+      },
+    },
+    config = function(_, opts)
+      require("codediff").setup(opts)
+
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "codediff-explorer",
+        callback = function(event)
+          vim.keymap.set("n", "u", function()
+            local lifecycle = require("codediff.ui.lifecycle")
+            local explorer = lifecycle.get_explorer(vim.api.nvim_get_current_tabpage())
+            local node = explorer and explorer.tree and explorer.tree:get_node()
+
+            if not node or not node.data or node.data.type == "group" then
+              return
+            end
+
+            if node.data.group ~= "staged" then
+              vim.notify("Move to Staged Changes to unstage this entry", vim.log.levels.WARN)
+              return
+            end
+
+            require("codediff.ui.explorer").toggle_stage_entry(explorer, explorer.tree)
+          end, { buffer = event.buf, silent = true, desc = "Unstage entry" })
+        end,
+      })
+    end,
   },
 
   -- Neogit - Magit-like Git interface
@@ -147,8 +177,10 @@ return {
           hunk = { "", "" },
         },
         integrations = {
-          diffview = true,
+          codediff = true,
+          snacks = true
         },
+        diff_viewer = "codediff",
       })
     end,
   },
