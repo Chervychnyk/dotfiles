@@ -91,12 +91,12 @@ Use subagents for non-trivial work while keeping the main agent as orchestrator 
 Default routing:
 
 - trivial lookup, one-line edit, or direct answer → handle directly
-- unclear scope or product intent → use a custom `spec` agent if available, otherwise ask concise grouped questions
-- unfamiliar code path or >3 relevant files → launch a read-only scout/explore-style agent
-- bug / feature / behavior-preserving cleanup → gather context, plan, implement with one writer, then review
-- multi-step work → run scout/spec first, then planner, then one worker, then reviewer
-- external/current facts plus local code context → run researcher-style and scout/explore-style agents in parallel when available
-- drift or assumption check against current session history → use `inherit_context: true` with a reviewer/oracle-style agent if available
+- unclear scope or product intent → use the `spec` agent
+- unfamiliar code path or >3 relevant files → launch the `scout` agent (read-only)
+- bug / feature / behavior-preserving cleanup → `scout` for context, `planner` for the plan, one `worker` to implement, `reviewer` to verify
+- multi-step work → `scout`/`spec` first, then `planner`, then one `worker`, then `reviewer`
+- external/current facts plus local code context → run a researcher-style agent and `scout` in parallel when a researcher is available
+- drift or assumption check against current session history → use `inherit_context: true` with `reviewer`
 
 Operational rules:
 
@@ -119,9 +119,17 @@ Common triggers:
 - Repo orientation/conventions/security sweep → `learn-codebase`
 - Bug reports, debugging, or performance regressions → `diagnose`
 - TDD / test-first / regression-first implementation → `tdd`
-- Architecture, cohesion, coupling, seams, or rewrite review → `architecture-review`
+- Product/plan clarification with docs, domain language, or decision records → `grill-with-docs`
+- Architecture review/improvement, cohesion, coupling, seams, deepening modules, refactoring opportunities, or testability → `improve-codebase-architecture`
+- Very terse responses / "caveman mode" / lower-token communication → `caveman`
+- Teaching a skill or concept over multiple sessions → `teach`
 - Session history analysis → `session-reader`
-- Commits/MRs or provider-specific workflows → use the matching installed skill when available
+- Starting work on a new branch or Jira issue → `create-branch`
+- Reviewing a branch, PR, or work-in-progress changes → `review`
+- Sentry stack traces, production exceptions, or "fix this Sentry issue" → `sentry-fix-issues`
+- Implementing UI from a Figma URL or design spec → `implement-design`
+- Searching, creating, or organizing Obsidian notes → `obsidian-vault`
+- Authoring a new agent skill → `write-a-skill`
 
 Skill locations and availability can vary by machine; check the current skill list rather than hardcoding paths or assuming a skill exists.
 
