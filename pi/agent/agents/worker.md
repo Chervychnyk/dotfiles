@@ -1,7 +1,7 @@
 ---
 description: Use for focused implementation, file edits, and verification once the task and plan are clear.
-model: openai-codex/gpt-5.3-codex
-thinking: off
+model: openai-codex/gpt-5.5
+thinking: low
 tools: read, edit, write, bash, grep, find, ls, todo
 extensions: true
 inherit_context: true
