@@ -86,22 +86,28 @@ Use the `todo` tool for non-trivial or interruptible work:
 
 ## Subagents
 
-Use subagents for non-trivial work while keeping the main agent as orchestrator and final decision-maker. This setup uses `@gotgenes/pi-subagents`, whose primary tools are `subagent`, `get_subagent_result`, and `steer_subagent`.
+Use subagents proactively for non-trivial work while keeping the main agent as orchestrator and final decision-maker. This setup uses `@gotgenes/pi-subagents`, whose primary tools are `subagent`, `get_subagent_result`, and `steer_subagent`.
 
 Default routing:
 
 - trivial lookup, one-line edit, or direct answer → handle directly
 - unclear scope or product intent → use the `spec` agent
-- unfamiliar code path or >3 relevant files → launch the `scout` agent (read-only)
-- bug / feature / behavior-preserving cleanup → `scout` for context, `planner` for the plan, one `worker` to implement, `reviewer` to verify
-- multi-step work → `scout`/`spec` first, then `planner`, then one `worker`, then `reviewer`
+- unfamiliar repo, unfamiliar code path, or request that depends on conventions → launch the `scout` agent (read-only) before planning or editing
+- change touching more than one file, public API, runtime config, persistence, auth, payments, concurrency, or test infrastructure → use `scout` for context and `reviewer` before finalizing
+- bug report, failing test, regression, or performance issue → use `scout`/diagnosis first; use `planner` when the fix is not obvious after reconnaissance
+- feature, behavior change, or behavior-preserving cleanup beyond a tiny local edit → `scout` for context, `planner` for the plan, one `worker` to implement, `reviewer` to verify
+- multi-step work or work likely to exceed ~15 minutes → `scout`/`spec` first, then `planner`, then one `worker`, then `reviewer`
 - external/current facts plus local code context → run a researcher-style agent and `scout` in parallel when a researcher is available
 - drift or assumption check against current session history → use `inherit_context: true` with `reviewer`
 
+When uncertain whether to use a subagent, prefer a small, read-only `scout` instead of skipping subagents. Run subagents in the foreground by default so the main agent can use their findings before doing overlapping work. Use background subagents only when their scope is clearly independent, long-running, or the parent will intentionally wait/retrieve results before touching the same area. Avoid subagents only when the task is clearly local, low-risk, and faster to complete directly than to delegate.
+
 Operational rules:
 
-- Launch with explicit `prompt`, `description`, and `subagent_type`; use `run_in_background: true` for parallel or long-running work.
-- Retrieve background results with `get_subagent_result({ agent_id, wait })`; redirect running agents with `steer_subagent({ agent_id, message })`.
+- Launch with explicit `prompt`, `description`, and `subagent_type`; omit `run_in_background` unless there is a concrete reason for asynchronous work.
+- Before launching a background subagent, write down the ownership split: what the subagent owns, what the parent will avoid duplicating, and when results will be retrieved.
+- Do not inspect, diagnose, or review the same files/behavior in parallel with a background subagent unless the work is intentionally partitioned and non-overlapping.
+- Retrieve background results with `get_subagent_result({ agent_id, wait })` before making decisions that depend on that scope; redirect running agents with `steer_subagent({ agent_id, message })`.
 - Use one writer by default in the shared tree. Use `isolation: "worktree"` only when the installed subagent/worktree support is verified for the current Pi package set.
 - Prefer fresh context for adversarial review; set `inherit_context: true` only when the child needs parent conversation history.
 - Use a reviewer-style agent before finalizing risky changes: security, data integrity, concurrency, auth, payments, migrations, or public APIs.

@@ -18,7 +18,9 @@
     ],
     "allowUnixSockets": [
       "~/.colima/default/docker.sock",
-      "/var/run/docker.sock"
+      "/var/run/docker.sock",
+      "~/.obsidian-cli.sock",
+      "/Users/artem/.obsidian-cli.sock"
     ],
     "allowLocalBinding": true
   },
@@ -27,6 +29,12 @@
       "~/.ssh",
       "~/.aws",
       "~/.gnupg"
+    ],
+    "allowRead": [
+      ".",
+      "~/.agents",
+      "~/.pi/agent/agents",
+      "~/.pi/agent/skills"
     ],
     "allowWrite": [
       ".",

@@ -1,3 +1,4 @@
 {
-  "proxy": "http://localhost:57091"
+  "proxy": "http://localhost:57091",
+  "storageDir": "~/.cache/pi/web-tools"
 }
