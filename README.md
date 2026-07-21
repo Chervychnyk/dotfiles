@@ -32,6 +32,32 @@ After setup, run:
 ./healthcheck.sh
 ```
 
+## Pi agent config
+
+This repo links `pi/` to `~/.pi`. See `pi/README.md` for the Pi runtime map, safety stack, custom agents, extension settings, and verification commands.
+
+## Restore agent skills
+
+This repo tracks skill source references in `skills-lock.json`. On a new machine, restore them after `./setup.sh` has installed Node/npm:
+
+```bash
+cd ~/dotfiles
+npx skills@latest experimental_install
+```
+
+The skills CLI also keeps global install metadata at `~/.agents/.skill-lock.json`. After adding or updating global skills, refresh the tracked lockfile with:
+
+```bash
+cp ~/.agents/.skill-lock.json ~/dotfiles/skills-lock.json
+```
+
+Useful checks:
+
+```bash
+npx skills@latest list -g -a pi -a claude-code
+npx skills@latest update -g
+```
+
 ## What `setup.sh` does
 
 - installs Homebrew if needed
