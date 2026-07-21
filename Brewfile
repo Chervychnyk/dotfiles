@@ -18,6 +18,7 @@ brew "gh"             # GitHub CLI
 brew "git"
 brew "git-delta"      # Syntax-highlighting pager for git/diff
 brew "gnupg"
+brew "herdr"          # Terminal workspace manager / agent multiplexer
 brew "jq"             # JSON processor
 brew "libpng"
 brew "mise"           # Runtime version manager / env/task control plane

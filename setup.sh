@@ -180,6 +180,7 @@ link_file "$DOTFILES/wezterm"       "$HOME/.config/wezterm"
 link_file "$DOTFILES/ghostty"       "$HOME/.config/ghostty"
 
 link_file "$DOTFILES/.tmux.conf"    "$HOME/.tmux.conf"
+link_file "$DOTFILES/.config/herdr" "$HOME/.config/herdr"
 link_file "$DOTFILES/zellij"        "$HOME/.config/zellij"
 
 link_file "$DOTFILES/.config/starship.toml" "$HOME/.config/starship.toml"
@@ -195,6 +196,7 @@ link_file "$DOTFILES/bat"                   "$HOME/.config/bat"
 link_file "$DOTFILES/.psqlrc"       "$HOME/.psqlrc"
 link_file "$DOTFILES/.macos"        "$HOME/.macos"
 link_file "$DOTFILES/pi"            "$HOME/.pi"
+link_file "$DOTFILES/claude/statusline.sh" "$HOME/.claude/statusline.sh"
 
 success "All symlinks created"
 

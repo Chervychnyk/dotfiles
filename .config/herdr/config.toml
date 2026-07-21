@@ -1,0 +1,82 @@
+# Herdr configuration managed by dotfiles.
+# Mirrors the tmux setup in .tmux.conf: Everforest dark hard palette,
+# Ctrl-; prefix, current-directory pane/tab creation, vim-style pane movement.
+
+onboarding = false
+
+[theme]
+name = "terminal"
+
+[theme.custom]
+# Everforest Dark Hard, matching schlerp/tmux-everforest dark_hard.
+panel_bg = "#1E2326"
+accent = "#83C092"
+red = "#E67E80"
+green = "#A7C080"
+blue = "#7FBBB3"
+yellow = "#DBBC7F"
+
+[terminal]
+shell_mode = "auto"
+new_cwd = "follow"
+
+[update]
+channel = "stable"
+
+[keys]
+prefix = "ctrl+;"
+
+# tmux-like session/workspace and tab actions.
+detach = "prefix+q"
+workspace_picker = "prefix+w"
+goto = "prefix+g"
+new_workspace = "prefix+shift+n"
+rename_workspace = "prefix+shift+w"
+close_workspace = "prefix+shift+d"
+new_tab = "prefix+c"
+previous_tab = "prefix+p"
+next_tab = "prefix+n"
+switch_tab = "prefix+1..9"
+rename_tab = "prefix+shift+t"
+close_tab = "prefix+shift+x"
+
+# Vim/tmux-style pane movement and management.
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+last_pane = "prefix+ctrl+backslash"
+cycle_pane_next = "prefix+tab"
+cycle_pane_previous = "prefix+shift+tab"
+split_horizontal = "prefix+backslash"
+split_vertical = "prefix+enter"
+close_pane = "prefix+x"
+zoom = "prefix+m"
+resize_mode = "prefix+r"
+copy_mode = "prefix+v"
+reload_config = "prefix+shift+r"
+toggle_sidebar = "prefix+b"
+
+# Navigate-mode movement uses the same vim keys as tmux copy/navigation mode.
+navigate_pane_left = "h"
+navigate_pane_down = "j"
+navigate_pane_up = "k"
+navigate_pane_right = "l"
+navigate_workspace_up = "up"
+navigate_workspace_down = "down"
+
+[ui]
+sidebar_width = 32
+sidebar_min_width = 18
+sidebar_max_width = 36
+mouse_capture = true
+confirm_close = true
+prompt_new_tab_name = false
+accent = "#83C092"
+
+[ui.toast]
+delivery = "herdr"
+delay_seconds = 1
+
+[advanced]
+scrollback_limit_bytes = 10000000

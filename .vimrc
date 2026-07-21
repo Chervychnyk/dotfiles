@@ -11,7 +11,8 @@ set number
 set ruler
 set showcmd
 set wildmenu
-set wildmode=list:longest set history=1000
+set wildmode=list:longest
+set history=1000
 
 set tabstop=2
 set shiftwidth=2

@@ -188,13 +188,20 @@ if command -v brew >/dev/null 2>&1; then
     export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
   fi
 
-  # Java / other libs
-  [[ -d "$HOMEBREW_PREFIX/opt/openjdk/bin" ]] && export PATH="$HOMEBREW_PREFIX/opt/openjdk/bin:$PATH"
-
+  # Taglib 1.x
   if [[ -d "$HOMEBREW_PREFIX/opt/taglib" ]]; then
     export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib"
   fi
 fi
+
+# Android SDK + JDK (React Native / Expo)
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+# JAVA_HOME is managed by mise (global java@temurin-17). RN 0.83 / Expo 55 pins
+# the Gradle toolchain to JDK 17; Android Studio's bundled JBR is 21, which makes
+# Gradle try to auto-provision 17 via foojay and crash on Gradle 9.0. Don't
+# hardcode JBR here — let mise provide JDK 17.
+export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
 
 # Puppeteer
 export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
