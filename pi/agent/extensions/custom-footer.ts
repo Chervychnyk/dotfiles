@@ -23,7 +23,6 @@ const STATUS_ORDER: Record<string, number> = {
   mcp: 0,
   'mcp-auth': 1,
   sandbox: 2,
-  'pi-permission-system': 3,
   permission: 999,
 }
 
@@ -244,12 +243,6 @@ export default function (pi: ExtensionAPI) {
               })
               .map(([key, text]) => {
                 const cleaned = sanitizeStatusText(text)
-                if (key === 'pi-permission-system' && cleaned === 'yolo') {
-                  return (
-                    theme.fg('error', '🚨') +
-                    theme.fg('error', ' YOLO MODE')
-                  )
-                }
                 if (key === 'permission') {
                   return theme.fg('warning', cleaned)
                 }

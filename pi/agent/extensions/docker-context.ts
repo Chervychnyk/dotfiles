@@ -33,6 +33,8 @@ type QueueEntry = {
   promise: Promise<void>
   resolve: () => void
   position: number
+  released: boolean
+  sessionId: string
 }
 
 type StreamCommandError = Error & {
@@ -58,6 +60,7 @@ const DEFAULT_SERVICE_CANDIDATES = [
   'django',
 ]
 const MAX_DOCKER_EXEC_QUEUE_PER_SERVICE = 3 // waiting commands, excluding the currently running one
+const MAX_DOCKER_EXEC_QUEUE_WAIT_MS = 10 * 60_000
 const REFRESH_CACHE_TTL_MS = 5_000
 
 function uniq(values: string[]): string[] {
@@ -546,11 +549,98 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
   let lastRefreshCwd: string | undefined
   const runningExecs = new Map<string, PendingCommand>()
   const execQueues = new Map<string, QueueEntry>()
+  let activeSessionId: string | undefined
+
+  function isCurrentSession(ctx: ExtensionContext): boolean {
+    return Boolean(activeSessionId) && ctx.sessionManager.getSessionId() === activeSessionId
+  }
+
+  function releaseQueueEntry(entry: QueueEntry): void {
+    if (entry.released) return
+    entry.released = true
+    entry.resolve()
+  }
+
+  function safeUpdate(
+    sessionId: string,
+    onUpdate: ((update: {
+      content: Array<{ type: 'text'; text: string }>
+      details?: Record<string, unknown>
+    }) => void) | undefined,
+    update: {
+      content: Array<{ type: 'text'; text: string }>
+      details?: Record<string, unknown>
+    },
+  ): void {
+    if (activeSessionId !== sessionId) return
+    onUpdate?.(update)
+  }
+
+  function cleanupQueueEntry(lockKey: string, entry: QueueEntry): void {
+    releaseQueueEntry(entry)
+    if (execQueues.get(lockKey) === entry) {
+      execQueues.delete(lockKey)
+    }
+  }
+
+  function waitForQueueTurn(
+    previous: QueueEntry,
+    current: QueueEntry,
+    lockKey: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let done = false
+      let timeout: NodeJS.Timeout | undefined
+
+      const finish = (error?: Error) => {
+        if (done) return
+        done = true
+        if (timeout) clearTimeout(timeout)
+        signal?.removeEventListener('abort', abort)
+        if (error) {
+          if (execQueues.get(lockKey) === current) {
+            execQueues.delete(lockKey)
+          }
+          previous.promise.then(
+            () => releaseQueueEntry(current),
+            () => releaseQueueEntry(current),
+          )
+          reject(error)
+          return
+        }
+        resolve()
+      }
+
+      const abort = () => finish(new Error('docker_exec canceled while queued'))
+
+      timeout = setTimeout(() => {
+        finish(
+          new Error(
+            `docker_exec queue wait timed out after ${Math.ceil(
+              MAX_DOCKER_EXEC_QUEUE_WAIT_MS / 1000,
+            )}s`,
+          ),
+        )
+      }, MAX_DOCKER_EXEC_QUEUE_WAIT_MS)
+      timeout.unref()
+
+      if (signal?.aborted) {
+        abort()
+        return
+      }
+
+      signal?.addEventListener('abort', abort, { once: true })
+      previous.promise.then(() => finish(), finish)
+    })
+  }
 
   async function refresh(
     ctx: ExtensionContext,
     force = false,
   ): Promise<DockerContextState> {
+    const refreshSessionId = ctx.sessionManager.getSessionId()
+    const canApplyRefresh = () => activeSessionId === refreshSessionId
     const now = Date.now()
     if (
       !force &&
@@ -563,10 +653,10 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
 
     const persisted = getPersistedState(ctx)
     const composeDir = await findComposeDir(ctx.cwd)
-    lastRefreshAt = now
-    lastRefreshCwd = ctx.cwd
+    if (!canApplyRefresh()) return state
 
     if (!composeDir) {
+      if (!canApplyRefresh()) return state
       state = {
         composeDir: undefined,
         composeCommand: undefined,
@@ -577,10 +667,13 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         detected: false,
         reason: 'No Docker Compose file found from cwd upwards',
       }
+      lastRefreshAt = now
+      lastRefreshCwd = ctx.cwd
       return state
     }
 
     const composeCommand = await detectComposeCommand(pi, composeDir)
+    if (!canApplyRefresh()) return state
     if (!composeCommand) {
       state = {
         composeDir,
@@ -592,12 +685,15 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         detected: false,
         reason: 'Neither `docker compose` nor `docker-compose` is available',
       }
+      lastRefreshAt = now
+      lastRefreshCwd = ctx.cwd
       return state
     }
 
     try {
       const services = await listServices(pi, composeDir, composeCommand)
       const running = await listRunningServices(pi, composeDir, composeCommand)
+      if (!canApplyRefresh()) return state
       state = {
         composeDir,
         composeCommand,
@@ -610,8 +706,11 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         ),
         detected: true,
       }
+      lastRefreshAt = now
+      lastRefreshCwd = ctx.cwd
       return state
     } catch (error: any) {
+      if (!canApplyRefresh()) return state
       state = {
         composeDir,
         composeCommand,
@@ -622,6 +721,8 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         detected: false,
         reason: error?.message || 'Failed to inspect Docker Compose services',
       }
+      lastRefreshAt = now
+      lastRefreshCwd = ctx.cwd
       return state
     }
   }
@@ -733,13 +834,34 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
   }
 
   pi.on('session_start', async (_event, ctx) => {
+    activeSessionId = ctx.sessionManager.getSessionId()
     const next = await refresh(ctx)
+    if (!isCurrentSession(ctx)) return
     if (ctx.hasUI && next.detected) {
       ctx.ui.notify(
         `Docker context: ${next.defaultService ?? 'no default'} (${next.services.join(', ')})`,
         'info',
       )
     }
+  })
+
+  function cleanupSessionQueues(ctx: ExtensionContext): void {
+    if (!isCurrentSession(ctx)) return
+    const sessionId = ctx.sessionManager.getSessionId()
+    for (const entry of execQueues.values()) {
+      if (entry.sessionId === sessionId) releaseQueueEntry(entry)
+    }
+    execQueues.clear()
+    runningExecs.clear()
+    activeSessionId = undefined
+  }
+
+  pi.on('session_before_switch', (_event, ctx) => {
+    cleanupSessionQueues(ctx)
+  })
+
+  pi.on('session_shutdown', (_event, ctx) => {
+    cleanupSessionQueues(ctx)
   })
 
   pi.on('before_agent_start', async (_event, ctx) => {
@@ -933,18 +1055,21 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         }
       }
 
+      const executeSessionId = ctx.sessionManager.getSessionId()
       const queueEntry: QueueEntry = {
         promise: new Promise<void>((resolve) => {
           releaseQueue = resolve
         }),
         resolve: () => releaseQueue?.(),
         position: queuePosition,
+        released: false,
+        sessionId: executeSessionId,
       }
       execQueues.set(lockKey, queueEntry)
 
       if (previous) {
         const active = runningExecs.get(lockKey)
-        onUpdate?.({
+        safeUpdate(executeSessionId, onUpdate, {
           content: [
             {
               type: 'text',
@@ -967,7 +1092,16 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
           },
         })
 
-        await previous.promise
+        await waitForQueueTurn(previous, queueEntry, lockKey, signal)
+      }
+
+      if (signal?.aborted) {
+        cleanupQueueEntry(lockKey, queueEntry)
+        throw new Error('docker_exec canceled before start')
+      }
+      if (activeSessionId !== executeSessionId) {
+        cleanupQueueEntry(lockKey, queueEntry)
+        throw new Error('docker_exec canceled because the session changed')
       }
 
       runningExecs.set(lockKey, {
@@ -975,7 +1109,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         command: params.command,
       })
 
-      onUpdate?.({
+      safeUpdate(executeSessionId, onUpdate, {
         content: [
           {
             type: 'text',
@@ -1004,7 +1138,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
           execSpec.composeDir,
           execSpec.args,
           signal,
-          onUpdate,
+          (update) => safeUpdate(executeSessionId, onUpdate, update),
           timeoutSeconds * 1000,
         )
         const durationMs = Date.now() - startedAt
@@ -1086,10 +1220,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         }
       } finally {
         runningExecs.delete(lockKey)
-        releaseQueue?.()
-        if (execQueues.get(lockKey) === queueEntry) {
-          execQueues.delete(lockKey)
-        }
+        cleanupQueueEntry(lockKey, queueEntry)
       }
     },
     renderCall(args, theme) {
@@ -1253,7 +1384,8 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
         ? Math.max(1, Math.floor(params.timeout as number))
         : undefined
 
-      onUpdate?.({
+      const executeSessionId = ctx.sessionManager.getSessionId()
+      safeUpdate(executeSessionId, onUpdate, {
         content: [
           {
             type: 'text',
@@ -1277,7 +1409,7 @@ export default function dockerContextExtension(pi: ExtensionAPI) {
           current.composeDir!,
           args,
           signal,
-          onUpdate,
+          (update) => safeUpdate(executeSessionId, onUpdate, update),
           timeoutSeconds ? timeoutSeconds * 1000 : undefined,
         )
         const summary = [

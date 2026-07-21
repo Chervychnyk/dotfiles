@@ -38,9 +38,221 @@ function formatUsd(cost: number): string {
   return `$${cost.toFixed(4)}`
 }
 
-function estimateTokens(text: string): number {
+function compactNumber(value: number): string {
+  if (!Number.isFinite(value)) return '0'
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (abs >= 1_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}k`
+  return Math.round(value).toLocaleString()
+}
+
+function formatTokens(value: number, exact = false): string {
+  return `${exact ? '' : '~'}${compactNumber(value)} tok`
+}
+
+function plainUsageBar(used: number, total: number, width = 24): string {
+  if (total <= 0) return ''
+  const ratio = Math.min(1, Math.max(0, used / total))
+  const filled = Math.min(width, Math.max(used > 0 ? 1 : 0, Math.round(ratio * width)))
+  return `${'█'.repeat(filled)}${'░'.repeat(width - filled)}`
+}
+
+function formatList(items: string[], empty = '(none)', max = 8): string {
+  if (items.length === 0) return empty
+  const head = items.slice(0, max)
+  const rest = items.length - head.length
+  return rest > 0 ? `${head.join(', ')} +${rest} more` : head.join(', ')
+}
+
+function estimateTokens(text: string, denominator = 4): number {
   // Deliberately fuzzy (good enough for “how big-ish is this”).
-  return Math.max(0, Math.ceil(text.length / 4))
+  return Math.max(0, Math.ceil(text.length / denominator))
+}
+
+type ModelSummary = {
+  provider?: string
+  id?: string
+  api?: string
+}
+
+type TokenHeuristic = {
+  label: string
+  textDenominator: number
+  toolDenominator: number
+  toolShape: 'anthropic' | 'openai-chat' | 'openai-responses' | 'gemini' | 'bedrock' | 'raw'
+}
+
+function getTokenHeuristic(model?: ModelSummary): TokenHeuristic {
+  const provider = (model?.provider ?? '').toLowerCase()
+  const id = (model?.id ?? '').toLowerCase()
+  const api = (model?.api ?? '').toLowerCase()
+
+  if (provider.includes('anthropic') || api === 'anthropic-messages') {
+    if (/claude.*4[-.]?[78]|4[-.]?[78].*claude/.test(id)) {
+      return {
+        label: 'Claude 4.7+ heuristic',
+        textDenominator: 2.6,
+        toolDenominator: 2.6,
+        toolShape: 'anthropic',
+      }
+    }
+    return {
+      label: 'Anthropic heuristic',
+      textDenominator: 3.5,
+      toolDenominator: 3.3,
+      toolShape: 'anthropic',
+    }
+  }
+
+  if (
+    provider.includes('openai') ||
+    api === 'openai-responses' ||
+    api === 'azure-openai-responses'
+  ) {
+    return {
+      label: 'OpenAI Responses heuristic',
+      textDenominator: 4,
+      toolDenominator: 5.5,
+      toolShape: 'openai-responses',
+    }
+  }
+
+  if (
+    api === 'openai-completions' ||
+    api === 'mistral-conversations' ||
+    provider.includes('mistral')
+  ) {
+    return {
+      label: 'OpenAI chat-style heuristic',
+      textDenominator: 4,
+      toolDenominator: 5.5,
+      toolShape: 'openai-chat',
+    }
+  }
+
+  if (
+    provider.includes('google') ||
+    provider.includes('gemini') ||
+    api === 'google-generative-ai' ||
+    api === 'google-vertex'
+  ) {
+    return {
+      label: 'Gemini/Vertex heuristic',
+      textDenominator: 4,
+      toolDenominator: 4,
+      toolShape: 'gemini',
+    }
+  }
+
+  if (provider.includes('bedrock') || api === 'bedrock-converse-stream') {
+    return {
+      label: 'Bedrock heuristic',
+      textDenominator: 4,
+      toolDenominator: 4,
+      toolShape: 'bedrock',
+    }
+  }
+
+  return {
+    label: 'fallback chars/4',
+    textDenominator: 4,
+    toolDenominator: 4,
+    toolShape: 'raw',
+  }
+}
+
+function safeMinifiedJson(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? 'undefined'
+  } catch (error) {
+    return `[unserializable: ${error instanceof Error ? error.message : String(error)}]`
+  }
+}
+
+type ToolLike = {
+  name: string
+  description?: string
+  parameters?: unknown
+  promptGuidelines?: string[]
+}
+
+function toolPayload(tool: ToolLike, shape: TokenHeuristic['toolShape']): unknown {
+  const description = tool.description ?? ''
+  switch (shape) {
+    case 'anthropic':
+      return {
+        name: tool.name,
+        description,
+        input_schema: tool.parameters,
+      }
+    case 'openai-chat':
+      return {
+        type: 'function',
+        function: {
+          name: tool.name,
+          description,
+          parameters: tool.parameters,
+          strict: null,
+        },
+      }
+    case 'gemini':
+      return {
+        name: tool.name,
+        description,
+        parametersJsonSchema: tool.parameters,
+      }
+    case 'bedrock':
+      return {
+        toolSpec: {
+          name: tool.name,
+          description,
+          inputSchema: { json: tool.parameters },
+        },
+      }
+    case 'openai-responses':
+      return {
+        type: 'function',
+        name: tool.name,
+        description,
+        parameters: tool.parameters,
+        strict: null,
+      }
+    case 'raw':
+      return {
+        name: tool.name,
+        description,
+        parameters: tool.parameters,
+        promptGuidelines: tool.promptGuidelines ?? [],
+      }
+    default:
+      return {
+        type: 'function',
+        name: tool.name,
+        description,
+        parameters: tool.parameters,
+        strict: null,
+      }
+  }
+}
+
+function estimateToolTokens(tool: ToolLike, heuristic: TokenHeuristic): number {
+  return estimateTokens(
+    safeMinifiedJson(toolPayload(tool, heuristic.toolShape)),
+    heuristic.toolDenominator,
+  )
+}
+
+function estimateToolsTokens(tools: ToolLike[], heuristic: TokenHeuristic): number {
+  if (tools.length === 0) return 0
+  const payload =
+    heuristic.toolShape === 'gemini'
+      ? {
+          functionDeclarations: tools.map((tool) =>
+            toolPayload(tool, heuristic.toolShape),
+          ),
+        }
+      : tools.map((tool) => toolPayload(tool, heuristic.toolShape))
+  return estimateTokens(safeMinifiedJson(payload), heuristic.toolDenominator)
 }
 
 function normalizeReadPath(inputPath: string, cwd: string): string {
@@ -98,6 +310,7 @@ async function readFileIfExists(
 
 async function loadProjectContextFiles(
   cwd: string,
+  denominator = 4,
 ): Promise<Array<{ path: string; tokens: number; bytes: number }>> {
   const out: Array<{ path: string; tokens: number; bytes: number }> = []
   const seen = new Set<string>()
@@ -110,7 +323,7 @@ async function loadProjectContextFiles(
         seen.add(f.path)
         out.push({
           path: f.path,
-          tokens: estimateTokens(f.content),
+          tokens: estimateTokens(f.content, denominator),
           bytes: f.bytes,
         })
         // pi loads at most one of those per dir
@@ -318,12 +531,32 @@ function joinCommaStyled(
   return items.map(renderItem).join(sep)
 }
 
+function padLabel(label: string, width = 30): string {
+  if (label.length >= width) return `${label.slice(0, Math.max(0, width - 1))}…`
+  return label.padEnd(width, ' ')
+}
+
+function singleLine(text: string, max = 96): string {
+  const normalized = text.replace(/\s+/g, ' ').trim()
+  return normalized.length <= max
+    ? normalized
+    : `${normalized.slice(0, Math.max(0, max - 1)).trimEnd()}…`
+}
+
+type TokenDetail = {
+  name: string
+  tokens: number
+  detail?: string
+  active?: boolean
+  loaded?: boolean
+}
+
 type ContextViewData = {
   usage: {
     // message-based context usage estimate from ctx.getContextUsage()
     messageTokens: number
     contextWindow: number
-    // effective usage incl. a rough tool-definition estimate
+    // effective usage incl. a provider-shaped tool-definition estimate
     effectiveTokens: number
     percent: number
     remainingTokens: number
@@ -334,11 +567,14 @@ type ContextViewData = {
     usedTools: number
     usedToolCalls: number
     usedToolSummary: string
+    heuristicLabel: string
   } | null
   agentFiles: string[]
   extensions: string[]
   skills: string[]
   loadedSkills: string[]
+  toolDetails: TokenDetail[]
+  skillDetails: TokenDetail[]
   session: { totalTokens: number; totalCost: number }
 }
 
@@ -350,6 +586,7 @@ class ContextView implements Component {
   private container: Container
   private body: Text
   private cachedWidth?: number
+  private expanded = false
 
   constructor(tui: TUI, theme: any, data: ContextViewData, onDone: () => void) {
     this.tui = tui
@@ -362,7 +599,7 @@ class ContextView implements Component {
     this.container.addChild(
       new Text(
         theme.fg('accent', theme.bold('Context')) +
-          theme.fg('dim', '  (Esc/q/Enter to close)'),
+          theme.fg('dim', '  (e/Ctrl+O expand · Esc/q/Enter close)'),
         1,
         0,
       ),
@@ -380,124 +617,113 @@ class ContextView implements Component {
     const muted = (s: string) => this.theme.fg('muted', s)
     const dim = (s: string) => this.theme.fg('dim', s)
     const text = (s: string) => this.theme.fg('text', s)
+    const accent = (s: string) => this.theme.fg('accent', s)
+
+    const labelWidth = Math.max(24, Math.min(34, width - 28))
+    const row = (label: string, value: string, detail?: string, marker = true) =>
+      `  ${marker ? accent('▸ ') : '  '}${muted(padLabel(label, labelWidth))}${accent(value)}${detail ? ` ${dim(detail)}` : ''}`
 
     const lines: string[] = []
 
-    // Window + bar
     if (!this.data.usage) {
-      lines.push(muted('Window: ') + dim('(unknown)'))
+      lines.push(row('Total request', '(unknown)', undefined, false))
     } else {
       const u = this.data.usage
       lines.push(
-        muted('Window: ') +
-          text(
-            `~${u.effectiveTokens.toLocaleString()} / ${u.contextWindow.toLocaleString()}`,
-          ) +
-          muted(
-            `  (${u.percent.toFixed(1)}% used, ~${u.remainingTokens.toLocaleString()} left)`,
-          ),
+        row(
+          'Total request',
+          formatTokens(u.effectiveTokens),
+          `(${compactNumber(u.contextWindow)} ctx · ${u.percent.toFixed(1)}% used · ${formatTokens(u.remainingTokens)} left)`,
+          false,
+        ),
       )
-
-      // bar width tries to fit within the viewport
-      const barWidth = Math.max(10, Math.min(36, width - 10))
-
-      // Prorate system prompt into current message context estimate, then add tools estimate.
+      const barWidth = Math.max(12, Math.min(30, width - 36))
       const sysInMessages = Math.min(u.systemPromptTokens, u.messageTokens)
       const convoInMessages = Math.max(0, u.messageTokens - sysInMessages)
-      const bar =
-        renderUsageBar(
-          this.theme,
-          {
-            system: sysInMessages,
-            tools: u.toolsTokens,
-            convo: convoInMessages,
-            remaining: u.remainingTokens,
-          },
-          u.contextWindow,
-          barWidth,
-        ) +
-        ' ' +
-        dim('sys') +
-        this.theme.fg('customMessageLabel', '█') +
-        ' ' +
-        dim('tools') +
-        this.theme.fg('warning', '█') +
-        ' ' +
-        dim('convo') +
-        this.theme.fg('accent', '█') +
-        ' ' +
-        dim('free') +
-        this.theme.fg('dim', '█')
-      lines.push(bar)
+      const bar = renderUsageBar(
+        this.theme,
+        {
+          system: sysInMessages,
+          tools: u.toolsTokens,
+          convo: convoInMessages,
+          remaining: u.remainingTokens,
+        },
+        u.contextWindow,
+        barWidth,
+      )
+      lines.push(
+        `  ${bar}  ${dim(`harness ${formatTokens(u.systemPromptTokens + u.toolsTokens)} · session ${formatTokens(Math.max(0, u.messageTokens - u.systemPromptTokens))} · free ${formatTokens(u.remainingTokens)}`)}`,
+      )
+      lines.push(
+        `  ${this.theme.fg('customMessageLabel', '█')} ${dim('system')}  ${this.theme.fg('warning', '█')} ${dim('tools')}  ${this.theme.fg('accent', '█')} ${dim('conversation')}  ${this.theme.fg('dim', '█')} ${dim('free')}`,
+      )
     }
 
     lines.push('')
-
-    // System prompt + tools totals (approx)
     if (this.data.usage) {
       const u = this.data.usage
-      lines.push(
-        muted('System: ') +
-          text(`~${u.systemPromptTokens.toLocaleString()} tok`) +
-          muted(` (AGENTS ~${u.agentTokens.toLocaleString()})`),
-      )
-      lines.push(
-        muted('Tool defs: ') +
-          text(`~${u.toolsTokens.toLocaleString()} tok`) +
-          muted(` (${u.activeTools} available)`),
-      )
-      lines.push(
-        muted('Tool usage: ') +
-          text(`${u.usedTools} used`) +
-          muted(' · ') +
-          text(`${u.usedToolCalls} calls`),
-      )
-      lines.push(muted('Used tools: ') + text(u.usedToolSummary || '(none)'))
+      lines.push(row('Runtime system prompt', formatTokens(u.systemPromptTokens), `(AGENTS ${formatTokens(u.agentTokens)})`))
+      lines.push(row(`Tools (${u.activeTools} active)`, formatTokens(u.toolsTokens), `(${u.heuristicLabel})`))
+      lines.push(row(`AGENTS (${this.data.agentFiles.length})`, formatTokens(u.agentTokens), formatList(this.data.agentFiles)))
+      lines.push(row(`Skills (${this.data.skills.length})`, `${this.data.skills.length}`, `${this.data.loadedSkills.length} loaded`))
+      lines.push(row(`Extensions (${this.data.extensions.length})`, `${this.data.extensions.length}`, formatList(this.data.extensions)))
     }
 
     lines.push(
-      muted(`AGENTS (${this.data.agentFiles.length}): `) +
-        text(
-          this.data.agentFiles.length
-            ? joinComma(this.data.agentFiles)
-            : '(none)',
-        ),
+      row(
+        'Total session',
+        formatTokens(this.data.session.totalTokens, true),
+        `(${formatUsd(this.data.session.totalCost)})`,
+        false,
+      ),
     )
-    lines.push('')
-    lines.push(
-      muted(`Extensions (${this.data.extensions.length}): `) +
-        text(
-          this.data.extensions.length
-            ? joinComma(this.data.extensions)
-            : '(none)',
-        ),
-    )
+    if (this.data.usage) {
+      const u = this.data.usage
+      lines.push(row('Tool calls', `${u.usedToolCalls}`, `${u.usedTools} unique · ${u.usedToolSummary || '(none)'}`, false))
+    }
 
     const loaded = new Set(this.data.loadedSkills)
-    const skillsRendered = this.data.skills.length
-      ? joinCommaStyled(
-          this.data.skills,
-          (name) =>
-            loaded.has(name)
-              ? this.theme.fg('success', name)
-              : this.theme.fg('muted', name),
-          this.theme.fg('muted', ', '),
-        )
-      : '(none)'
-    lines.push(muted(`Skills (${this.data.skills.length}): `) + skillsRendered)
-    lines.push('')
-    lines.push(
-      muted('Session: ') +
-        text(`${this.data.session.totalTokens.toLocaleString()} tokens`) +
-        muted(' · ') +
-        text(formatUsd(this.data.session.totalCost)),
-    )
+    if (this.expanded) {
+      lines.push('', muted('Tool detail'))
+      for (const tool of this.data.toolDetails) {
+        lines.push(row(tool.name, formatTokens(tool.tokens), tool.detail, false))
+      }
+      if (this.data.toolDetails.length === 0) lines.push(dim('    (none)'))
+
+      lines.push('', muted('Skill detail'))
+      for (const skill of this.data.skillDetails) {
+        const name = skill.loaded ? this.theme.fg('success', skill.name) : skill.name
+        lines.push(row(name, formatTokens(skill.tokens), skill.detail, false))
+      }
+      if (this.data.skillDetails.length === 0) lines.push(dim('    (none)'))
+    } else if (this.data.skills.length > 0) {
+      const skillsRendered = joinCommaStyled(
+        this.data.skills.slice(0, 10),
+        (name) =>
+          loaded.has(name)
+            ? this.theme.fg('success', name)
+            : this.theme.fg('muted', name),
+        this.theme.fg('muted', ', '),
+      )
+      lines.push('', dim('  skills: ') + skillsRendered + (this.data.skills.length > 10 ? dim(` +${this.data.skills.length - 10} more`) : ''))
+      lines.push(dim('  press e or Ctrl+O to expand tool/skill token details'))
+    }
 
     this.body.setText(lines.join('\n'))
     this.cachedWidth = width
   }
 
+  setExpanded(_expanded: boolean): void {
+    this.expanded = !this.expanded
+    this.invalidate()
+  }
+
   handleInput(data: string): void {
+    if (data.toLowerCase() === 'e' || matchesKey(data, Key.ctrl('o'))) {
+      this.expanded = !this.expanded
+      this.invalidate()
+      return
+    }
     if (
       matchesKey(data, Key.escape) ||
       matchesKey(data, Key.ctrl('c')) ||
@@ -606,32 +832,63 @@ export default function contextExtension(pi: ExtensionAPI) {
         .map((c) => normalizeSkillName(c.name))
         .sort((a, b) => a.localeCompare(b))
 
-      const agentFiles = await loadProjectContextFiles(ctx.cwd)
+      const systemPrompt = ctx.getSystemPrompt()
+      const heuristic = getTokenHeuristic(ctx.model)
+
+      const agentFiles = await loadProjectContextFiles(
+        ctx.cwd,
+        heuristic.textDenominator,
+      )
       const agentFilePaths = agentFiles.map((f) => shortenPath(f.path, ctx.cwd))
       const agentTokens = agentFiles.reduce((a, f) => a + f.tokens, 0)
-
-      const systemPrompt = ctx.getSystemPrompt()
-      const systemPromptTokens = systemPrompt ? estimateTokens(systemPrompt) : 0
+      const systemPromptTokens = systemPrompt
+        ? estimateTokens(systemPrompt, heuristic.textDenominator)
+        : 0
 
       const usage = ctx.getContextUsage()
       const messageTokens = usage?.tokens ?? 0
       const ctxWindow = usage?.contextWindow ?? 0
 
       // Tool definitions are not part of ctx.getContextUsage() (it estimates message tokens).
-      // We approximate their token impact from tool name + description, and apply a fudge
-      // factor to account for parameters/schema/formatting.
-      const TOOL_FUDGE = 1.5
+      // Estimate their impact from the provider-shaped payload, not just name/description.
       const activeToolNames = pi.getActiveTools()
       const toolInfoByName = new Map(
         pi.getAllTools().map((t) => [t.name, t] as const),
       )
-      let toolsTokens = 0
-      for (const name of activeToolNames) {
-        const info = toolInfoByName.get(name)
-        const blob = `${name}\n${info?.description ?? ''}`
-        toolsTokens += estimateTokens(blob)
-      }
-      toolsTokens = Math.round(toolsTokens * TOOL_FUDGE)
+      const activeToolInfos = activeToolNames
+        .map((name) => toolInfoByName.get(name))
+        .filter((tool): tool is NonNullable<typeof tool> => !!tool)
+      const toolsTokens = estimateToolsTokens(activeToolInfos, heuristic)
+      const toolDetails = activeToolInfos
+        .map((tool) => ({
+          name: tool.name,
+          tokens: estimateToolTokens(tool, heuristic),
+          detail: singleLine(tool.description || '(no description)'),
+          active: true,
+        }))
+        .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
+
+      const loadedSkillSet = getLoadedSkillsFromSession(ctx)
+      const skillDetails = await Promise.all(
+        skillCmds
+          .filter((cmd) => loadedSkillSet.has(normalizeSkillName(cmd.name)))
+          .map(async (cmd) => {
+            const name = normalizeSkillName(cmd.name)
+            const p = cmd.sourceInfo?.path
+              ? normalizeReadPath(cmd.sourceInfo.path, ctx.cwd)
+              : ''
+            const file = p ? await readFileIfExists(p) : null
+            return {
+              name,
+              tokens: file
+                ? estimateTokens(file.content, heuristic.textDenominator)
+                : 0,
+              detail: p ? shortenPath(p, ctx.cwd) : undefined,
+              loaded: true,
+            }
+          }),
+      )
+      skillDetails.sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
 
       const effectiveTokens = messageTokens + toolsTokens
       const percent = ctxWindow > 0 ? (effectiveTokens / ctxWindow) * 100 : 0
@@ -648,36 +905,34 @@ export default function contextExtension(pi: ExtensionAPI) {
 
       const makePlainText = () => {
         const lines: string[] = []
-        lines.push('Context')
+        lines.push('╭─ Context')
         if (usage) {
           lines.push(
-            `Window: ~${effectiveTokens.toLocaleString()} / ${ctxWindow.toLocaleString()} (${percent.toFixed(1)}% used, ~${remainingTokens.toLocaleString()} left)`,
+            `│ ${plainUsageBar(effectiveTokens, ctxWindow)}  ${formatTokens(effectiveTokens)} / ${compactNumber(ctxWindow)} (${percent.toFixed(1)}%, ${formatTokens(remainingTokens)} left)`,
           )
         } else {
-          lines.push('Window: (unknown)')
+          lines.push('│ Window: unknown')
         }
+        lines.push('├─ Budget')
         lines.push(
-          `System: ~${systemPromptTokens.toLocaleString()} tok (AGENTS ~${agentTokens.toLocaleString()})`,
+          `│ System     ${formatTokens(systemPromptTokens).padEnd(10)}  AGENTS ${formatTokens(agentTokens)}`,
         )
         lines.push(
-          `Tool defs: ~${toolsTokens.toLocaleString()} tok (${activeToolNames.length} available)`,
+          `│ Tool defs  ${formatTokens(toolsTokens).padEnd(10)}  ${activeToolNames.length} active · ${heuristic.label}`,
         )
         lines.push(
-          `Tool usage: ${usedToolCounts.size} used · ${usedToolCalls} calls`,
+          `│ Session    ${formatTokens(sessionUsage.totalTokens, true).padEnd(10)}  ${formatUsd(sessionUsage.totalCost)}`,
         )
-        lines.push(`Used tools: ${usedToolSummary || '(none)'}`)
+        lines.push('├─ Activity')
+        lines.push(`│ Tools      ${usedToolCounts.size} used · ${usedToolCalls} calls`)
+        lines.push(`│ Top tools  ${usedToolSummary || '(none)'}`)
+        lines.push('├─ Loaded')
+        lines.push(`│ AGENTS     ${formatList(agentFilePaths)}`)
         lines.push(
-          `AGENTS: ${agentFilePaths.length ? joinComma(agentFilePaths) : '(none)'}`,
+          `│ Extensions ${extensionFiles.length} · ${formatList(extensionFiles)}`,
         )
-        lines.push(
-          `Extensions (${extensionFiles.length}): ${extensionFiles.length ? joinComma(extensionFiles) : '(none)'}`,
-        )
-        lines.push(
-          `Skills (${skills.length}): ${skills.length ? joinComma(skills) : '(none)'}`,
-        )
-        lines.push(
-          `Session: ${sessionUsage.totalTokens.toLocaleString()} tokens · ${formatUsd(sessionUsage.totalCost)}`,
-        )
+        lines.push(`│ Skills     ${skills.length} · ${formatList(skills)}`)
+        lines.push('╰─')
         return lines.join('\n')
       }
 
@@ -689,8 +944,8 @@ export default function contextExtension(pi: ExtensionAPI) {
         return
       }
 
-      const loadedSkills = Array.from(getLoadedSkillsFromSession(ctx)).sort(
-        (a, b) => a.localeCompare(b),
+      const loadedSkills = Array.from(loadedSkillSet).sort((a, b) =>
+        a.localeCompare(b),
       )
 
       const viewData: ContextViewData = {
@@ -708,12 +963,15 @@ export default function contextExtension(pi: ExtensionAPI) {
               usedTools: usedToolCounts.size,
               usedToolCalls,
               usedToolSummary,
+              heuristicLabel: heuristic.label,
             }
           : null,
         agentFiles: agentFilePaths,
         extensions: extensionFiles,
         skills,
         loadedSkills,
+        toolDetails,
+        skillDetails,
         session: {
           totalTokens: sessionUsage.totalTokens,
           totalCost: sessionUsage.totalCost,

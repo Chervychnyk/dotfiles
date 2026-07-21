@@ -1040,10 +1040,6 @@ export default function reviewExtension(pi: ExtensionAPI) {
     applyAllReviewState(ctx)
   })
 
-  pi.on('session_switch', (_event, ctx) => {
-    applyAllReviewState(ctx)
-  })
-
   pi.on('session_tree', (_event, ctx) => {
     applyAllReviewState(ctx)
   })

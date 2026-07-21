@@ -1,12 +1,15 @@
 import path from 'node:path'
-import type {
-  ExtensionAPI,
-  ExtensionContext,
-  Theme,
+import {
+  VERSION,
+  keyHint,
+  type ExtensionAPI,
+  type ExtensionContext,
+  type Theme,
 } from '@earendil-works/pi-coding-agent'
 import { truncateToWidth, visibleWidth } from '@earendil-works/pi-tui'
 
 const MODEL_PLACEHOLDER = 'no model selected'
+const PROVIDER_PLACEHOLDER = 'unknown provider'
 
 function projectName(cwd: string) {
   return path.basename(cwd) || 'session'
@@ -31,32 +34,59 @@ function renderLogo(theme: Theme) {
   ]
 }
 
-function renderSubtitle(theme: Theme, modelId: string, cwd: string) {
+function renderSubtitle(
+  theme: Theme,
+  providerId: string,
+  modelId: string,
+  cwd: string,
+  thinkingLevel: string,
+) {
   return [
-    theme.fg('accent', modelId),
+    theme.fg('muted', `Pi ${VERSION}`),
+    theme.fg('dim', '·'),
+    theme.fg('accent', `${providerId}/${modelId}`),
+    theme.fg('dim', `(${thinkingLevel})`),
     theme.fg('dim', '·'),
     theme.fg('muted', projectName(cwd)),
   ].join(' ')
 }
 
+function renderKeyHints(theme: Theme) {
+  return theme.fg(
+    'dim',
+    [
+      keyHint('app.interrupt', 'interrupt'),
+      keyHint('app.thinking.cycle', 'thinking'),
+      keyHint('app.model.cycleForward', 'model'),
+      keyHint('app.tools.expand', 'tools'),
+      keyHint('app.editor.external', 'editor'),
+    ].join('  '),
+  )
+}
+
 function renderHeader(
   theme: Theme,
   width: number,
+  providerId: string,
   modelId: string,
   cwd: string,
+  thinkingLevel: string,
 ) {
   return [
     '',
     ...renderLogo(theme).map((line) => center(line, width)),
     '',
-    center(renderSubtitle(theme, modelId, cwd), width),
+    center(renderSubtitle(theme, providerId, modelId, cwd, thinkingLevel), width),
+    center(renderKeyHints(theme), width),
     '',
   ]
 }
 
 function installHeader(
   ctx: ExtensionContext,
+  getProviderId: () => string,
   getModelId: () => string,
+  getThinkingLevel: () => string,
 ): (() => void) | undefined {
   if (!ctx.hasUI) return undefined
 
@@ -67,7 +97,14 @@ function installHeader(
 
     return {
       render(width: number) {
-        return renderHeader(theme, width, getModelId(), ctx.cwd)
+        return renderHeader(
+          theme,
+          width,
+          getProviderId(),
+          getModelId(),
+          ctx.cwd,
+          getThinkingLevel(),
+        )
       },
       invalidate() {
         tui.requestRender()
@@ -79,16 +116,28 @@ function installHeader(
 }
 
 export default function (pi: ExtensionAPI) {
+  let providerId = PROVIDER_PLACEHOLDER
   let modelId = MODEL_PLACEHOLDER
   let requestRender: (() => void) | undefined
 
   pi.on('session_start', (_event, ctx) => {
+    providerId = ctx.model?.provider ?? PROVIDER_PLACEHOLDER
     modelId = ctx.model?.id ?? MODEL_PLACEHOLDER
-    requestRender = installHeader(ctx, () => modelId)
+    requestRender = installHeader(
+      ctx,
+      () => providerId,
+      () => modelId,
+      () => pi.getThinkingLevel() || 'default',
+    )
   })
 
   pi.on('model_select', (event) => {
+    providerId = event.model.provider ?? PROVIDER_PLACEHOLDER
     modelId = event.model.id
+    requestRender?.()
+  })
+
+  pi.on('thinking_level_select', () => {
     requestRender?.()
   })
 
@@ -100,8 +149,14 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand('custom-header', {
     description: 'Enable the centered Pi logo header with model and project',
     handler: async (_args, ctx) => {
+      providerId = ctx.model?.provider ?? providerId
       modelId = ctx.model?.id ?? modelId
-      requestRender = installHeader(ctx, () => modelId)
+      requestRender = installHeader(
+        ctx,
+        () => providerId,
+        () => modelId,
+        () => pi.getThinkingLevel() || 'default',
+      )
       ctx.ui.notify('Custom header enabled', 'info')
     },
   })
