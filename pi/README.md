@@ -40,6 +40,7 @@ Local path packages assume the corresponding checkout exists on the machine.
 | `custom-footer.ts`, `custom-header.ts`, `usage-bar.ts` | TUI presentation. |
 | `diff.ts`, `review.ts`, `handoff.ts`, `session-breakdown.ts`, `session-search.ts` | Session and change-review workflow helpers. |
 | `docker-context.ts` | Docker Compose context detection. |
+| `markdown-preview.ts` | Project-local Markdown preview in the TUI. |
 | `go-to-bed.ts` | Late-night advisory/blocking guard. |
 | `pi-cloak/` | Secret/path cloaking behavior. |
 | `sandbox/` | Runtime filesystem/network sandbox. |
@@ -59,6 +60,12 @@ Local path packages assume the corresponding checkout exists on the machine.
 Later tiers override earlier tiers through the extension's merge function. `sandbox` and `todos` use this interface. Static package files such as `agent/extensions/subagent/config.json` and `agent/web-tools.json` are package configuration, not tiered extension settings.
 
 For future local extensions, prefer `__lib/extension-settings.ts` when settings need global/project/local overrides. If a setting has only one adapter, keep it static until a real seam exists.
+
+## Markdown preview
+
+Use `/mdview <path>` in the interactive TUI to open a rendered Markdown overlay. The path must resolve to a file inside the current project, including after symlink resolution, and files larger than 1 MiB are rejected.
+
+Use the configured arrow and page-navigation keys to scroll and the configured cancel key to close the overlay. Mermaid fences are displayed as code; the extension does not use a Mermaid renderer or make network requests.
 
 ## Restore and verification
 

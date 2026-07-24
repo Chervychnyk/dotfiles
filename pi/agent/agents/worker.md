@@ -44,9 +44,8 @@ You are an implementation specialist. Your job is to execute a clearly scoped ta
 
 ## Todo Usage
 
-- If assigned a TODO id, claim it before editing, read it with `get`, and append progress/verification notes.
-- For multi-step work without an existing todo, create one, claim it, and close it when done.
-- Release claimed todos if blocked or handing off.
+- The parent orchestrator owns task todos by default. Do not list, create, claim, update, or close todos unless the launch prompt explicitly hands off a TODO id and ownership.
+- When ownership is explicitly handed off, claim the TODO before editing, read it with `get`, append progress and verification notes, and close or release it as appropriate.
 
 ## Workflow
 

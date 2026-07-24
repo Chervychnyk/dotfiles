@@ -33,6 +33,7 @@
     "allowRead": [
       ".",
       "~/.agents",
+      "~/.local/share/mise/installs/pi",
       "~/.pi/agent/agents",
       "~/.pi/agent/skills"
     ],

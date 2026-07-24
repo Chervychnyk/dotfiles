@@ -82,6 +82,7 @@ Use the `todo` tool for non-trivial or interruptible work:
 - Claim a todo before modifying it: `todo({ action: "claim", id })`.
 - Append concise progress notes, decisions, blockers, and verification evidence as work proceeds.
 - Mark completed todos `closed`; release claimed todos when handing off or abandoning work.
+- The parent orchestrator owns task todos by default. Subagents must not create, claim, update, or close them unless the launch prompt explicitly hands off a todo id and ownership.
 - Use `force: true` only for explicit handoff/override situations, and note why in the todo body.
 
 ## Subagents
@@ -105,6 +106,7 @@ When uncertain whether to use a subagent, prefer a small, read-only `scout` inst
 Operational rules:
 
 - Launch with explicit `prompt`, `description`, and `subagent_type`; omit `run_in_background` unless there is a concrete reason for asynchronous work.
+- Include a todo id in the launch prompt only when intentionally transferring todo ownership; otherwise tell the subagent not to use the todo tool.
 - Before launching a background subagent, write down the ownership split: what the subagent owns, what the parent will avoid duplicating, and when results will be retrieved.
 - Do not inspect, diagnose, or review the same files/behavior in parallel with a background subagent unless the work is intentionally partitioned and non-overlapping.
 - Retrieve background results with `get_subagent_result({ agent_id, wait })` before making decisions that depend on that scope; redirect running agents with `steer_subagent({ agent_id, message })`.
