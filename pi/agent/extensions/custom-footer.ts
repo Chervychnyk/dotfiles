@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { AssistantMessage } from '@earendil-works/pi-ai'
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
-import { truncateToWidth } from '@earendil-works/pi-tui'
+import { truncateToWidth, visibleWidth } from '@earendil-works/pi-tui'
 
 const execFileAsync = promisify(execFile)
 
@@ -28,6 +28,54 @@ const STATUS_ORDER: Record<string, number> = {
 
 function getStatusOrder(key: string): number {
   return STATUS_ORDER[key] ?? 100
+}
+
+function envFlag(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name]
+  if (value === undefined) return defaultValue
+  return !['0', 'false', 'no', 'off', ''].includes(value.trim().toLowerCase())
+}
+
+type FooterSegment = {
+  full: string
+  compact?: string
+}
+
+function textWidth(text: string): number {
+  return visibleWidth(text)
+}
+
+function joinSegments(segments: FooterSegment[], separator: string, compact = false): string {
+  return segments
+    .map((segment) => (compact && segment.compact ? segment.compact : segment.full))
+    .filter(Boolean)
+    .join(separator)
+}
+
+function wrapSegments(segments: FooterSegment[], width: number, separator: string): string[] {
+  const full = joinSegments(segments, separator)
+  if (textWidth(full) <= width) return [full]
+
+  const compact = joinSegments(segments, separator, true)
+  if (textWidth(compact) <= width) return [compact]
+
+  const lines: string[] = []
+  let line = ''
+
+  for (const segment of segments) {
+    const text = segment.compact || segment.full
+    const candidate = line ? `${line}${separator}${text}` : text
+    if (!line || textWidth(candidate) <= width) {
+      line = candidate
+      continue
+    }
+
+    lines.push(truncateToWidth(line, width))
+    line = text
+  }
+
+  if (line) lines.push(truncateToWidth(line, width))
+  return lines.length > 0 ? lines : ['']
 }
 
 type GitStatus = {
@@ -103,10 +151,11 @@ function formatGitStatus(status: GitStatus | undefined, fallbackBranch?: string)
   const parts = branch ? [`⎇ ${branch}`] : []
   if (!status) return parts.join(' ')
 
-  if (status.staged > 0 || status.unstaged > 0 || status.untracked > 0) {
-    parts[0] = parts[0] ? `${parts[0]}*` : '*'
-  }
-  if (status.ahead > 0) parts.push(`[${status.ahead}]`)
+  if (status.staged > 0) parts.push(`+${status.staged}`)
+  if (status.unstaged > 0) parts.push(`~${status.unstaged}`)
+  if (status.untracked > 0) parts.push(`?${status.untracked}`)
+  if (status.ahead > 0) parts.push(`↑${status.ahead}`)
+  if (status.behind > 0) parts.push(`↓${status.behind}`)
 
   return parts.join(' ')
 }
@@ -114,6 +163,8 @@ function formatGitStatus(status: GitStatus | undefined, fallbackBranch?: string)
 export default function (pi: ExtensionAPI) {
   let sessionStart = Date.now()
   let gitStatus: GitStatus | undefined
+  const showCwd = envFlag('PI_CUSTOM_FOOTER_SHOW_CWD', true)
+  const showGit = envFlag('PI_CUSTOM_FOOTER_SHOW_GIT', true)
 
   function formatElapsed(ms: number): string {
     const s = Math.floor(ms / 1000)
@@ -135,26 +186,39 @@ export default function (pi: ExtensionAPI) {
   pi.on('session_start', async (_event, ctx) => {
     sessionStart = Date.now()
 
+    if (ctx.mode !== 'tui') return
+
+    gitStatus = undefined
     ctx.ui.setFooter((tui, theme, footerData) => {
+      let disposed = false
+
       const refreshGit = async () => {
-        gitStatus = await getGitStatus(ctx.cwd)
+        if (!showGit) return
+        const nextGitStatus = await getGitStatus(ctx.cwd)
+        if (disposed) return
+        gitStatus = nextGitStatus
         tui.requestRender()
       }
       void refreshGit()
 
-      const unsub = footerData.onBranchChange(() => {
-        void refreshGit()
-      })
+      const unsub = showGit
+        ? footerData.onBranchChange(() => {
+            void refreshGit()
+          })
+        : () => {}
       const timer = setInterval(() => tui.requestRender(), 30_000)
-      const gitTimer = setInterval(() => {
-        void refreshGit()
-      }, 5_000)
+      const gitTimer = showGit
+        ? setInterval(() => {
+            void refreshGit()
+          }, 5_000)
+        : undefined
 
       return {
         dispose() {
+          disposed = true
           unsub()
           clearInterval(timer)
-          clearInterval(gitTimer)
+          if (gitTimer) clearInterval(gitTimer)
         },
         invalidate() {},
         render(width: number): string[] {
@@ -204,8 +268,8 @@ export default function (pi: ExtensionAPI) {
           const short = parts.length > 2 ? parts.slice(-2).join('/') : ctx.cwd
           const cwdStr = theme.fg('muted', `⌂ ${short}`)
 
-          const branch = footerData.getGitBranch()
-          const gitStatusText = formatGitStatus(gitStatus, branch)
+          const branch = showGit ? footerData.getGitBranch() : undefined
+          const gitStatusText = showGit ? formatGitStatus(gitStatus, branch) : ''
           const branchStr = gitStatusText ? theme.fg('accent', gitStatusText) : ''
 
           const thinking = pi.getThinkingLevel()
@@ -227,11 +291,19 @@ export default function (pi: ExtensionAPI) {
             theme.fg(thinkColor, `(${thinkingLabel})`)
 
           const sep = theme.fg('dim', ' | ')
-          const leftParts = [modelStr, tokenStats, contextBar, elapsed, cwdStr]
-          if (branchStr) leftParts.push(branchStr)
-          const left = leftParts.join(sep)
+          const leftParts: FooterSegment[] = [
+            { full: modelStr, compact: theme.fg('accent', modelId) },
+            { full: tokenStats, compact: theme.fg('accent', `↑${fmt(input)} ↓${fmt(output)}`) },
+            {
+              full: contextBar,
+              compact: theme.fg(pctColor, `${clampedPct.toFixed(0)}%`) + ' ' + theme.fg('muted', contextSize),
+            },
+            { full: elapsed, compact: theme.fg('dim', formatElapsed(Date.now() - sessionStart)) },
+          ]
+          if (showCwd) leftParts.push({ full: cwdStr, compact: theme.fg('muted', short) })
+          if (showGit && branchStr) leftParts.push({ full: branchStr, compact: branchStr })
 
-          const lines = [truncateToWidth(left, width)]
+          const lines = wrapSegments(leftParts, width, sep)
 
           const extensionStatuses = footerData.getExtensionStatuses()
           if (extensionStatuses.size > 0) {
