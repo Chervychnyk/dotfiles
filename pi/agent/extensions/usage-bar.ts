@@ -58,15 +58,48 @@ const STATUS_URLS: Record<string, string> = {
   copilot: 'https://www.githubstatus.com/api/v2/status.json',
 }
 
+function clampPercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(100, Math.max(0, value))
+}
+
+function normalizePercent(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return clampPercent(value >= 0 && value <= 1 ? value * 100 : value)
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  ms = 5000,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms)
+  })
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer)
+  })
+}
+
 async function fetchProviderStatus(provider: string): Promise<ProviderStatus> {
   const url = STATUS_URLS[provider]
   if (!url) return { indicator: 'none' }
 
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch(url, { signal: controller.signal })
+    const res = await fetchWithTimeout(url, {}, 5000)
     if (!res.ok) return { indicator: 'unknown' }
 
     const data = (await res.json()) as any
@@ -84,14 +117,10 @@ async function fetchProviderStatus(provider: string): Promise<ProviderStatus> {
 
 async function fetchGeminiStatus(): Promise<ProviderStatus> {
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       'https://www.google.com/appsstatus/dashboard/incidents.json',
-      {
-        signal: controller.signal,
-      },
+      {},
+      5000,
     )
     if (!res.ok) return { indicator: 'unknown' }
 
@@ -194,15 +223,11 @@ async function fetchClaudeUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
   }
 
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch('https://api.anthropic.com/api/oauth/usage', {
+    const res = await fetchWithTimeout('https://api.anthropic.com/api/oauth/usage', {
       headers: {
         Authorization: `Bearer ${token}`,
         'anthropic-beta': 'oauth-2025-04-20',
       },
-      signal: controller.signal,
     })
 
     if (!res.ok) {
@@ -293,17 +318,12 @@ async function fetchCopilotUsage(_modelRegistry: any): Promise<UsageSnapshot> {
   }
 
   const tryFetch = async (authHeader: string) => {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch('https://api.github.com/copilot_internal/user', {
+    return fetchWithTimeout('https://api.github.com/copilot_internal/user', {
       headers: {
         ...headersBase,
         Authorization: authHeader,
       },
-      signal: controller.signal,
     })
-    return res
   }
 
   try {
@@ -418,10 +438,7 @@ async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
   }
 
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       'https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota',
       {
         method: 'POST',
@@ -430,7 +447,6 @@ async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
           'Content-Type': 'application/json',
         },
         body: '{}',
-        signal: controller.signal,
       },
     )
 
@@ -566,14 +582,11 @@ async function refreshAntigravityAccessToken(
   refreshToken: string,
 ): Promise<{ accessToken: string; expiresAt?: number } | null> {
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
     const clientId = process.env.ANTIGRAVITY_GOOGLE_CLIENT_ID
     const clientSecret = process.env.ANTIGRAVITY_GOOGLE_CLIENT_SECRET
     if (!clientId || !clientSecret) return null
 
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -582,7 +595,6 @@ async function refreshAntigravityAccessToken(
         refresh_token: refreshToken,
         grant_type: 'refresh_token',
       }).toString(),
-      signal: controller.signal,
     })
 
     if (!res.ok) return null
@@ -636,10 +648,7 @@ async function fetchAntigravityUsage(
   }
 
   const fetchModels = async (token: string): Promise<Response> => {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    return fetch(
+    return fetchWithTimeout(
       'https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels',
       {
         method: 'POST',
@@ -651,7 +660,6 @@ async function fetchAntigravityUsage(
           Accept: 'application/json',
         },
         body: JSON.stringify({ project: auth.projectId }),
-        signal: controller.signal,
       },
     )
   }
@@ -818,9 +826,6 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
   }
 
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
       'User-Agent': 'CodexBar',
@@ -831,10 +836,9 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
       headers['ChatGPT-Account-Id'] = accountId
     }
 
-    const res = await fetch('https://chatgpt.com/backend-api/wham/usage', {
+    const res = await fetchWithTimeout('https://chatgpt.com/backend-api/wham/usage', {
       method: 'GET',
       headers,
-      signal: controller.signal,
     })
 
     if (res.status === 401 || res.status === 403) {
@@ -1031,6 +1035,157 @@ async function fetchKiroUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
 }
 
 // ============================================================================
+// MiniMax / Kimi
+// ============================================================================
+
+async function loadProviderToken(
+  modelRegistry: any,
+  provider: string,
+  authJsonKey: string,
+  envKey: string,
+): Promise<string | undefined> {
+  try {
+    const token = await Promise.resolve(
+      modelRegistry?.authStorage?.getApiKey?.(provider),
+    )
+    if (typeof token === 'string' && token.length > 0) return token
+  } catch {}
+
+  try {
+    if (fs.existsSync(PI_AUTH_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
+      const cred = data[authJsonKey] ?? data[provider]
+      const token = cred?.access ?? cred?.apiKey ?? cred?.api_key
+      if (typeof token === 'string' && token.length > 0) return token
+    }
+  } catch {}
+
+  const envToken = process.env[envKey]
+  return envToken && envToken.length > 0 ? envToken : undefined
+}
+
+function formatDurationLabel(startMs?: number, endMs?: number): string {
+  if (!startMs || !endMs || endMs <= startMs) return 'Limit'
+  const hours = Math.round((endMs - startMs) / 3600000)
+  if (hours >= 24) return hours % 24 === 0 ? `${hours / 24}d` : `${hours}h`
+  return `${Math.max(1, hours)}h`
+}
+
+async function fetchMiniMaxUsage(
+  modelRegistry: any,
+  provider: 'minimax' | 'minimax-cn',
+): Promise<UsageSnapshot> {
+  const token = await loadProviderToken(
+    modelRegistry,
+    provider,
+    provider,
+    provider === 'minimax' ? 'MINIMAX_API_KEY' : 'MINIMAX_CN_API_KEY',
+  )
+  const displayName = provider === 'minimax' ? 'MiniMax' : 'MiniMax CN'
+  if (!token) return { provider, displayName, windows: [], error: 'No credentials' }
+
+  const url =
+    provider === 'minimax'
+      ? 'https://api.minimax.io/v1/token_plan/remains'
+      : 'https://api.minimaxi.com/v1/token_plan/remains'
+
+  try {
+    const res = await fetchWithTimeout(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    })
+    if (!res.ok) return { provider, displayName, windows: [], error: `HTTP ${res.status}` }
+
+    const data = (await res.json()) as any
+    if (data.base_resp?.status_code !== 0) {
+      return {
+        provider,
+        displayName,
+        windows: [],
+        error: data.base_resp?.status_msg || 'API error',
+      }
+    }
+
+    const buckets = data.model_remains || []
+    const bucket =
+      buckets.find((b: any) => b.model_name === 'general' && b.current_interval_status === 1) ||
+      buckets.find((b: any) => b.model_name === 'general') ||
+      buckets.find((b: any) => b.current_interval_status === 1) ||
+      buckets[0]
+    if (!bucket) return { provider, displayName, windows: [], error: 'No quota data' }
+
+    const windows: RateWindow[] = []
+    if (bucket.current_interval_remaining_percent !== undefined) {
+      const end = bucket.end_time ? new Date(bucket.end_time) : undefined
+      windows.push({
+        label: formatDurationLabel(bucket.start_time, bucket.end_time),
+        usedPercent: normalizePercent(100 - bucket.current_interval_remaining_percent),
+        resetDescription: end ? formatReset(end) : undefined,
+      })
+    }
+    if (bucket.current_weekly_remaining_percent !== undefined) {
+      const end = bucket.weekly_end_time ? new Date(bucket.weekly_end_time) : undefined
+      windows.push({
+        label: 'Week',
+        usedPercent: normalizePercent(100 - bucket.current_weekly_remaining_percent),
+        resetDescription: end ? formatReset(end) : undefined,
+      })
+    }
+
+    return { provider, displayName, windows }
+  } catch (e) {
+    return { provider, displayName, windows: [], error: String(e) }
+  }
+}
+
+async function fetchKimiUsage(modelRegistry: any): Promise<UsageSnapshot> {
+  const provider = 'kimi-coding'
+  const displayName = 'Kimi'
+  const token = await loadProviderToken(modelRegistry, provider, provider, 'KIMI_API_KEY')
+  if (!token) return { provider, displayName, windows: [], error: 'No credentials' }
+
+  try {
+    const res = await fetchWithTimeout('https://api.kimi.com/coding/v1/usages', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    })
+    if (!res.ok) return { provider, displayName, windows: [], error: `HTTP ${res.status}` }
+
+    const data = (await res.json()) as any
+    const windows: RateWindow[] = []
+    for (const limit of data.limits || []) {
+      const detail = limit.detail || {}
+      const total = Number(detail.limit || 0)
+      const remaining = Number(detail.remaining || 0)
+      if (total <= 0) continue
+      const duration = limit.window?.timeUnit === 'TIME_UNIT_MINUTE' ? limit.window?.duration : undefined
+      const reset = detail.resetTime ? new Date(detail.resetTime) : undefined
+      windows.push({
+        label: duration ? `${duration}m` : 'Limit',
+        usedPercent: normalizePercent(((total - remaining) / total) * 100),
+        resetDescription: reset ? formatReset(reset) : undefined,
+      })
+    }
+
+    const weekly = data.usage || {}
+    const weeklyTotal = Number(weekly.limit || 0)
+    const weeklyRemaining = Number(weekly.remaining || 0)
+    if (weeklyTotal > 0) {
+      const reset = weekly.resetTime ? new Date(weekly.resetTime) : undefined
+      windows.push({
+        label: 'Week',
+        usedPercent: normalizePercent(((weeklyTotal - weeklyRemaining) / weeklyTotal) * 100),
+        resetDescription: reset ? formatReset(reset) : undefined,
+      })
+    }
+
+    return { provider, displayName, windows }
+  } catch (e) {
+    return { provider, displayName, windows: [], error: String(e) }
+  }
+}
+
+// ============================================================================
 // z.ai
 // ============================================================================
 
@@ -1058,16 +1213,12 @@ async function fetchZaiUsage(): Promise<UsageSnapshot> {
   }
 
   try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 5000)
-
-    const res = await fetch('https://api.z.ai/api/monitor/usage/quota/limit', {
+    const res = await fetchWithTimeout('https://api.z.ai/api/monitor/usage/quota/limit', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         Accept: 'application/json',
       },
-      signal: controller.signal,
     })
 
     if (!res.ok) {
@@ -1138,6 +1289,16 @@ async function fetchZaiUsage(): Promise<UsageSnapshot> {
 // Helpers
 // ============================================================================
 
+function normalizeUsageSnapshot(snapshot: UsageSnapshot): UsageSnapshot {
+  return {
+    ...snapshot,
+    windows: snapshot.windows.map((window) => ({
+      ...window,
+      usedPercent: normalizePercent(window.usedPercent),
+    })),
+  }
+}
+
 function formatReset(date: Date): string {
   const diffMs = date.getTime() - Date.now()
   if (diffMs < 0) return 'now'
@@ -1205,12 +1366,6 @@ class UsageComponent {
   }
 
   private async load() {
-    const timeout = <T>(p: Promise<T>, ms: number, fallback: T) =>
-      Promise.race([
-        p,
-        new Promise<T>((r) => setTimeout(() => r(fallback), ms)),
-      ])
-
     // Fetch usage and status in parallel
     const [
       claude,
@@ -1219,62 +1374,83 @@ class UsageComponent {
       codex,
       antigravity,
       kiro,
+      minimax,
+      minimaxCn,
+      kimi,
       zai,
       claudeStatus,
       copilotStatus,
       geminiStatus,
       codexStatus,
     ] = await Promise.all([
-      timeout(fetchClaudeUsage(this.pi), 6000, {
+      withTimeout(fetchClaudeUsage(this.pi), 6000, {
         provider: 'anthropic',
         displayName: 'Claude',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchCopilotUsage(this.modelRegistry), 6000, {
+      withTimeout(fetchCopilotUsage(this.modelRegistry), 6000, {
         provider: 'copilot',
         displayName: 'Copilot',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchGeminiUsage(this.modelRegistry), 6000, {
+      withTimeout(fetchGeminiUsage(this.modelRegistry), 6000, {
         provider: 'gemini',
         displayName: 'Gemini',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchCodexUsage(this.modelRegistry), 6000, {
+      withTimeout(fetchCodexUsage(this.modelRegistry), 6000, {
         provider: 'codex',
         displayName: 'Codex',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchAntigravityUsage(this.modelRegistry), 6000, {
+      withTimeout(fetchAntigravityUsage(this.modelRegistry), 6000, {
         provider: 'antigravity',
         displayName: 'Antigravity',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchKiroUsage(this.pi), 6000, {
+      withTimeout(fetchKiroUsage(this.pi), 6000, {
         provider: 'kiro',
         displayName: 'Kiro',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchZaiUsage(), 6000, {
+      withTimeout(fetchMiniMaxUsage(this.modelRegistry, 'minimax'), 6000, {
+        provider: 'minimax',
+        displayName: 'MiniMax',
+        windows: [],
+        error: 'Timeout',
+      }),
+      withTimeout(fetchMiniMaxUsage(this.modelRegistry, 'minimax-cn'), 6000, {
+        provider: 'minimax-cn',
+        displayName: 'MiniMax CN',
+        windows: [],
+        error: 'Timeout',
+      }),
+      withTimeout(fetchKimiUsage(this.modelRegistry), 6000, {
+        provider: 'kimi-coding',
+        displayName: 'Kimi',
+        windows: [],
+        error: 'Timeout',
+      }),
+      withTimeout(fetchZaiUsage(), 6000, {
         provider: 'zai',
         displayName: 'z.ai',
         windows: [],
         error: 'Timeout',
       }),
-      timeout(fetchProviderStatus('anthropic'), 3000, {
+      withTimeout(fetchProviderStatus('anthropic'), 3000, {
         indicator: 'unknown' as const,
       }),
-      timeout(fetchProviderStatus('copilot'), 3000, {
+      withTimeout(fetchProviderStatus('copilot'), 3000, {
         indicator: 'unknown' as const,
       }),
-      timeout(fetchGeminiStatus(), 3000, { indicator: 'unknown' as const }),
-      timeout(fetchProviderStatus('codex'), 3000, {
+      withTimeout(fetchGeminiStatus(), 3000, { indicator: 'unknown' as const }),
+      withTimeout(fetchProviderStatus('codex'), 3000, {
         indicator: 'unknown' as const,
       }),
     ])
@@ -1286,11 +1462,23 @@ class UsageComponent {
     codex.status = codexStatus
 
     // Filter out providers with no data and no error (not configured)
-    const allUsages = [claude, copilot, gemini, codex, antigravity, kiro, zai]
-    this.usages = allUsages.filter(
+    const allUsages = [
+      claude,
+      copilot,
+      gemini,
+      codex,
+      antigravity,
+      kiro,
+      minimax,
+      minimaxCn,
+      kimi,
+      zai,
+    ]
+    this.usages = allUsages.map(normalizeUsageSnapshot).filter(
       (u) =>
         u.windows.length > 0 ||
         (u.error !== 'No credentials' &&
+          u.error !== 'No token' &&
           u.error !== 'kiro-cli not found' &&
           u.error !== 'No API key'),
     )
@@ -1356,11 +1544,12 @@ class UsageComponent {
           lines.push(box(dim('  No data')))
         } else {
           for (const w of u.windows) {
-            const remaining = Math.max(0, 100 - w.usedPercent)
+            const usedPercent = normalizePercent(w.usedPercent)
+            const remaining = clampPercent(100 - usedPercent)
             const barW = 12
             const filled = Math.min(
               barW,
-              Math.round((w.usedPercent / 100) * barW),
+              Math.round((usedPercent / 100) * barW),
             )
             const empty = barW - filled
             const color =
