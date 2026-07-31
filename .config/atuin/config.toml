@@ -19,8 +19,7 @@ filter_mode = "global"
 # Show help text
 show_help = true
 
-# Sync is disabled by default (enable if you want to sync across machines)
-sync_address = ""
+# Automatic sync is disabled (enable if you want to sync across machines)
 sync_frequency = "0"
 
 # Update check
