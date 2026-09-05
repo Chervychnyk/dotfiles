@@ -23,3 +23,24 @@ pi/interview-snapshots/
 *.backup.*
 *.local
 .env.secrets
+
+# herdr runtime state and installed plugins (~/.config/herdr is symlinked here).
+# Plugin *code* is herdr-managed and reinstallable; plugin *config* is ours, so
+# `plugins/*` ignores the checkouts while the negation keeps config/ tracked.
+# (A `plugins/` rule could not be undone this way -- git will not re-include a
+# path whose parent directory is itself excluded.)
+.config/herdr/plugins/*
+!.config/herdr/plugins/config/
+.config/herdr/plugins.json
+.config/herdr/.plugins.lock
+.config/herdr/session.json
+.config/herdr/*.log
+.config/herdr/*.sock
+# herdr-managed; regenerate with `herdr integration install pi`
+pi/agent/extensions/herdr-agent-state.ts
+
+# worktrunk records project-hook approvals per machine (~/.config/worktrunk is symlinked here)
+.config/worktrunk/approvals.toml
+
+# pi-permission-system writes a per-machine review log of permission decisions
+pi/agent/extensions/pi-permission-system/logs/

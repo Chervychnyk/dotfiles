@@ -1,0 +1,8 @@
+# Global gitignore (~/.config/git/ignore — git's XDG default, no core.excludesFile needed).
+
+**/.claude/settings.local.json
+
+**/.claude/.cc-writes/
+
+# Worktrunk creates worktrees here (worktree-path in .config/worktrunk/config.toml).
+.worktrees/
