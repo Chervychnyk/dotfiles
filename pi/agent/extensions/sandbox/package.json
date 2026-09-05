@@ -6,7 +6,7 @@
   "scripts": {
     "clean": "echo 'nothing to clean'",
     "build": "echo 'nothing to build'",
-    "check": "node tests/check.mjs"
+    "check": "node --check index.ts && node --experimental-strip-types -e \"Promise.all([import('./policy.ts'), import('./approval-broker.ts'), import('./lifecycle.ts'), import('./runtime.ts')])\" && node tests/check.mjs && node tests/approval-broker.check.mjs && node tests/lifecycle.check.mjs"
   },
   "pi": {
     "extensions": [
@@ -14,6 +14,6 @@
     ]
   },
   "dependencies": {
-    "@anthropic-ai/sandbox-runtime": "^0.0.26"
+    "@anthropic-ai/sandbox-runtime": "0.0.71"
   }
 }

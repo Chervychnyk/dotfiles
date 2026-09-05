@@ -22,8 +22,7 @@
  *   "filesystem": {
  *     "allowRead": ["."],
  *     "denyRead": ["~/.ssh", "~/.aws"],
- *     "allowWrite": [".", "/tmp"],
- *     "denyWrite": [".env", ".env.*", "*.pem", "*.key"]
+ *     "allowWrite": [".", "/tmp"]
  *   }
  * }
  * ```
@@ -53,8 +52,11 @@
 
 import { SandboxManager } from '@anthropic-ai/sandbox-runtime'
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createBashTool } from '@earendil-works/pi-coding-agent'
 import { getExtensionSettingsPaths } from '../__lib/extension-settings.ts'
+import { createApprovalBroker } from './approval-broker.ts'
 import {
   ALLOW_READ_KEY,
   ALLOW_WRITE_KEY,
@@ -66,14 +68,16 @@ import {
 } from './config.ts'
 import {
   buildRuntimeConfigWithSessionGrants,
+  decideFilesystemAccess,
   domainMatches,
   extractCommandDomains,
   extractDomainsFromUrls,
-  pathMatchesAny,
-  resolveSandboxPath,
-  type PermissionChoice,
 } from './policy.ts'
 import { askPermission, type SandboxCtx } from './permission-ui.ts'
+import {
+  RUNTIME_UNAVAILABLE_BLOCK_REASON,
+  createSandboxRuntimeLifecycle,
+} from './lifecycle.ts'
 import { createSandboxedBashOps } from './runtime.ts'
 
 const SANDBOX_STATUS_KEY = 'sandbox'
@@ -81,8 +85,15 @@ const NO_SANDBOX_FLAG = 'no-sandbox'
 const NETWORK_BLOCK_REASON = 'Blocked by sandbox network policy'
 const FILESYSTEM_BLOCK_REASON = 'Blocked by sandbox filesystem policy'
 const WEB_FETCH_TOOLS = new Set(['web_fetch', 'batch_web_fetch'])
-const READ_TOOL = 'read'
-const WRITE_TOOLS = new Set(['write', 'edit'])
+const PATH_TOOL_ACCESS: Record<string, 'read' | 'write'> = {
+  read: 'read',
+  write: 'write',
+  edit: 'write',
+}
+
+function blockedBashResult(output: string) {
+  return { result: { output, exitCode: 1, cancelled: false, truncated: false } }
+}
 
 function allowsAllDomains(config: SandboxConfig) {
   return config.network?.allowedDomains?.includes('*') ?? false
@@ -160,7 +171,6 @@ function renderSandboxDetails(
 }
 
 export default function (pi: ExtensionAPI) {
-
   const clearSandboxStatus = (ctx: SandboxCtx) => {
     ctx.ui.setStatus(SANDBOX_STATUS_KEY, undefined)
   }
@@ -169,9 +179,9 @@ export default function (pi: ExtensionAPI) {
     ctx: SandboxCtx,
     message: string,
     level: 'info' | 'warning' | 'error',
+    allowLocal = false,
   ) => {
-    sandboxEnabled = false
-    sandboxInitialized = false
+    runtimeLifecycle.disable({ allowLocal })
     clearSandboxStatus(ctx)
     ctx.ui.notify(message, level)
   }
@@ -184,85 +194,97 @@ export default function (pi: ExtensionAPI) {
 
   const localCwd = process.cwd()
   const localBash = createBashTool(localCwd)
+  const sandboxImplementationDir = path.dirname(fileURLToPath(import.meta.url))
 
-  let sandboxEnabled = false
-  let sandboxInitialized = false
-  let sandboxedBash: ReturnType<typeof createBashTool> | undefined
+  function protectedRoots(cwd: string) {
+    const settingsPaths = getExtensionSettingsPaths(EXTENSION_NAME, cwd)
+    return {
+      sandboxDirs: [
+        path.join(path.dirname(settingsPaths.global), 'extensions', EXTENSION_NAME),
+        sandboxImplementationDir,
+      ],
+      settingsPaths: Object.values(settingsPaths),
+    }
+  }
+
   const sessionAllowedDomains = new Set<string>()
   const sessionAllowedReadPaths = new Set<string>()
   const sessionAllowedWritePaths = new Set<string>()
 
-  function buildRuntimeConfig(config: SandboxConfig): SandboxConfig {
-    return buildRuntimeConfigWithSessionGrants(config, {
-      domains: sessionAllowedDomains,
-      readPaths: sessionAllowedReadPaths,
-      writePaths: sessionAllowedWritePaths,
-    })
+  function buildRuntimeConfig(config: SandboxConfig, cwd: string): SandboxConfig {
+    return buildRuntimeConfigWithSessionGrants(
+      config,
+      {
+        domains: sessionAllowedDomains,
+        readPaths: sessionAllowedReadPaths,
+        writePaths: sessionAllowedWritePaths,
+      },
+      { cwd, protectedRoots: protectedRoots(cwd) },
+    )
   }
 
-  async function initializeSandbox(config: SandboxConfig) {
-    const runtimeConfig = buildRuntimeConfig(config)
-    const configExt = runtimeConfig as unknown as {
-      ignoreViolations?: Record<string, string[]>
-      enableWeakerNestedSandbox?: boolean
-    }
+  const runtimeLifecycle = createSandboxRuntimeLifecycle<
+    { config: SandboxConfig; cwd: string },
+    ReturnType<typeof createBashTool>
+  >({
+    reset: () => SandboxManager.reset(),
+    async initialize({ config, cwd }) {
+      const runtimeConfig = buildRuntimeConfig(config, cwd)
+      const configExt = runtimeConfig as unknown as {
+        ignoreViolations?: Record<string, string[]>
+        enableWeakerNestedSandbox?: boolean
+      }
 
-    if (sandboxInitialized) {
-      await SandboxManager.reset()
-      sandboxInitialized = false
-    }
+      await SandboxManager.initialize({
+        network: runtimeConfig.network,
+        filesystem: runtimeConfig.filesystem,
+        ignoreViolations: configExt.ignoreViolations,
+        enableWeakerNestedSandbox: configExt.enableWeakerNestedSandbox,
+      })
 
-    await SandboxManager.initialize({
-      network: runtimeConfig.network,
-      filesystem: runtimeConfig.filesystem,
-      ignoreViolations: configExt.ignoreViolations,
-      enableWeakerNestedSandbox: configExt.enableWeakerNestedSandbox,
-    })
+      return createBashTool(localCwd, { operations: createSandboxedBashOps() })
+    },
+  })
 
-    sandboxedBash = createBashTool(localCwd, {
-      operations: createSandboxedBashOps(),
-    })
-    sandboxEnabled = true
-    sandboxInitialized = true
-  }
+  const approvalBroker = createApprovalBroker({
+    ask: askPermission,
+    getSettingsPaths: (cwd) => getExtensionSettingsPaths(EXTENSION_NAME, cwd),
+    refreshRuntime: async (cwd) => {
+      await runtimeLifecycle.refresh({ config: loadConfig(cwd), cwd })
+    },
+    createGuard: () => runtimeLifecycle.createGuard(),
+  })
 
-  async function applyGrant(options: {
-    ctx: SandboxCtx
-    choice: PermissionChoice
-    cwd: string
-    values: string[]
-    sessionSet: Set<string>
-    persist: (target: string, values: string[]) => void
-    successMessage: (target: string) => string
-  }) {
-    const { ctx, choice, cwd, values, sessionSet, persist, successMessage } = options
+  type GateOutcome =
+    | { status: 'allowed'; executor: ReturnType<typeof createBashTool> }
+    | { status: 'blocked'; reason: string }
 
-    if (choice === 'session') {
-      for (const value of values) sessionSet.add(value)
-      await initializeSandbox(loadConfig(cwd))
-      return true
-    }
-
-    if (choice !== 'project' && choice !== 'global') return false
-
-    const paths = getExtensionSettingsPaths(EXTENSION_NAME, cwd)
-    const target = choice === 'global' ? paths.global : paths.project
+  /**
+   * Runs an approval prompt and re-checks runtime availability afterwards: the
+   * runtime can be torn down or refreshed while the prompt is open.
+   */
+  async function gateApproval(
+    approval: Promise<boolean>,
+    denyReason: string,
+  ): Promise<GateOutcome> {
+    let allowed: boolean
     try {
-      persist(target, values)
-      for (const value of values) sessionSet.add(value)
-      await initializeSandbox(loadConfig(cwd))
-      ctx.ui.notify(successMessage(target), 'info')
-      return true
-    } catch (err) {
-      ctx.ui.notify(
-        `Failed to update sandbox config: ${err instanceof Error ? err.message : err}`,
-        'error',
-      )
-      return false
+      allowed = await approval
+    } catch (error) {
+      if (runtimeLifecycle.access().kind === 'sandboxed') throw error
+      allowed = false
     }
+
+    const access = runtimeLifecycle.access()
+    if (access.kind !== 'sandboxed') {
+      return { status: 'blocked', reason: RUNTIME_UNAVAILABLE_BLOCK_REASON }
+    }
+    if (!allowed) return { status: 'blocked', reason: denyReason }
+    return { status: 'allowed', executor: access.executor }
   }
 
   async function promptForDomains(ctx: SandboxCtx, domains: string[]) {
+    if (domains.length === 0) return true
     const config = loadConfig(ctx.cwd ?? localCwd)
     const blocked = domains.filter(
       (domain) => !isDomainAllowed(config, sessionAllowedDomains, domain),
@@ -270,11 +292,10 @@ export default function (pi: ExtensionAPI) {
     if (blocked.length === 0) return true
 
     const prompt = `Sandbox blocked network domain${blocked.length === 1 ? '' : 's'}: ${blocked.join(', ')}`
-    const choice = await askPermission(ctx, prompt)
 
-    return applyGrant({
+    return approvalBroker.request({
       ctx,
-      choice,
+      prompt,
       cwd: ctx.cwd ?? localCwd,
       values: blocked,
       sessionSet: sessionAllowedDomains,
@@ -290,32 +311,36 @@ export default function (pi: ExtensionAPI) {
   ) {
     const cwd = ctx.cwd ?? localCwd
     const config = loadConfig(cwd)
-    const absolutePath = resolveSandboxPath(cwd, rawPath)
-    const filesystem = config.filesystem ?? {}
-
-    if (access === 'write' && pathMatchesAny(absolutePath, filesystem.denyWrite, cwd)) {
-      ctx.ui.notify(`Sandbox hard-blocked write to ${rawPath} because it matches denyWrite`, 'error')
-      return false
-    }
-
     const sessionSet = access === 'read' ? sessionAllowedReadPaths : sessionAllowedWritePaths
     const allowKey = access === 'read' ? ALLOW_READ_KEY : ALLOW_WRITE_KEY
-    const allowedPatterns = filesystem[allowKey] ?? []
-    const alreadyAllowed =
-      sessionSet.has(absolutePath) || pathMatchesAny(absolutePath, allowedPatterns, cwd)
-    if (alreadyAllowed) return true
+    const decision = decideFilesystemAccess({
+      path: rawPath,
+      access,
+      cwd,
+      filesystem: config.filesystem,
+      sessionPaths: sessionSet,
+      protectedRoots: protectedRoots(cwd),
+    })
+
+    if (decision.status === 'denied') {
+      const message = decision.reason === 'protected-sandbox-path'
+        ? `Sandbox hard-blocked write to protected sandbox path: ${rawPath}`
+        : `Sandbox hard-blocked write to ${rawPath} because it matches denyWrite`
+      ctx.ui.notify(message, 'error')
+      return false
+    }
+    if (decision.status === 'allowed') return true
 
     const prompt = `Sandbox blocked ${access} path: ${rawPath}`
-    const choice = await askPermission(ctx, prompt)
 
-    return applyGrant({
+    return approvalBroker.request({
       ctx,
-      choice,
+      prompt,
       cwd,
-      values: [absolutePath],
+      values: [decision.grantPath],
       sessionSet,
       persist: (target, values) => updateFilesystemAllowList(target, allowKey, values),
-      successMessage: (target) => `Sandbox allowed ${access} ${absolutePath} in ${target}`,
+      successMessage: (target) => `Sandbox allowed ${access} ${decision.grantPath} in ${target}`,
     })
   }
 
@@ -323,87 +348,97 @@ export default function (pi: ExtensionAPI) {
     ...localBash,
     label: 'bash (sandboxed)',
     async execute(id, params, signal, onUpdate, ctx) {
-      if (!sandboxEnabled || !sandboxInitialized) {
+      const initialAccess = runtimeLifecycle.access()
+      if (initialAccess.kind === 'local') {
         return localBash.execute(id, params, signal, onUpdate)
       }
-
-      const command = typeof params.command === 'string' ? params.command : ''
-      const allowed = await promptForDomains(ctx, extractCommandDomains(command))
-      if (!allowed) {
+      if (initialAccess.kind === 'blocked') {
         return {
-          content: [{ type: 'text', text: NETWORK_BLOCK_REASON }],
+          content: [{ type: 'text', text: initialAccess.reason }],
           isError: true,
         }
       }
 
-      return (sandboxedBash ?? localBash).execute(id, params, signal, onUpdate)
+      const command = typeof params.command === 'string' ? params.command : ''
+      const gated = await gateApproval(
+        promptForDomains(ctx, extractCommandDomains(command)),
+        NETWORK_BLOCK_REASON,
+      )
+      if (gated.status === 'blocked') {
+        return { content: [{ type: 'text', text: gated.reason }], isError: true }
+      }
+
+      return gated.executor.execute(id, params, signal, onUpdate)
     },
   })
 
   pi.on('user_bash', async (event, ctx) => {
-    if (!sandboxEnabled || !sandboxInitialized) return
-    const allowed = await promptForDomains(ctx, extractCommandDomains(event.command))
-    if (!allowed) {
-      return {
-        result: {
-          output: NETWORK_BLOCK_REASON,
-          exitCode: 1,
-          cancelled: false,
-          truncated: false,
-        },
-      }
-    }
+    const initialAccess = runtimeLifecycle.access()
+    if (initialAccess.kind === 'local') return
+    if (initialAccess.kind === 'blocked') return blockedBashResult(initialAccess.reason)
+
+    const gated = await gateApproval(
+      promptForDomains(ctx, extractCommandDomains(event.command)),
+      NETWORK_BLOCK_REASON,
+    )
+    if (gated.status === 'blocked') return blockedBashResult(gated.reason)
     return { operations: createSandboxedBashOps() }
   })
 
   pi.on('tool_call', async (event, ctx) => {
-    if (!sandboxEnabled || !sandboxInitialized) return
+    const initialAccess = runtimeLifecycle.access()
+    if (initialAccess.kind === 'local') return
+    if (initialAccess.kind === 'blocked') {
+      return { block: true, reason: initialAccess.reason }
+    }
+
+    let pending: { approval: Promise<boolean>; denyReason: string } | undefined
 
     if (WEB_FETCH_TOOLS.has(event.toolName)) {
-      const allowed = await promptForDomains(ctx, extractFetchDomains(event.input))
-      if (!allowed) return { block: true, reason: NETWORK_BLOCK_REASON }
-      return
+      pending = {
+        approval: promptForDomains(ctx, extractFetchDomains(event.input)),
+        denyReason: NETWORK_BLOCK_REASON,
+      }
+    } else {
+      const access = PATH_TOOL_ACCESS[event.toolName]
+      const targetPath = access ? extractToolPath(event.input) : undefined
+      if (access && targetPath) {
+        pending = {
+          approval: promptForPath(ctx, targetPath, access),
+          denyReason: FILESYSTEM_BLOCK_REASON,
+        }
+      }
     }
 
-    if (event.toolName === READ_TOOL) {
-      const targetPath = extractToolPath(event.input)
-      if (!targetPath) return
-      const allowed = await promptForPath(ctx, targetPath, 'read')
-      if (!allowed) return { block: true, reason: FILESYSTEM_BLOCK_REASON }
-      return
-    }
+    if (!pending) return
 
-    if (WRITE_TOOLS.has(event.toolName)) {
-      const targetPath = extractToolPath(event.input)
-      if (!targetPath) return
-      const allowed = await promptForPath(ctx, targetPath, 'write')
-      if (!allowed) return { block: true, reason: FILESYSTEM_BLOCK_REASON }
-    }
+    const gated = await gateApproval(pending.approval, pending.denyReason)
+    if (gated.status === 'blocked') return { block: true, reason: gated.reason }
   })
 
   pi.on('session_start', async (_event, ctx) => {
     const noSandbox = pi.getFlag(NO_SANDBOX_FLAG) as boolean
 
     if (noSandbox) {
-      disableSandbox(ctx, 'Sandbox disabled via --no-sandbox', 'warning')
+      disableSandbox(ctx, 'Sandbox disabled via --no-sandbox', 'warning', true)
       return
     }
 
     const config = loadConfig(ctx.cwd)
 
     if (!config.enabled) {
-      disableSandbox(ctx, 'Sandbox disabled via config', 'info')
+      disableSandbox(ctx, 'Sandbox disabled via config', 'info', true)
       return
     }
 
     const platform = process.platform
     if (platform !== 'darwin' && platform !== 'linux') {
-      disableSandbox(ctx, `Sandbox not supported on ${platform}`, 'warning')
+      disableSandbox(ctx, `Sandbox not supported on ${platform}`, 'warning', true)
       return
     }
 
     try {
-      await initializeSandbox(config)
+      await runtimeLifecycle.initialize({ config, cwd: ctx.cwd })
 
       if (allowsAllDomains(config)) {
         ctx.ui.notify(
@@ -418,32 +453,29 @@ export default function (pi: ExtensionAPI) {
       )
       ctx.ui.notify('Sandbox initialized', 'info')
     } catch (err) {
-      disableSandbox(
-        ctx,
-        `Sandbox initialization failed: ${err instanceof Error ? err.message : err}`,
-        'error',
-      )
+      clearSandboxStatus(ctx)
+      if (runtimeLifecycle.state !== 'disabled') {
+        ctx.ui.notify(
+          `Sandbox initialization failed: ${err instanceof Error ? err.message : err}`,
+          'error',
+        )
+      }
     }
   })
 
   pi.on('session_shutdown', async (_event, ctx) => {
-    if (sandboxInitialized) {
-      try {
-        await SandboxManager.reset()
-      } catch {
-        // Ignore cleanup errors
-      }
+    try {
+      await runtimeLifecycle.shutdown()
+    } catch {
+      // Ignore cleanup errors
     }
-    sandboxInitialized = false
-    sandboxEnabled = false
-    sandboxedBash = undefined
     clearSandboxStatus(ctx)
   })
 
   pi.registerCommand(EXTENSION_NAME, {
     description: 'Show sandbox configuration',
     handler: async (_args, ctx) => {
-      if (!sandboxEnabled) {
+      if (runtimeLifecycle.state === 'disabled') {
         ctx.ui.notify('Sandbox is disabled', 'info')
         return
       }

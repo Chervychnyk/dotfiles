@@ -1,9 +1,21 @@
 import { Key, matchesKey, truncateToWidth } from '@earendil-works/pi-tui'
-import {
-  PERMISSION_CHOICES,
-  parsePermissionChoice,
-  type PermissionChoice,
-} from './policy.ts'
+const PERMISSION_CHOICES = [
+  { key: 'a', value: 'abort', label: 'abort' },
+  { key: 's', value: 'session', label: 'session' },
+  { key: 'p', value: 'project', label: 'project' },
+  { key: 'g', value: 'global', label: 'global' },
+] as const
+
+export type PermissionChoice = (typeof PERMISSION_CHOICES)[number]['value']
+
+const CHOICE_LABELS = PERMISSION_CHOICES.map((choice) => `[${choice.key}] ${choice.label}`)
+const CHOICE_KEYS = PERMISSION_CHOICES.map((choice) => choice.key).join('/')
+
+function parsePermissionChoice(answer: string | undefined): PermissionChoice {
+  const normalized = answer?.trim().toLowerCase()
+  const key = normalized?.startsWith('[') ? normalized[1] : normalized?.[0]
+  return PERMISSION_CHOICES.find((choice) => choice.key === key)?.value ?? 'abort'
+}
 
 export type SandboxUiLevel = 'info' | 'warning' | 'error'
 export type SandboxTheme = {
@@ -44,13 +56,12 @@ async function inlineChoice(ctx: SandboxCtx, title: string) {
   return ctx.ui.custom<string | undefined>((tui, theme, _keybindings, done) => {
     let selected = 0
     const renderLine = () =>
-      choices
-        .map((choice, index) => {
-          const text = `[${choice.key}] ${choice.label}`
-          return index === selected
+      CHOICE_LABELS
+        .map((text, index) =>
+          index === selected
             ? theme.bg('selectedBg', theme.fg('accent', text))
-            : theme.fg('muted', text)
-        })
+            : theme.fg('muted', text),
+        )
         .join('  ')
 
     return {
@@ -97,13 +108,8 @@ export async function askPermission(
   const answer =
     (await inlineChoice(ctx, prompt)) ??
     (ctx.ui.input
-      ? await ctx.ui.input(`${prompt}\n[a] abort  [s] session  [p] project  [g] global`, 'a/s/p/g')
-      : await ctx.ui.select!(prompt, [
-          '[a] abort',
-          '[s] session',
-          '[p] project',
-          '[g] global',
-        ]))
+      ? await ctx.ui.input(`${prompt}\n${CHOICE_LABELS.join('  ')}`, CHOICE_KEYS)
+      : await ctx.ui.select!(prompt, [...CHOICE_LABELS]))
 
   return parsePermissionChoice(answer)
 }

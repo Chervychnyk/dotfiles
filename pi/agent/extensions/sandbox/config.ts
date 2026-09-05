@@ -2,10 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import type { SandboxRuntimeConfig } from '@anthropic-ai/sandbox-runtime'
 import { loadExtensionSettings } from '../__lib/extension-settings.ts'
-
-export const EXTENSION_NAME = 'sandbox'
-export const ALLOW_READ_KEY = 'allowRead'
-export const ALLOW_WRITE_KEY = 'allowWrite'
+import { SECRET_DENY_WRITE_GLOBS } from './policy.ts'
 
 export interface SandboxConfig extends SandboxRuntimeConfig {
   enabled?: boolean
@@ -35,9 +32,13 @@ export const DEFAULT_CONFIG: SandboxConfig = {
     denyRead: ['~/.ssh', '~/.aws', '~/.gnupg'],
     allowRead: ['.'],
     allowWrite: ['.', '/tmp'],
-    denyWrite: ['.env', '.env.*', '*.pem', '*.key'],
+    denyWrite: [...SECRET_DENY_WRITE_GLOBS],
   },
 }
+
+export const EXTENSION_NAME = 'sandbox'
+export const ALLOW_READ_KEY = 'allowRead'
+export const ALLOW_WRITE_KEY = 'allowWrite'
 
 export function deepMerge(
   base: SandboxConfig,
@@ -81,24 +82,30 @@ export function loadConfig(cwd: string): SandboxConfig {
   return deepMerge(DEFAULT_CONFIG, settings)
 }
 
-export function updateAllowedDomains(filePath: string, domains: string[]) {
-  let existing: Partial<SandboxConfig> = {}
-  if (existsSync(filePath)) {
-    existing = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<SandboxConfig>
-  }
+function mergeSorted(current: string[] | undefined, additions: string[]) {
+  return [...new Set([...(current ?? []), ...additions])].sort()
+}
 
-  const current = existing.network?.allowedDomains ?? []
-  const allowedDomains = [...new Set([...current, ...domains])].sort()
-  const updated = {
+function updateSettingsFile(
+  filePath: string,
+  mutate: (existing: Partial<SandboxConfig>) => Partial<SandboxConfig>,
+) {
+  const existing: Partial<SandboxConfig> = existsSync(filePath)
+    ? (JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<SandboxConfig>)
+    : {}
+
+  mkdirSync(path.dirname(filePath), { recursive: true })
+  writeFileSync(filePath, `${JSON.stringify(mutate(existing), null, 2)}\n`, 'utf-8')
+}
+
+export function updateAllowedDomains(filePath: string, domains: string[]) {
+  updateSettingsFile(filePath, (existing) => ({
     ...existing,
     network: {
       ...(existing.network ?? {}),
-      allowedDomains,
+      allowedDomains: mergeSorted(existing.network?.allowedDomains, domains),
     },
-  }
-
-  mkdirSync(path.dirname(filePath), { recursive: true })
-  writeFileSync(filePath, `${JSON.stringify(updated, null, 2)}\n`, 'utf-8')
+  }))
 }
 
 export function updateFilesystemAllowList(
@@ -106,21 +113,11 @@ export function updateFilesystemAllowList(
   key: typeof ALLOW_READ_KEY | typeof ALLOW_WRITE_KEY,
   paths: string[],
 ) {
-  let existing: Partial<SandboxConfig> = {}
-  if (existsSync(filePath)) {
-    existing = JSON.parse(readFileSync(filePath, 'utf-8')) as Partial<SandboxConfig>
-  }
-
-  const filesystem = existing.filesystem ?? {}
-  const current = filesystem[key] ?? []
-  const updated = {
+  updateSettingsFile(filePath, (existing) => ({
     ...existing,
     filesystem: {
-      ...filesystem,
-      [key]: [...new Set([...current, ...paths])].sort(),
+      ...(existing.filesystem ?? {}),
+      [key]: mergeSorted(existing.filesystem?.[key], paths),
     },
-  }
-
-  mkdirSync(path.dirname(filePath), { recursive: true })
-  writeFileSync(filePath, `${JSON.stringify(updated, null, 2)}\n`, 'utf-8')
+  }))
 }
