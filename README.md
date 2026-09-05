@@ -7,8 +7,8 @@ Personal macOS development environment bootstrap and configuration.
 - shell: zsh, zim, aliases, fzf, atuin, starship
 - editors: Neovim, Vim, Zed
 - terminals: Ghostty, WezTerm, tmux, Zellij
-- macOS UX: AeroSpace, SketchyBar, `.macos`
-- tooling: mise, hk, fnox, k9s, yazi, PostgreSQL CLI config, Pi agent config
+- macOS UX: AeroSpace, SketchyBar, declarative mise defaults, residual `.macos`
+- tooling: mise, hk, fnox, k9s, yazi, worktrunk, PostgreSQL CLI config, Pi agent config
 - packages/apps: `Brewfile`
 
 ## Quick start on a new Mac
@@ -25,6 +25,8 @@ For mostly non-interactive setup:
 ```bash
 ./setup.sh --yes
 ```
+
+`--yes` is forwarded to `mise bootstrap` and also accepts defaults in the post-bootstrap script. It applies `.macos` by default, matching the old setup behavior. Use `./setup.sh --yes --no-macos` to keep the run non-interactive but skip macOS defaults.
 
 After setup, run:
 
@@ -60,19 +62,66 @@ npx skills@latest update -g
 
 ## What `setup.sh` does
 
+`setup.sh` is now a small first-stage installer. It:
+
+- installs Xcode Command Line Tools if needed
 - installs Homebrew if needed
-- installs formulae/casks from `Brewfile`
-- installs `mise`, `hk`, and `fnox` for reproducible tools, hooks, and secrets workflows
-- installs TagLib 1.13.1 from the `$USER/versions` Homebrew tap
 - writes `~/.config/shell.local.env` with detected `HOMEBREW_PREFIX`
-- creates symlinks for tracked config files
-- installs Zim and NVM if missing
+- installs `mise` if needed
+- delegates the rest of the machine convergence to `mise bootstrap -C "$DOTFILES" --skip macos-defaults`
+
+`setup.sh` skips mise's top-level macOS defaults phase so the existing one-time macOS prompt/`--macos`/`--no-macos` semantics stay intact. If enabled, `scripts/bootstrap-post.sh` first runs `mise bootstrap macos defaults apply -C "$DOTFILES" --yes`, then applies the residual `.macos` script.
+
+`mise.toml` owns tracked dotfile symlinks and scalar non-privileged macOS defaults. The `bootstrap` task runs `scripts/bootstrap-post.sh`, which preserves the custom setup that is not yet declarative:
+
+- installs formulae/casks from `Brewfile`
+- installs TagLib 1.13.1 from the `$USER/versions` Homebrew tap
+- configures Git user name/email and the defensive global empty `core.hooksPath`
+- builds the `bat` theme cache when `bat` is installed
+- installs Zim if missing
 - prepares common local directories (`~/projects`, `~/code`, `~/work`)
 - creates local override files if missing:
   - `~/.zshrc.local`
   - `~/.aliases.local`
   - `~/.env.secrets`
-- optionally applies macOS defaults from `.macos`
+- optionally applies declarative macOS defaults from `mise.toml` and residual defaults from `.macos`
+
+## mise bootstrap checks
+
+Preview what mise would change without mutating files:
+
+```bash
+mise bootstrap -C ~/dotfiles --dry-run
+```
+
+Check managed dotfile/package/tool/defaults status:
+
+```bash
+mise bootstrap -C ~/dotfiles status
+mise bootstrap -C ~/dotfiles status --missing
+mise bootstrap -C ~/dotfiles dotfiles status
+mise bootstrap macos defaults status -C ~/dotfiles
+```
+
+Direct `mise bootstrap -C ~/dotfiles` applies declarative macOS defaults during its normal `macos-defaults` phase, before the `bootstrap` task asks whether to run the residual `.macos` script. To preview or run the setup path without live macOS defaults changes, skip that phase:
+
+```bash
+mise bootstrap -C ~/dotfiles --skip macos-defaults --dry-run
+```
+
+To apply only declarative macOS defaults:
+
+```bash
+mise bootstrap macos defaults apply -C ~/dotfiles --yes
+```
+
+Existing files that are not already the expected symlinks will show as conflicts. Review them before overwriting. To intentionally adopt the repo version for conflicting dotfiles, run:
+
+```bash
+mise bootstrap -C ~/dotfiles --force-dotfiles
+```
+
+`setup.sh` does not pass `--force-dotfiles`; first runs should be reviewed rather than overwriting local files automatically.
 
 ## Migration checklist
 
@@ -139,6 +188,108 @@ These are intentionally **not** stored in this repo:
 - SketchyBar items render correctly
 - k9s opens without cluster-specific junk in config
 
+## Git worktrees (worktrunk)
+
+[worktrunk](https://worktrunk.dev) wraps `git worktree` so a branch and its
+working directory are the same thing. It is installed from the `Brewfile`; the
+user config lives in `.config/worktrunk/config.toml` and is symlinked to
+`~/.config/worktrunk`.
+
+Shell integration (the `wt` function that can `cd`, plus completions) is
+installed once per machine:
+
+```bash
+wt config shell install
+```
+
+It appends a single line to `~/.zshrc`, which is symlinked here — so the line
+lands in this repo and travels with it.
+
+### Daily commands
+
+```bash
+wt switch -c feat/thing   # create branch + worktree, cd into it
+wt switch                 # interactive picker with diff preview
+wt switch ^               # back to the default branch
+wt switch -               # previous worktree
+wt list                   # all worktrees with status
+wt step commit            # stage + LLM-written Conventional Commit message
+wt merge                  # squash, rebase, merge, then remove the worktree
+wt remove                 # drop a worktree and its branch
+```
+
+### Layout
+
+Worktrees are created at `<repo>/.worktrees/<branch>`. `.worktrees/` is ignored
+globally via `.config/git/ignore`, so no per-repo `.gitignore` edits are needed,
+and `$PROJECT_PATHS` / the `proj()` picker still show one entry per project.
+
+### Per-project config
+
+Each repo can commit its own `.config/wt.toml`. This is where setup that a fresh
+worktree needs belongs — a new worktree has no `node_modules`, no `.env`, no
+compiled assets:
+
+```toml
+# .config/wt.toml
+pre-start = "npm ci"          # blocking: runs before the worktree is usable
+post-start = "npm run dev"    # background: dev server, watchers
+pre-merge = "npm test"        # blocking: failure aborts the merge
+
+[step.copy-ignored]
+exclude = [".cache/", "node_modules/"]   # gitignored files to skip copying in
+```
+
+Project hooks require approval on first run; approvals are stored per machine in
+`~/.config/worktrunk/approvals.toml` (gitignored here).
+
+Note: global `core.hooksPath` points at an empty directory (see
+`scripts/bootstrap-post.sh`), so repo-local git hooks never fire. worktrunk's
+`pre-commit` hook is separate from git hooks and is the practical place to run
+formatters and linters.
+
+### Parallel agents
+
+The reason worktrunk exists — each agent gets its own directory, so they do not
+fight over the working tree:
+
+```bash
+wt switch -x claude -c feat/auth -- 'Add user authentication'
+wt switch -x claude -c fix/pagination -- 'Fix the pagination bug'
+```
+
+### herdr plugin
+
+[herdr-worktrunk](https://github.com/devashish2203/herdr-worktrunk) drives all of
+this from inside herdr, so a worktree arrives as a workspace instead of a
+directory you have to go find:
+
+```bash
+herdr plugin install devashish2203/herdr-worktrunk
+```
+
+Keys are bound in `.config/herdr/config.toml`:
+
+| Key | Action |
+| --- | --- |
+| `prefix+shift+g` | `worktrunk.open` — fzf picker: switch to or create a worktree |
+| `prefix+shift+c` | `worktrunk.open-current` — same, branching off the current branch |
+| `prefix+shift+m` | `worktrunk.merge` — merge this worktree, then remove it |
+| `prefix+ctrl+d` | `worktrunk.remove` — remove this worktree, after a confirm |
+
+The plugin's own README suggests `prefix+shift+d` for remove; that is
+`close_workspace` in this config, so remove moved to `prefix+ctrl+d`.
+
+Plugin settings are tracked here at
+`.config/herdr/plugins/config/worktrunk/config.toml` — the picker is a popup
+sized like the lazygit and yazi popups, worktrees open as workspaces, and merge
+flags are left to the worktrunk config. herdr reads that file on every picker
+invocation, so edits take effect without a reload.
+
+Plugin *code* stays untracked (`.config/herdr/plugins/*` is gitignored, with
+`config/` negated back in), so the install command above is part of setting up a
+new machine.
+
 ## Local overrides
 
 Use these files for machine-specific or secret configuration:
@@ -195,9 +346,9 @@ _.fnox-env = { tools = true }
 Legacy formulae are stored in this repo under `homebrew/Formula/` so they can be copied into a tap later or installed directly by `setup.sh`:
 
 - `homebrew/Formula/openssl@1.1.rb`
-- `homebrew/Formula/taglib@1.13.1.rb`
+- `homebrew/Formula/taglib.rb`
 
-`setup.sh` copies these files into a local Homebrew tap named `$USER/versions`, installs from that tap, and pins `taglib@1.13.1`.
+`scripts/bootstrap-post.sh` copies these files into a local Homebrew tap named `$USER/versions`, installs from that tap, and pins `taglib@1.13.1` during `mise bootstrap`.
 `~/.zshrc` also prefers `TAGLIB_DIR` from `taglib@1.13.1` when available.
 
 ## Colima / Docker on the new machine
