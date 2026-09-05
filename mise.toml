@@ -1,0 +1,130 @@
+[settings]
+dotfiles.root = "."
+
+[dotfiles]
+"~/.zshrc" = { source = ".zshrc" }
+"~/.zprofile" = { source = ".zprofile" }
+"~/.aliases" = { source = ".aliases" }
+"~/.zimrc" = { source = ".zimrc" }
+"~/.fzf.zsh" = { source = ".fzf.zsh" }
+"~/.vimrc" = { source = ".vimrc" }
+"~/.config/nvim" = { source = ".config/nvim" }
+"~/.wezterm.lua" = { source = ".wezterm.lua" }
+"~/.config/wezterm" = { source = "wezterm" }
+"~/.config/ghostty" = { source = "ghostty" }
+"~/.tmux.conf" = { source = ".tmux.conf" }
+"~/.config/herdr" = { source = ".config/herdr" }
+"~/.config/zellij" = { source = "zellij" }
+"~/.config/starship.toml" = { source = ".config/starship.toml" }
+"~/.config/atuin" = { source = ".config/atuin" }
+"~/.config/aerospace" = { source = ".config/aerospace" }
+"~/.config/sketchybar" = { source = ".config/sketchybar" }
+"~/.config/yazi" = { source = ".config/yazi" }
+"~/.config/zed" = { source = ".config/zed" }
+"~/.config/worktrunk" = { source = ".config/worktrunk" }
+"~/.config/git/ignore" = { source = ".config/git/ignore" }
+"~/.config/opensessions" = { source = ".config/opensessions" }
+"~/.config/k9s" = { source = "k9s" }
+"~/.config/bat" = { source = "bat" }
+"~/.psqlrc" = { source = ".psqlrc" }
+"~/.macos" = { source = ".macos" }
+"~/.pi" = { source = "pi" }
+"~/.claude/statusline.sh" = { source = "claude/statusline.sh" }
+
+[bootstrap.macos.defaults.NSGlobalDomain]
+NSDocumentSaveNewDocumentsToCloud = false
+AppleLocale = "en_US@currency=UAH"
+AppleMeasurementUnits = "Centimeters"
+AppleMetricUnits = true
+NSAutomaticCapitalizationEnabled = false
+NSAutomaticSpellingCorrectionEnabled = false
+NSAutomaticQuoteSubstitutionEnabled = false
+NSAutomaticDashSubstitutionEnabled = false
+ApplePressAndHoldEnabled = false
+KeyRepeat = 2
+InitialKeyRepeat = 15
+NSAutomaticWindowAnimationsEnabled = false
+NSScrollAnimationEnabled = false
+QLPanelAnimationDuration = 0.0
+NSDocumentRevisionsWindowTransformAnimation = false
+NSToolbarFullScreenAnimationDuration = 0.0
+NSBrowserColumnAnimationSpeedMultiplier = 0.0
+AppleShowAllExtensions = true
+AppleFontSmoothing = 1
+WebKitDeveloperExtras = true
+
+[bootstrap.macos.defaults."com.apple.Accessibility"]
+ReduceMotionEnabled = true
+
+[bootstrap.macos.defaults."com.apple.screensaver"]
+askForPassword = 1
+askForPasswordDelay = 0
+
+[bootstrap.macos.defaults."com.apple.screencapture"]
+type = "png"
+disable-shadow = true
+
+[bootstrap.macos.defaults."com.apple.finder"]
+QuitMenuItem = true
+DisableAllAnimations = true
+AppleShowAllFiles = true
+ShowStatusBar = true
+ShowPathbar = true
+_FXShowPosixPathInTitle = true
+_FXSortFoldersFirst = true
+FXDefaultSearchScope = "SCcf"
+FXEnableExtensionChangeWarning = false
+FXPreferredViewStyle = "Nlsv"
+WarnOnEmptyTrash = false
+ShowExternalHardDrivesOnDesktop = true
+ShowHardDrivesOnDesktop = true
+ShowMountedServersOnDesktop = true
+ShowRemovableMediaOnDesktop = true
+NewWindowTarget = "PfHm"
+OpenWindowForNewRemovableDisk = true
+
+[bootstrap.macos.defaults."com.apple.desktopservices"]
+DSDontWriteNetworkStores = true
+DSDontWriteUSBStores = true
+
+[bootstrap.macos.defaults."com.apple.frameworks.diskimages"]
+auto-open-ro-root = true
+auto-open-rw-root = true
+
+[bootstrap.macos.defaults."com.apple.dock"]
+mouse-over-hilite-stack = true
+tilesize = 42
+mineffect = "scale"
+minimize-to-application = true
+show-process-indicators = true
+launchanim = false
+mru-spaces = false
+autohide-delay = 0.0
+autohide-time-modifier = 0.0
+autohide = true
+showhidden = true
+no-bouncing = true
+show-recents = false
+springboard-show-duration = 0.0
+springboard-hide-duration = 0.0
+springboard-page-duration = 0.0
+
+[bootstrap.macos.defaults."com.apple.iCal"]
+"first day of week" = 1
+
+[bootstrap.macos.defaults."com.apple.ActivityMonitor"]
+OpenMainWindow = true
+IconType = 5
+ShowCategory = 0
+SortColumn = "CPUUsage"
+SortDirection = 0
+
+[tools]
+java = "temurin-17"
+node = "lts"
+pi = "latest"
+uv = "latest"
+
+[tasks.bootstrap]
+description = "Run dotfiles post-bootstrap setup"
+run = "./scripts/bootstrap-post.sh"

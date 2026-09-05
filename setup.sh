@@ -4,7 +4,6 @@ set -euo pipefail
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NONINTERACTIVE=false
 APPLY_MACOS="ask"
-GIT_NAME_DEFAULT="Artem Chervychnyk"
 
 for arg in "$@"; do
   case "$arg" in
@@ -26,53 +25,8 @@ for arg in "$@"; do
   esac
 done
 
-info()    { printf "\033[0;34m[info]\033[0m  %s\n" "$1"; }
-success() { printf "\033[0;32m[ok]\033[0m    %s\n" "$1"; }
-warn()    { printf "\033[0;33m[warn]\033[0m  %s\n" "$1"; }
-
-prompt_with_default() {
-  local prompt="$1" default_value="$2" result
-
-  if [[ "$NONINTERACTIVE" == true ]]; then
-    printf '%s' "$default_value"
-    return 0
-  fi
-
-  read -rp "$prompt [$default_value]: " result
-  printf '%s' "${result:-$default_value}"
-}
-
-confirm() {
-  local prompt="$1" default="${2:-N}" reply
-
-  if [[ "$NONINTERACTIVE" == true ]]; then
-    [[ "$default" =~ ^[Yy]$ ]]
-    return
-  fi
-
-  read -rp "$prompt [$default] " reply
-  reply="${reply:-$default}"
-  [[ "$reply" =~ ^[Yy]$ ]]
-}
-
-link_file() {
-  local src="$1" dst="$2"
-  local dst_dir
-  dst_dir=$(dirname "$dst")
-
-  [[ -d "$dst_dir" ]] || mkdir -p "$dst_dir"
-
-  if [[ -e "$dst" || -L "$dst" ]]; then
-    if [[ -L "$dst" && "$(readlink "$dst")" == "$src" ]]; then
-      return 0
-    fi
-    mv "$dst" "${dst}.backup.$(date +%s)"
-    warn "Backed up existing $dst"
-  fi
-
-  ln -s "$src" "$dst"
-  success "Linked $dst → $src"
-}
+# shellcheck source=scripts/lib/log.sh
+source "$DOTFILES/scripts/lib/log.sh"
 
 brew_shellenv() {
   if [[ -x "/opt/homebrew/bin/brew" ]]; then
@@ -116,138 +70,24 @@ mkdir -p "$HOME/.config"
 printf 'export HOMEBREW_PREFIX="%s"\n' "$(brew --prefix)" > "$HOME/.config/shell.local.env"
 success "Wrote $HOME/.config/shell.local.env"
 
-info "Updating Homebrew and installing packages..."
-brew update
-brew bundle --file="$DOTFILES/Brewfile"
-
-info "Installing custom versioned formulae from dotfiles..."
-LOCAL_TAP="$(brew --repository)/Library/Taps/$USER/homebrew-versions"
-mkdir -p "$LOCAL_TAP/Formula"
-cp "$DOTFILES/homebrew/Formula/openssl@1.1.rb" "$LOCAL_TAP/Formula/openssl@1.1.rb"
-cp "$DOTFILES/homebrew/Formula/taglib.rb" "$LOCAL_TAP/Formula/taglib.rb"
-
-if brew list --versions openssl@1.1 >/dev/null 2>&1; then
-  success "openssl@1.1 already installed"
+if ! command -v mise &>/dev/null; then
+  info "Installing mise..."
+  brew install mise
+  success "mise installed"
 else
-  brew install "$USER/versions/openssl@1.1"
-  success "Installed openssl@1.1"
+  success "mise already installed"
 fi
 
-if brew list --versions taglib >/dev/null 2>&1; then
-  success "taglib@1.13.1 already installed"
-else
-  brew install "$USER/versions/taglib"
-  success "Installed taglib@1.13.1"
-fi
-brew pin taglib >/dev/null 2>&1 || true
-
-brew cleanup
-success "Packages installed"
-
-info "Configuring Git..."
-current_name=$(git config --global user.name 2>/dev/null || echo "")
-current_email=$(git config --global user.email 2>/dev/null || echo "")
-
-git_name=$(prompt_with_default "Git user.name" "${current_name:-$GIT_NAME_DEFAULT}")
-git_email=$(prompt_with_default "Git user.email" "${current_email:-}")
-
-if [[ -n "$git_email" ]]; then
-  git config --global user.email "$git_email"
-else
-  warn "No email provided — skipping git email config"
-fi
-git config --global user.name "$git_name"
-
-# Defensive default after the recent hook compromise: ignore per-repository hooks
-# unless explicitly overridden for a trusted project.
-mkdir -p "$HOME/.config/git/empty-hooks"
-git config --global core.hooksPath "$HOME/.config/git/empty-hooks"
-success "Git configured ($git_name${git_email:+ <$git_email>}) with global empty hooksPath"
-
-info "Creating symlinks..."
-
-link_file "$DOTFILES/.zshrc"        "$HOME/.zshrc"
-link_file "$DOTFILES/.zprofile"     "$HOME/.zprofile"
-link_file "$DOTFILES/.aliases"      "$HOME/.aliases"
-link_file "$DOTFILES/.zimrc"        "$HOME/.zimrc"
-link_file "$DOTFILES/.fzf.zsh"      "$HOME/.fzf.zsh"
-
-link_file "$DOTFILES/.vimrc"        "$HOME/.vimrc"
-link_file "$DOTFILES/.config/nvim"  "$HOME/.config/nvim"
-
-link_file "$DOTFILES/.wezterm.lua"  "$HOME/.wezterm.lua"
-link_file "$DOTFILES/wezterm"       "$HOME/.config/wezterm"
-link_file "$DOTFILES/ghostty"       "$HOME/.config/ghostty"
-
-link_file "$DOTFILES/.tmux.conf"    "$HOME/.tmux.conf"
-link_file "$DOTFILES/.config/herdr" "$HOME/.config/herdr"
-link_file "$DOTFILES/zellij"        "$HOME/.config/zellij"
-
-link_file "$DOTFILES/.config/starship.toml" "$HOME/.config/starship.toml"
-link_file "$DOTFILES/.config/atuin"         "$HOME/.config/atuin"
-link_file "$DOTFILES/.config/aerospace"     "$HOME/.config/aerospace"
-link_file "$DOTFILES/.config/sketchybar"    "$HOME/.config/sketchybar"
-link_file "$DOTFILES/.config/yazi"          "$HOME/.config/yazi"
-link_file "$DOTFILES/.config/zed"           "$HOME/.config/zed"
-link_file "$DOTFILES/.config/opensessions"  "$HOME/.config/opensessions"
-link_file "$DOTFILES/k9s"                   "$HOME/.config/k9s"
-link_file "$DOTFILES/bat"                   "$HOME/.config/bat"
-
-link_file "$DOTFILES/.psqlrc"       "$HOME/.psqlrc"
-link_file "$DOTFILES/.macos"        "$HOME/.macos"
-link_file "$DOTFILES/pi"            "$HOME/.pi"
-link_file "$DOTFILES/claude/statusline.sh" "$HOME/.claude/statusline.sh"
-
-success "All symlinks created"
-
-if command -v bat &>/dev/null; then
-  info "Building bat theme cache..."
-  bat cache --build >/dev/null
-  success "bat theme cache built"
+mise_args=(bootstrap -C "$DOTFILES" --skip macos-defaults)
+if [[ "$NONINTERACTIVE" == true ]]; then
+  mise_args+=(--yes)
 fi
 
-if [[ ! -d "$HOME/.zim" ]]; then
-  info "Installing Zim..."
-  curl -fsSL --create-dirs -o "$HOME/.zim/zimfw.zsh" \
-    https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
-  zsh -c "source $HOME/.zim/zimfw.zsh init && zimfw install"
-  success "Zim installed"
-else
-  success "Zim already installed"
-fi
-
-
-mkdir -p "$HOME/projects" "$HOME/code" "$HOME/work"
-success "Project directories ready"
-
-mkdir -p "$HOME/.zsh/functions" "$HOME/.config/k9s"
-touch "$HOME/.zshrc.local" "$HOME/.aliases.local" "$HOME/.env.secrets"
-chmod 600 "$HOME/.env.secrets"
-success "Local override files ensured"
-
-case "$APPLY_MACOS" in
-  yes)
-    should_apply=true
-    ;;
-  no)
-    should_apply=false
-    ;;
-  *)
-    if confirm "Apply macOS system preferences from .macos?" "N"; then
-      should_apply=true
-    else
-      should_apply=false
-    fi
-    ;;
-esac
-
-if [[ "$should_apply" == true ]]; then
-  info "Applying macOS preferences..."
-  source "$DOTFILES/.macos"
-  success "macOS preferences applied (some may require restart)"
-else
-  warn "Skipped macOS preferences"
-fi
+info "Running mise bootstrap..."
+DOTFILES="$DOTFILES" \
+DOTFILES_NONINTERACTIVE="$NONINTERACTIVE" \
+DOTFILES_APPLY_MACOS="$APPLY_MACOS" \
+  mise "${mise_args[@]}"
 
 echo ""
-success "🎉 Setup complete! See README.md for post-install and migration checklist."
+success "Setup complete! See README.md for post-install and migration checklist."
