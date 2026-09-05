@@ -41,10 +41,6 @@ type FooterSegment = {
   compact?: string
 }
 
-function textWidth(text: string): number {
-  return visibleWidth(text)
-}
-
 function joinSegments(segments: FooterSegment[], separator: string, compact = false): string {
   return segments
     .map((segment) => (compact && segment.compact ? segment.compact : segment.full))
@@ -54,10 +50,10 @@ function joinSegments(segments: FooterSegment[], separator: string, compact = fa
 
 function wrapSegments(segments: FooterSegment[], width: number, separator: string): string[] {
   const full = joinSegments(segments, separator)
-  if (textWidth(full) <= width) return [full]
+  if (visibleWidth(full) <= width) return [full]
 
   const compact = joinSegments(segments, separator, true)
-  if (textWidth(compact) <= width) return [compact]
+  if (visibleWidth(compact) <= width) return [compact]
 
   const lines: string[] = []
   let line = ''
@@ -65,7 +61,7 @@ function wrapSegments(segments: FooterSegment[], width: number, separator: strin
   for (const segment of segments) {
     const text = segment.compact || segment.full
     const candidate = line ? `${line}${separator}${text}` : text
-    if (!line || textWidth(candidate) <= width) {
+    if (!line || visibleWidth(candidate) <= width) {
       line = candidate
       continue
     }

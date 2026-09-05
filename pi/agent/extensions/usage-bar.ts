@@ -30,6 +30,39 @@ interface ProviderStatus {
   description?: string
 }
 
+/**
+ * The slice of pi's ModelRegistry this extension touches.
+ *
+ * pi ships no type declarations for it, so this is hand-derived and checked
+ * against pi 0.84.3 (docs/extensions.md:997 plus the bundled runtime).
+ *
+ * `getProviderAuth` forwards to `runtime.getAuth(provider)`, which resolves
+ * the stored credential: an OAuth credential goes through pi's refresh path
+ * first, then the provider's own `toAuth` derivation. It returns
+ * `{ auth, source }` — the derived auth, not the stored credential, so
+ * credential fields like Codex's `accountId` are not reachable through it.
+ *
+ * Where the token lands depends on the credential type. API-key providers get
+ * `auth.apiKey`; OAuth providers get an `Authorization: Bearer …` header and
+ * leave `auth.apiKey` unset (`pi auth print-api-key --provider openai-codex`
+ * rejects it as "configured with OAuth, not an API key"). `getAuthCredential`
+ * in pi's own auth command reads both, in that order — mirrored below.
+ *
+ * Optional here because pi's docs are the only contract; a build without it
+ * falls back to reading auth.json directly.
+ */
+interface PiProviderAuth {
+  auth?: {
+    apiKey?: string
+    headers?: Record<string, string>
+  }
+  source?: string
+}
+
+interface PiModelRegistry {
+  getProviderAuth?(provider: string): Promise<PiProviderAuth | undefined>
+}
+
 interface UsageSnapshot {
   provider: string
   displayName: string
@@ -299,7 +332,9 @@ function loadCopilotRefreshToken(): string | undefined {
   return undefined
 }
 
-async function fetchCopilotUsage(_modelRegistry: any): Promise<UsageSnapshot> {
+async function fetchCopilotUsage(
+  _modelRegistry: PiModelRegistry | undefined,
+): Promise<UsageSnapshot> {
   const token = loadCopilotRefreshToken()
   if (!token) {
     return {
@@ -405,7 +440,9 @@ async function fetchCopilotUsage(_modelRegistry: any): Promise<UsageSnapshot> {
 // Gemini Usage
 // ============================================================================
 
-async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
+async function fetchGeminiUsage(
+  _modelRegistry: PiModelRegistry | undefined,
+): Promise<UsageSnapshot> {
   let token: string | undefined
 
   // Read directly from pi's auth.json
@@ -503,6 +540,48 @@ async function fetchGeminiUsage(_modelRegistry: any): Promise<UsageSnapshot> {
 }
 
 // ============================================================================
+// pi credential resolution
+// ============================================================================
+
+/**
+ * Resolve a provider's live token through pi's documented auth API.
+ *
+ * For an OAuth credential this refreshes first when the token is inside pi's
+ * validity window (5 min) and persists the new one, so the token is live.
+ * Resolves to undefined when the provider is not registered or nothing is
+ * stored, and throws a ModelsError when resolution or refresh fails — both
+ * are swallowed here so every caller falls back to auth.json.
+ *
+ * Returns the derived auth only: `accountId`, `projectId` and friends live on
+ * the stored credential and still come from auth.json.
+ *
+ * The extraction mirrors `getAuthCredential` in pi's auth command: API-key
+ * providers expose `auth.apiKey`, OAuth providers expose only an
+ * `Authorization: Bearer …` header.
+ */
+async function resolveRegistryToken(
+  modelRegistry: PiModelRegistry | undefined,
+  provider: string,
+): Promise<string | undefined> {
+  try {
+    const resolved = await modelRegistry?.getProviderAuth?.(provider)
+
+    const apiKey = resolved?.auth?.apiKey
+    if (typeof apiKey === 'string' && apiKey.length > 0) return apiKey
+
+    const authorization = Object.entries(resolved?.auth?.headers ?? {}).find(
+      ([name]) => name.toLowerCase() === 'authorization',
+    )?.[1]
+    if (typeof authorization === 'string') {
+      const bearer = /^Bearer\s+(.+)$/iu.exec(authorization)?.[1]
+      if (bearer && bearer.length > 0) return bearer
+    }
+  } catch {}
+
+  return undefined
+}
+
+// ============================================================================
 // Antigravity Usage
 // ============================================================================
 
@@ -544,30 +623,31 @@ function loadAntigravityAuthFromPiAuthJson(): AntigravityAuth | undefined {
 }
 
 async function loadAntigravityAuth(
-  modelRegistry: any,
+  modelRegistry: PiModelRegistry | undefined,
 ): Promise<AntigravityAuth | undefined> {
-  // Prefer model registry auth storage first (may auto-refresh).
-  try {
-    const accessToken = await Promise.resolve(
-      modelRegistry?.authStorage?.getApiKey?.('google-antigravity'),
-    )
-    const raw = await Promise.resolve(
-      modelRegistry?.authStorage?.get?.('google-antigravity'),
-    )
+  // Registry first: it runs pi's OAuth refresh path, and a refresh persists
+  // the new credential to auth.json. Reading auth.json afterwards therefore
+  // picks up the post-refresh `expires`, which matters because the caller
+  // refreshes again on its own when expiresAt is within 5 minutes — the same
+  // window pi uses, so a stale value here would cause a redundant refresh.
+  const registryToken = await resolveRegistryToken(
+    modelRegistry,
+    'google-antigravity',
+  )
 
-    const projectId =
-      typeof raw?.projectId === 'string' ? raw.projectId : undefined
-    const refreshToken =
-      typeof raw?.refresh === 'string' ? raw.refresh : undefined
-    const expiresAt = typeof raw?.expires === 'number' ? raw.expires : undefined
-
-    if (typeof accessToken === 'string' && accessToken.length > 0) {
-      return { accessToken, projectId, refreshToken, expiresAt }
-    }
-  } catch {}
-
-  // Fallback to pi auth.json
+  // projectId/refresh/expires are credential fields the registry does not
+  // expose, so they come from auth.json either way.
   const fromPi = loadAntigravityAuthFromPiAuthJson()
+
+  if (registryToken) {
+    return {
+      accessToken: registryToken,
+      projectId: fromPi?.projectId,
+      refreshToken: fromPi?.refreshToken,
+      expiresAt: fromPi?.expiresAt,
+    }
+  }
+
   if (fromPi) return fromPi
 
   // Last resort: env var (won't have projectId; request will likely fail)
@@ -614,7 +694,7 @@ async function refreshAntigravityAccessToken(
 }
 
 async function fetchAntigravityUsage(
-  modelRegistry: any,
+  modelRegistry: PiModelRegistry | undefined,
 ): Promise<UsageSnapshot> {
   const auth = await loadAntigravityAuth(modelRegistry)
   if (!auth?.accessToken) {
@@ -782,23 +862,29 @@ async function fetchAntigravityUsage(
 // Codex (OpenAI) Usage
 // ============================================================================
 
-async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
-  // Try to get token from pi's auth storage first
-  let accessToken: string | undefined
+async function fetchCodexUsage(
+  modelRegistry: PiModelRegistry | undefined,
+): Promise<UsageSnapshot> {
   let accountId: string | undefined
 
-  try {
-    // Try openai-codex provider first (pi's built-in)
-    accessToken = await modelRegistry?.authStorage?.getApiKey?.('openai-codex')
+  // pi's registry resolves and refreshes the token, but not accountId.
+  let accessToken = await resolveRegistryToken(modelRegistry, 'openai-codex')
 
-    // Get account ID if available from OAuth credentials
-    const cred = modelRegistry?.authStorage?.get?.('openai-codex')
-    if (cred?.type === 'oauth') {
-      accountId = (cred as any).accountId
+  // pi's auth.json holds the persisted OAuth login and is the only source for
+  // accountId, so read it even when the registry supplied the token.
+  try {
+    if (fs.existsSync(PI_AUTH_PATH)) {
+      const data = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
+      const cred = data['openai-codex'] ?? data['codex']
+      if (!accessToken) {
+        if (typeof cred?.access === 'string') accessToken = cred.access
+        else if (typeof cred?.apiKey === 'string') accessToken = cred.apiKey
+      }
+      if (typeof cred?.accountId === 'string') accountId = cred.accountId
     }
   } catch {}
 
-  // Fallback to ~/.codex/auth.json if not in pi's auth
+  // Last resort: the Codex CLI's own credentials at ~/.codex/auth.json
   if (!accessToken) {
     const authPath = path.join(CODEX_HOME, 'auth.json')
 
@@ -860,41 +946,7 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
     }
 
     const data = (await res.json()) as any
-    const windows: RateWindow[] = []
-
-    // Primary window (usually 3-hour)
-    if (data.rate_limit?.primary_window) {
-      const pw = data.rate_limit.primary_window
-      const resetDate = pw.reset_at ? new Date(pw.reset_at * 1000) : undefined
-      const windowHours = Math.round((pw.limit_window_seconds || 10800) / 3600)
-      windows.push({
-        label: `${windowHours}h`,
-        usedPercent: pw.used_percent || 0,
-        resetDescription: resetDate ? formatReset(resetDate) : undefined,
-      })
-    }
-
-    // Secondary window (daily for some plans, weekly for others)
-    if (data.rate_limit?.secondary_window) {
-      const sw = data.rate_limit.secondary_window
-      const resetDate = sw.reset_at ? new Date(sw.reset_at * 1000) : undefined
-      const windowSeconds = sw.limit_window_seconds || 86400
-      const windowHours = Math.round(windowSeconds / 3600)
-      const windowDays = Math.round(windowSeconds / 86400)
-      const label =
-        windowDays === 7
-          ? 'Week'
-          : windowDays === 1
-            ? 'Day'
-            : windowHours >= 24
-              ? `${windowDays}d`
-              : `${windowHours}h`
-      windows.push({
-        label,
-        usedPercent: sw.used_percent || 0,
-        resetDescription: resetDate ? formatReset(resetDate) : undefined,
-      })
-    }
+    const windows = collectCodexWindows(data.rate_limit)
 
     // Credits info
     let plan = data.plan_type
@@ -903,9 +955,12 @@ async function fetchCodexUsage(modelRegistry: any): Promise<UsageSnapshot> {
         typeof data.credits.balance === 'number'
           ? data.credits.balance
           : parseFloat(data.credits.balance) || 0
-      plan = plan
-        ? `${plan} ($${balance.toFixed(2)})`
-        : `$${balance.toFixed(2)}`
+      // Only worth showing when there is actually a balance to report.
+      if (balance > 0 || data.credits.unlimited) {
+        plan = plan
+          ? `${plan} ($${balance.toFixed(2)})`
+          : `$${balance.toFixed(2)}`
+      }
     }
 
     return { provider: 'codex', displayName: 'Codex', windows, plan }
@@ -1039,17 +1094,13 @@ async function fetchKiroUsage(pi: ExtensionAPI): Promise<UsageSnapshot> {
 // ============================================================================
 
 async function loadProviderToken(
-  modelRegistry: any,
+  modelRegistry: PiModelRegistry | undefined,
   provider: string,
   authJsonKey: string,
   envKey: string,
 ): Promise<string | undefined> {
-  try {
-    const token = await Promise.resolve(
-      modelRegistry?.authStorage?.getApiKey?.(provider),
-    )
-    if (typeof token === 'string' && token.length > 0) return token
-  } catch {}
+  const registryToken = await resolveRegistryToken(modelRegistry, provider)
+  if (registryToken) return registryToken
 
   try {
     if (fs.existsSync(PI_AUTH_PATH)) {
@@ -1064,6 +1115,59 @@ async function loadProviderToken(
   return envToken && envToken.length > 0 ? envToken : undefined
 }
 
+/**
+ * Reads every rate-limit window the Codex payload exposes. `secondary_window`
+ * and `additional_rate_limits` are often null (a Plus plan reports only the
+ * weekly window in `primary_window`), so each source is optional.
+ */
+function collectCodexWindows(rateLimit: any): RateWindow[] {
+  const toWindow = (
+    raw: any,
+    defaultSeconds?: number,
+  ): RateWindow | undefined => {
+    if (!raw || typeof raw !== 'object') return undefined
+    const seconds =
+      typeof raw.limit_window_seconds === 'number'
+        ? raw.limit_window_seconds
+        : defaultSeconds
+    if (!seconds) return undefined
+
+    const resetDate =
+      typeof raw.reset_at === 'number'
+        ? new Date(raw.reset_at * 1000)
+        : undefined
+    return {
+      label: formatWindowLabel(seconds),
+      usedPercent: raw.used_percent || 0,
+      resetDescription: resetDate ? formatReset(resetDate) : undefined,
+    }
+  }
+
+  const windows = [
+    toWindow(rateLimit?.primary_window, 10800),
+    toWindow(rateLimit?.secondary_window, 86400),
+  ]
+
+  const additional = rateLimit?.additional_rate_limits
+  const extras = Array.isArray(additional)
+    ? additional
+    : additional && typeof additional === 'object'
+      ? Object.values(additional)
+      : []
+  for (const extra of extras) windows.push(toWindow(extra))
+
+  return windows.filter((window): window is RateWindow => window !== undefined)
+}
+
+function formatWindowLabel(limitWindowSeconds: number): string {
+  const hours = Math.round(limitWindowSeconds / 3600)
+  const days = Math.round(limitWindowSeconds / 86400)
+  if (days === 7) return 'Week'
+  if (days === 1) return 'Day'
+  if (hours >= 24) return `${days}d`
+  return `${hours}h`
+}
+
 function formatDurationLabel(startMs?: number, endMs?: number): string {
   if (!startMs || !endMs || endMs <= startMs) return 'Limit'
   const hours = Math.round((endMs - startMs) / 3600000)
@@ -1072,7 +1176,7 @@ function formatDurationLabel(startMs?: number, endMs?: number): string {
 }
 
 async function fetchMiniMaxUsage(
-  modelRegistry: any,
+  modelRegistry: PiModelRegistry | undefined,
   provider: 'minimax' | 'minimax-cn',
 ): Promise<UsageSnapshot> {
   const token = await loadProviderToken(
@@ -1138,7 +1242,9 @@ async function fetchMiniMaxUsage(
   }
 }
 
-async function fetchKimiUsage(modelRegistry: any): Promise<UsageSnapshot> {
+async function fetchKimiUsage(
+  modelRegistry: PiModelRegistry | undefined,
+): Promise<UsageSnapshot> {
   const provider = 'kimi-coding'
   const displayName = 'Kimi'
   const token = await loadProviderToken(modelRegistry, provider, provider, 'KIMI_API_KEY')
@@ -1189,19 +1295,15 @@ async function fetchKimiUsage(modelRegistry: any): Promise<UsageSnapshot> {
 // z.ai
 // ============================================================================
 
-async function fetchZaiUsage(): Promise<UsageSnapshot> {
-  // Check for API key in environment or pi auth
-  let apiKey = process.env.Z_AI_API_KEY
-
-  if (!apiKey) {
-    // Try pi auth storage
-    try {
-      if (fs.existsSync(PI_AUTH_PATH)) {
-        const auth = JSON.parse(fs.readFileSync(PI_AUTH_PATH, 'utf-8'))
-        apiKey = auth['z-ai']?.access || auth['zai']?.access
-      }
-    } catch {}
-  }
+async function fetchZaiUsage(
+  modelRegistry: PiModelRegistry | undefined,
+): Promise<UsageSnapshot> {
+  const apiKey = await loadProviderToken(
+    modelRegistry,
+    'zai',
+    'z-ai',
+    'Z_AI_API_KEY',
+  )
 
   if (!apiKey) {
     return {
@@ -1289,6 +1391,44 @@ async function fetchZaiUsage(): Promise<UsageSnapshot> {
 // Helpers
 // ============================================================================
 
+type UsageFetchContext = {
+  modelRegistry: PiModelRegistry | undefined
+  pi: ExtensionAPI
+}
+
+const USAGE_SOURCES: Array<{
+  provider: string
+  displayName: string
+  fetch: (ctx: UsageFetchContext) => Promise<UsageSnapshot>
+}> = [
+  { provider: 'anthropic', displayName: 'Claude', fetch: ({ pi }) => fetchClaudeUsage(pi) },
+  { provider: 'copilot', displayName: 'Copilot', fetch: ({ modelRegistry }) => fetchCopilotUsage(modelRegistry) },
+  { provider: 'gemini', displayName: 'Gemini', fetch: ({ modelRegistry }) => fetchGeminiUsage(modelRegistry) },
+  { provider: 'codex', displayName: 'Codex', fetch: ({ modelRegistry }) => fetchCodexUsage(modelRegistry) },
+  { provider: 'antigravity', displayName: 'Antigravity', fetch: ({ modelRegistry }) => fetchAntigravityUsage(modelRegistry) },
+  { provider: 'kiro', displayName: 'Kiro', fetch: ({ pi }) => fetchKiroUsage(pi) },
+  { provider: 'minimax', displayName: 'MiniMax', fetch: ({ modelRegistry }) => fetchMiniMaxUsage(modelRegistry, 'minimax') },
+  { provider: 'minimax-cn', displayName: 'MiniMax CN', fetch: ({ modelRegistry }) => fetchMiniMaxUsage(modelRegistry, 'minimax-cn') },
+  { provider: 'kimi-coding', displayName: 'Kimi', fetch: ({ modelRegistry }) => fetchKimiUsage(modelRegistry) },
+  { provider: 'zai', displayName: 'z.ai', fetch: ({ modelRegistry }) => fetchZaiUsage(modelRegistry) },
+]
+
+/** Providers with a public status page. Keyed by the USAGE_SOURCES provider id. */
+const STATUS_SOURCES: Array<{ provider: string; fetch: () => Promise<ProviderStatus> }> = [
+  { provider: 'anthropic', fetch: () => fetchProviderStatus('anthropic') },
+  { provider: 'copilot', fetch: () => fetchProviderStatus('copilot') },
+  { provider: 'gemini', fetch: () => fetchGeminiStatus() },
+  { provider: 'codex', fetch: () => fetchProviderStatus('codex') },
+]
+
+/** Errors that mean "provider not set up", so the row is hidden rather than shown as failing. */
+const UNCONFIGURED_ERRORS = new Set([
+  'No credentials',
+  'No token',
+  'kiro-cli not found',
+  'No API key',
+])
+
 function normalizeUsageSnapshot(snapshot: UsageSnapshot): UsageSnapshot {
   return {
     ...snapshot,
@@ -1347,14 +1487,14 @@ class UsageComponent {
   private tui: { requestRender: () => void }
   private theme: any
   private onClose: () => void
-  private modelRegistry: any
+  private modelRegistry: PiModelRegistry | undefined
   private pi: ExtensionAPI
 
   constructor(
     tui: { requestRender: () => void },
     theme: any,
     onClose: () => void,
-    modelRegistry: any,
+    modelRegistry: PiModelRegistry | undefined,
     pi: ExtensionAPI,
   ) {
     this.tui = tui
@@ -1366,121 +1506,38 @@ class UsageComponent {
   }
 
   private async load() {
+    const context: UsageFetchContext = { modelRegistry: this.modelRegistry, pi: this.pi }
+
     // Fetch usage and status in parallel
-    const [
-      claude,
-      copilot,
-      gemini,
-      codex,
-      antigravity,
-      kiro,
-      minimax,
-      minimaxCn,
-      kimi,
-      zai,
-      claudeStatus,
-      copilotStatus,
-      geminiStatus,
-      codexStatus,
-    ] = await Promise.all([
-      withTimeout(fetchClaudeUsage(this.pi), 6000, {
-        provider: 'anthropic',
-        displayName: 'Claude',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchCopilotUsage(this.modelRegistry), 6000, {
-        provider: 'copilot',
-        displayName: 'Copilot',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchGeminiUsage(this.modelRegistry), 6000, {
-        provider: 'gemini',
-        displayName: 'Gemini',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchCodexUsage(this.modelRegistry), 6000, {
-        provider: 'codex',
-        displayName: 'Codex',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchAntigravityUsage(this.modelRegistry), 6000, {
-        provider: 'antigravity',
-        displayName: 'Antigravity',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchKiroUsage(this.pi), 6000, {
-        provider: 'kiro',
-        displayName: 'Kiro',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchMiniMaxUsage(this.modelRegistry, 'minimax'), 6000, {
-        provider: 'minimax',
-        displayName: 'MiniMax',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchMiniMaxUsage(this.modelRegistry, 'minimax-cn'), 6000, {
-        provider: 'minimax-cn',
-        displayName: 'MiniMax CN',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchKimiUsage(this.modelRegistry), 6000, {
-        provider: 'kimi-coding',
-        displayName: 'Kimi',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchZaiUsage(), 6000, {
-        provider: 'zai',
-        displayName: 'z.ai',
-        windows: [],
-        error: 'Timeout',
-      }),
-      withTimeout(fetchProviderStatus('anthropic'), 3000, {
-        indicator: 'unknown' as const,
-      }),
-      withTimeout(fetchProviderStatus('copilot'), 3000, {
-        indicator: 'unknown' as const,
-      }),
-      withTimeout(fetchGeminiStatus(), 3000, { indicator: 'unknown' as const }),
-      withTimeout(fetchProviderStatus('codex'), 3000, {
-        indicator: 'unknown' as const,
-      }),
+    const [snapshots, statuses] = await Promise.all([
+      Promise.all(
+        USAGE_SOURCES.map((source) =>
+          withTimeout(source.fetch(context), 6000, {
+            provider: source.provider,
+            displayName: source.displayName,
+            windows: [],
+            error: 'Timeout',
+          }),
+        ),
+      ),
+      Promise.all(
+        STATUS_SOURCES.map((source) =>
+          withTimeout(source.fetch(), 3000, { indicator: 'unknown' as const }),
+        ),
+      ),
     ])
 
-    // Attach status to usage
-    claude.status = claudeStatus
-    copilot.status = copilotStatus
-    gemini.status = geminiStatus
-    codex.status = codexStatus
+    const statusByProvider = new Map(
+      STATUS_SOURCES.map((source, index) => [source.provider, statuses[index]]),
+    )
+    snapshots.forEach((snapshot, index) => {
+      const status = statusByProvider.get(USAGE_SOURCES[index]!.provider)
+      if (status) snapshot.status = status
+    })
 
-    // Filter out providers with no data and no error (not configured)
-    const allUsages = [
-      claude,
-      copilot,
-      gemini,
-      codex,
-      antigravity,
-      kiro,
-      minimax,
-      minimaxCn,
-      kimi,
-      zai,
-    ]
-    this.usages = allUsages.map(normalizeUsageSnapshot).filter(
-      (u) =>
-        u.windows.length > 0 ||
-        (u.error !== 'No credentials' &&
-          u.error !== 'No token' &&
-          u.error !== 'kiro-cli not found' &&
-          u.error !== 'No API key'),
+    // Hide providers with no data and no error (not configured)
+    this.usages = snapshots.map(normalizeUsageSnapshot).filter(
+      (u) => u.windows.length > 0 || !UNCONFIGURED_ERRORS.has(u.error ?? ''),
     )
     this.loading = false
     this.tui.requestRender()

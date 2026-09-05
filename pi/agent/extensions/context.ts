@@ -209,14 +209,6 @@ function toolPayload(tool: ToolLike, shape: TokenHeuristic['toolShape']): unknow
           inputSchema: { json: tool.parameters },
         },
       }
-    case 'openai-responses':
-      return {
-        type: 'function',
-        name: tool.name,
-        description,
-        parameters: tool.parameters,
-        strict: null,
-      }
     case 'raw':
       return {
         name: tool.name,
@@ -224,6 +216,7 @@ function toolPayload(tool: ToolLike, shape: TokenHeuristic['toolShape']): unknow
         parameters: tool.parameters,
         promptGuidelines: tool.promptGuidelines ?? [],
       }
+    case 'openai-responses':
     default:
       return {
         type: 'function',
@@ -519,10 +512,6 @@ function renderUsageBar(
   return `${sysStr}${toolsStr}${conStr}${remStr}`
 }
 
-function joinComma(items: string[]): string {
-  return items.join(', ')
-}
-
 function joinCommaStyled(
   items: string[],
   renderItem: (item: string) => string,
@@ -547,7 +536,6 @@ type TokenDetail = {
   name: string
   tokens: number
   detail?: string
-  active?: boolean
   loaded?: boolean
 }
 
@@ -713,11 +701,6 @@ class ContextView implements Component {
     this.cachedWidth = width
   }
 
-  setExpanded(_expanded: boolean): void {
-    this.expanded = !this.expanded
-    this.invalidate()
-  }
-
   handleInput(data: string): void {
     if (data.toLowerCase() === 'e' || matchesKey(data, Key.ctrl('o'))) {
       this.expanded = !this.expanded
@@ -864,7 +847,6 @@ export default function contextExtension(pi: ExtensionAPI) {
           name: tool.name,
           tokens: estimateToolTokens(tool, heuristic),
           detail: singleLine(tool.description || '(no description)'),
-          active: true,
         }))
         .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name))
 
