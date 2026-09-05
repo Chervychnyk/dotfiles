@@ -1,0 +1,61 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gotgenes/pi-packages/main/packages/pi-permission-system/schemas/permissions.schema.json",
+  "doublePressToConfirm": true,
+  "permissionReviewLog": true,
+  "shellTools": {
+    "interactive_shell": {
+      "commandArgument": "command",
+      "workdirArgument": "cwd"
+    }
+  },
+  "permission": {
+    "*": "allow",
+    "path": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow",
+      "~/.ssh/*": "deny",
+      "~/.aws/*": "deny",
+      "~/.gnupg/*": "deny",
+      "*.pem": "deny",
+      "*.key": "deny",
+      "~/.pi/agent/extensions/pi-permission-system/config.json": "deny",
+      "~/dotfiles/pi/agent/extensions/pi-permission-system/config.json": "deny",
+      "~/.pi/agent/sandbox.settings.json": "deny",
+      "~/dotfiles/pi/agent/sandbox.settings.json": "deny"
+    },
+    "external_directory": {
+      "*": "ask",
+      "/tmp/*": "allow",
+      "/private/tmp/*": "allow",
+      "~/.agents/*": "allow",
+      "~/.cache/*": "allow",
+      "~/.npm/*": "allow",
+      "~/.local/share/nvim/*": "allow",
+      "~/.local/state/nvim/*": "allow",
+      "~/.pi/cache/*": "allow",
+      "~/.pi/agent/skills/*": "allow"
+    },
+    "bash": {
+      "*": "ask",
+      "pwd": "allow",
+      "ls *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git rev-parse*": "allow",
+      "rg *": "allow",
+      "grep *": "allow",
+      "find *": "allow",
+      "jq *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "wc *": "allow",
+      "test *": "allow"
+    },
+    "interactive_shell": "allow"
+  }
+}

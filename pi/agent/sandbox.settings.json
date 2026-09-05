@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "network": {
     "allowedDomains": [
       "npmjs.org",
@@ -33,6 +33,7 @@
     "allowRead": [
       ".",
       "~/.agents",
+      "~/.cache",
       "~/.local/share/mise/installs/pi",
       "~/.pi/agent/agents",
       "~/.pi/agent/skills"
@@ -41,17 +42,13 @@
       ".",
       "/tmp",
       "/private/tmp",
+      "~/.agents",
       "~/.cache",
       "~/.npm",
       "~/.local/share/nvim",
       "~/.local/state/nvim",
-      "~/.pi/cache"
-    ],
-    "denyWrite": [
-      ".env",
-      ".env.*",
-      "*.pem",
-      "*.key"
+      "~/.pi/cache",
+      "~/.pi/agent/skills"
     ]
   }
 }
