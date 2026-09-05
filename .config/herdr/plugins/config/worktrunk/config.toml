@@ -1,0 +1,26 @@
+# herdr-worktrunk (github.com/devashish2203/herdr-worktrunk).
+# Read fresh on every picker invocation -- no herdr reload needed after an edit.
+
+# Nest each worktree as its own workspace in the sidebar rather than a tab in the
+# current one, so a worktree is a place you switch to, not a thing inside where
+# you already are. Matches how the automatic-rename plugin groups worktree spaces.
+open_mode = "workspace"
+
+# A floating picker, like the lazygit and yazi popups in ../../../config.toml.
+# The default "split" resizes whatever is on screen for the two seconds a picker
+# is up, which is the wrong trade for a chooser you dismiss immediately.
+picker_placement = "popup"
+
+# Sized between the yazi popup (85%) and lazygit (90%): the branch list needs the
+# width for long Jira-style names, less of the height.
+popup_width = "85%"
+popup_height = "80%"
+
+# Local branches only. Remote-tracking branches make the list long, and a remote
+# branch worth a worktree is usually one `wt switch` already knows how to fetch.
+show_remote_branches = false
+
+# Extra flags for `wt merge`, on top of what each action variant already passes.
+# Left empty: squash/rebase/remove defaults come from the worktrunk config in
+# ~/.config/worktrunk/config.toml, which is the one place they should live.
+merge_flags = ""

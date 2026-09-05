@@ -31,6 +31,7 @@ brew "starship"
 brew "tmux"
 brew "vim"
 brew "wget"
+brew "worktrunk"     # Git worktree manager (conflicts with wiredtiger)
 brew "yazi"
 brew "yq"             # YAML processor
 brew "zellij"

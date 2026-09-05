@@ -228,4 +228,11 @@ autoload -Uz unlock_bitwarden
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.yarn/bin:$PATH"
 
+for _f in ${HOME}/.config/herdr/plugins/github/herdr-automatic-rename-*/shell/hook.zsh(N); do
+  source $_f; break
+done
+unset _f
+
 # zprof  # Uncomment to show profiling results
+
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi

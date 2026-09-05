@@ -5,16 +5,40 @@
 onboarding = false
 
 [theme]
-name = "terminal"
+# Base is a dark built-in rather than "terminal": the terminal theme derives
+# tokens (including selection_bg) from the host palette, which rendered the
+# selected space/agent row as white-on-white. Every token is pinned below.
+name = "gruvbox"
 
 [theme.custom]
-# Everforest Dark Hard, matching schlerp/tmux-everforest dark_hard.
-panel_bg = "#1E2326"
-accent = "#83C092"
-red = "#E67E80"
-green = "#A7C080"
-blue = "#7FBBB3"
-yellow = "#DBBC7F"
+# Everforest Dark Hard, matching schlerp/tmux-everforest dark_hard and
+# .config/yazi/flavors/everforest-dark-hard.yazi.
+accent = "#83c092"          # aqua
+
+# Backgrounds: panel keeps the terminal bg, sidebar sits one step up, and
+# active/selected rows step up again so foreground text stays readable.
+panel_bg = "#1e2326"        # bg_dim
+sidebar_bg = "#272e33"      # bg0
+active_row_bg = "#2e383c"   # bg1
+selection_bg = "#414b50"    # bg3
+surface0 = "#2e383c"        # bg1
+surface1 = "#374145"        # bg2
+surface_dim = "#1e2326"     # bg_dim
+overlay0 = "#7a8478"        # grey0
+overlay1 = "#859289"        # grey1
+
+# Foregrounds.
+text = "#d3c6aa"            # fg
+subtext0 = "#9da9a0"        # grey2
+
+# Accent ramp.
+red = "#e67e80"
+peach = "#e69875"           # orange
+yellow = "#dbbc7f"
+green = "#a7c080"
+teal = "#83c092"            # aqua
+blue = "#7fbbb3"
+mauve = "#d699b6"           # purple
 
 [terminal]
 shell_mode = "auto"
@@ -33,18 +57,33 @@ goto = "prefix+g"
 new_workspace = "prefix+shift+n"
 rename_workspace = "prefix+shift+w"
 close_workspace = "prefix+shift+d"
+# Workspaces are a vertical sidebar list, so prev/next use vim j/k with shift.
+# prefix+shift+p/n are taken by rename_pane/new_workspace; shift+j/k are freed
+# by moving swap_pane off its prefix+shift+hjkl defaults below.
+previous_workspace = "prefix+shift+k"
+next_workspace = "prefix+shift+j"
+switch_workspace = "prefix+shift+1..9"
 new_tab = "prefix+c"
 previous_tab = "prefix+p"
 next_tab = "prefix+n"
 switch_tab = "prefix+1..9"
 rename_tab = "prefix+shift+t"
 close_tab = "prefix+shift+x"
+# Matches `bind -r < >` (swap-window) in .tmux.conf.
+move_tab_previous = "prefix+<"
+move_tab_next = "prefix+>"
 
 # Vim/tmux-style pane movement and management.
 focus_pane_left = "prefix+h"
 focus_pane_down = "prefix+j"
 focus_pane_up = "prefix+k"
 focus_pane_right = "prefix+l"
+# Relocated from the prefix+shift+hjkl defaults so shift+j/k can drive
+# workspace navigation above.
+swap_pane_left = "prefix+ctrl+h"
+swap_pane_down = "prefix+ctrl+j"
+swap_pane_up = "prefix+ctrl+k"
+swap_pane_right = "prefix+ctrl+l"
 last_pane = "prefix+ctrl+backslash"
 cycle_pane_next = "prefix+tab"
 cycle_pane_previous = "prefix+shift+tab"
@@ -53,9 +92,21 @@ split_vertical = "prefix+enter"
 close_pane = "prefix+x"
 zoom = "prefix+m"
 resize_mode = "prefix+r"
+# One-shot resize matching `bind -r [ ] - =` in .tmux.conf; resize_mode above
+# stays the repeatable path since herdr has no tmux `-r` equivalent.
+resize_pane_left = "prefix+["
+resize_pane_right = "prefix+]"
+resize_pane_down = "prefix+minus"
+resize_pane_up = "prefix+="
 copy_mode = "prefix+v"
 reload_config = "prefix+shift+r"
 toggle_sidebar = "prefix+b"
+
+# Agent panel navigation. No tmux equivalent; plain letters are the most
+# reliable keys in prefix mode.
+next_agent = "prefix+a"
+previous_agent = "prefix+shift+a"
+focus_agent = "prefix+alt+1..9"
 
 # Navigate-mode movement uses the same vim keys as tmux copy/navigation mode.
 navigate_pane_left = "h"
@@ -64,6 +115,59 @@ navigate_pane_up = "k"
 navigate_pane_right = "l"
 navigate_workspace_up = "up"
 navigate_workspace_down = "down"
+
+# Popups, mirroring the display-popup bindings in .tmux.conf.
+[[keys.command]]
+key = "prefix+ctrl+g"
+type = "popup"
+command = "lazygit"
+description = "lazygit"
+width = "90%"
+height = "90%"
+
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "yazi"
+description = "file manager"
+width = "85%"
+height = "85%"
+
+# Toggle the reviewr diff pane. d = diff.
+[[keys.command]]
+key = "prefix+d"
+type = "plugin_action"
+command = "persiyanov.reviewr.toggle"
+description = "reviewr: toggle diff pane"
+
+# herdr-worktrunk (github.com/devashish2203/herdr-worktrunk): git worktrees via
+# worktrunk, presented as herdr workspaces. shift+g is the plugin's own
+# recommended key and is free here; its other two suggestions collide, so merge
+# and remove are moved. shift+d is close_workspace above, and removing a worktree
+# by fumbling the workspace-close key is exactly the mistake worth designing out.
+[[keys.command]]
+key = "prefix+shift+g"
+type = "plugin_action"
+command = "worktrunk.open"
+description = "worktrunk: switch or create a worktree"
+
+[[keys.command]]
+key = "prefix+shift+c"
+type = "plugin_action"
+command = "worktrunk.open-current"
+description = "worktrunk: branch off the current branch"
+
+[[keys.command]]
+key = "prefix+shift+m"
+type = "plugin_action"
+command = "worktrunk.merge"
+description = "worktrunk: merge this worktree, then remove it"
+
+[[keys.command]]
+key = "prefix+ctrl+d"
+type = "plugin_action"
+command = "worktrunk.remove"
+description = "worktrunk: remove this worktree"
 
 [ui]
 sidebar_width = 32
@@ -74,6 +178,11 @@ confirm_close = true
 prompt_new_tab_name = false
 accent = "#83C092"
 
+# Attention queue: floats blocked/done agents to the top of the sidebar, which
+# is where a review pass starts. Symbols distinguish states by shape too.
+status_indicators = "symbols"
+show_agent_labels_on_pane_borders = true
+agent_panel_sort = "priority"
 [ui.toast]
 delivery = "herdr"
 delay_seconds = 1

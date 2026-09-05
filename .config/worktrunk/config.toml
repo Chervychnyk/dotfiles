@@ -1,0 +1,40 @@
+# Worktrunk — git worktree manager for parallel agent workflows.
+# Docs: https://worktrunk.dev  ·  Symlinked to ~/.config/worktrunk by mise.
+#
+# This is the user-level config. Per-project settings (hooks, forge, aliases)
+# belong in that repo's own `.config/wt.toml`, which is committed with the repo.
+
+# Worktrees live inside the repo under `.worktrees/`, so $PROJECT_PATHS and the
+# proj() picker in .zshrc keep showing exactly one entry per project.
+# `.worktrees/` is ignored globally via .config/git/ignore, so no per-repo
+# .gitignore edits are needed.
+#
+# primary_worktree_path (not repo_path) is deliberate: repo_path resolves to the
+# *current* worktree, so creating a worktree from inside one would nest them.
+worktree-path = "{{ primary_worktree_path }}/.worktrees/{{ branch | sanitize }}"
+
+[switch]
+cd = true
+
+[switch.picker]
+# delta is already the git pager (Brewfile), so picker diffs match `git diff`.
+pager = "delta --paging=never"
+
+[commit.generation]
+# Reuses the claude-code CLI from the Brewfile. Haiku with thinking disabled
+# keeps `wt step commit` fast and cheap; messages follow the same Conventional
+# Commit convention as the /commit skill.
+command = "MAX_THINKING_TOKENS=0 claude -p --no-session-persistence --model=haiku"
+template-append = """
+- Use Conventional Commits: type(scope): subject
+- Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+- Subject in imperative mood, no trailing period, 72 characters or fewer
+- Add a body only when the change needs a "why"; wrap at 72 columns
+"""
+
+# Per-project overrides for repos where the defaults above don't fit, e.g. a
+# monorepo that wants worktrees somewhere else:
+#
+# [projects."github.com/owner/repo"]
+# worktree-path = "{{ primary_worktree_path }}/../{{ repo }}.{{ branch | sanitize }}"
+# merge.squash = false
