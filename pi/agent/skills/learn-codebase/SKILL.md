@@ -1,218 +1,72 @@
 ---
 name: learn-codebase
-description: Discover project conventions and surface security concerns. Use when starting work in a new or unfamiliar project, when asked to "learn the codebase", "check project rules", "what are the conventions", "onboard to this project", or "anything shady in this codebase". Scans agent config files (.claude/, .cursor/, CLAUDE.md, etc.) and runs a security/smell sweep for hardcoded secrets, insecure patterns, suspicious dependencies, and dangerous configurations.
+description: Orient to an unfamiliar repository or code path when task work depends on conventions, architecture, or an unknown validation workflow. Use for onboarding and explicit codebase-orientation requests. Skip for familiar repositories, targeted file edits, direct lookups, documentation-only changes, and tasks whose entry point and validation command are already known.
 ---
 
-# Learn Codebase Conventions
+# Learn the codebase
 
-Scan the current project for agent instruction files from various tools, summarize the conventions, and optionally register discovered skills in `.pi/settings.json`.
+Build only the repository context needed for the current task. Stay read-only. Stop once the applicable rules, relevant code path, runtime, and validation command are known.
 
-## Step 1: Scan for Convention Files
+## 1. Find applicable instructions
 
-Search the project root for these files and directories:
+Locate instruction files at the repository root and along the path to files the task may touch:
 
-```bash
-# Agent instruction files (root-level)
-for f in CLAUDE.md AGENTS.md AGENTS.local.md COPILOT.md .cursorrules .clinerules; do
-  [ -f "$f" ] && echo "FOUND: $f"
-done
+- `AGENTS.md`, `AGENTS.local.md`, and `AGENTS.override.md`
+- `CLAUDE.md`
+- `.github/copilot-instructions.md`
+- `.cursorrules`
+- task-relevant files under `.claude/rules/`, `.cursor/rules/`, and `.pi/`
+- repository-specific equivalents named by those files
 
-# Agent config directories
-for d in .claude .cursor .github .pi; do
-  [ -d "$d" ] && echo "FOUND DIR: $d/"
-done
+Follow the harness's precedence rules. Read applicable instruction files fully. Do not inventory unrelated commands, settings, or skills.
 
-# Deeper convention files
-[ -f ".github/copilot-instructions.md" ] && echo "FOUND: .github/copilot-instructions.md"
+## 2. Trace the task's code path
 
-# Claude Code rules, skills, and commands
-[ -d ".claude/rules" ] && echo "FOUND: .claude/rules/"
-[ -d ".claude/skills" ] && echo "FOUND: .claude/skills/"
-[ -d ".claude/commands" ] && echo "FOUND: .claude/commands/"
-[ -f ".claude/settings.json" ] && echo "FOUND: .claude/settings.json"
+Use repository search and nearby files to identify:
 
-# Cursor rules and skills
-[ -d ".cursor/rules" ] && echo "FOUND: .cursor/rules/"
-[ -d ".cursor/skills" ] && echo "FOUND: .cursor/skills/"
+- the user-facing or public entry point;
+- the call path and data flow relevant to the task;
+- tests that exercise that behavior;
+- local naming, structure, and error-handling conventions;
+- task-relevant `CONTEXT.md`, ADRs, or architecture documentation.
 
-# Pi project skills
-[ -d ".pi/skills" ] && echo "FOUND: .pi/skills/"
-```
+Read manifests, scripts, and documentation only when they answer one of those questions. Prefer existing implementations over generic assumptions.
 
-## Step 2: Read and Summarize
+## 3. Identify the execution path
 
-For each discovered file, read its contents and extract key conventions:
+Determine the smallest reliable way to work and verify:
 
-1. **Root instruction files** (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`, etc.) — read fully; these are the primary project rules
-2. **Rule directories** (`.claude/rules/`, `.cursor/rules/`) — read each rule file
-3. **Commands** (`.claude/commands/`) — read each command file. These are reusable prompt workflows from Claude Code (e.g. PR creation, release scripts, review checklists). Summarize what each command does.
-4. **Skills directories** (`.claude/skills/`, `.cursor/skills/`) — list available skills and read their descriptions
-5. **Settings files** (`.claude/settings.json`) — note permissions and configuration
+- package manager or runtime;
+- whether commands run locally or through Docker Compose;
+- targeted build, typecheck, lint, or test command;
+- required services or fixtures;
+- generated or protected files that must not be edited directly.
 
-Present a structured summary to the user:
+Try discoverable commands and configuration before asking the user. Do not install dependencies, modify settings, or run broad test suites during orientation.
 
-```text
-## Project Conventions Summary
+## 4. Stop and report
 
-### Build & Run
-- Package manager: [npm/pnpm/yarn/bun]
-- Dev command: [command]
-- Test command: [command]
+Stop reconnaissance when you can name:
 
-### Code Style
-- [Key style rules]
+1. the applicable repository instructions;
+2. the relevant entry point and code path;
+3. the conventions the task must follow;
+4. the targeted validation command;
+5. any unresolved fact that blocks safe implementation.
 
-### Architecture
-- [Key patterns, structure]
-
-### Agent-Specific Rules
-- [Any rules targeted at AI agents]
-
-### Available Commands (from .claude/commands/)
-- [command-name] — [what it does]
-
-### Available Skills (from other tools)
-- [List skills found in .claude/skills, .cursor/skills]
-```
-
-Focus on actionable information. Skip boilerplate and obvious conventions.
-
-## Step 3: Register External Skills
-
-If `.claude/skills/` or other skill directories exist, suggest registering them in `.pi/settings.json` so pi can use them too:
-
-```json
-{
-  "skills": ["../.claude/skills"]
-}
-```
-
-Ask the user if they want to create or update `.pi/settings.json` with the discovered skill paths. Only do this if skills were actually found.
-
-## Step 4: Note What to Remember
-
-After summarizing, highlight the **top 3-5 things to keep in mind** while working in this project. These are the conventions most likely to be violated if forgotten — things like:
-
-- specific commit message formats
-- required co-author lines
-- mandatory test patterns
-- forbidden patterns or anti-patterns
-- package manager preferences (don't use npm when pnpm is required)
-
-## Step 5: Security & Smell Sweep
-
-Scan the codebase for things that look **shady, fishy, or dangerous**. This isn't a full audit — it's a quick sweep to surface anything the user should be aware of. Flag real concerns, not hypotheticals.
-
-### What to Scan
-
-Run these checks and report anything suspicious:
-
-**Hardcoded Secrets & Credentials**
-```bash
-# Look for hardcoded secrets, API keys, tokens, passwords
-rg -i --hidden -g '!{.git,node_modules,dist,build,.next,vendor,*.lock}' \
-  '(api[_-]?key|secret|token|password|credential|auth)\s*[:=]\s*["\x27][^"\x27]{8,}' \
-  --type-not binary -l 2>/dev/null | head -20
-
-# .env files committed to repo (should be gitignored)
-git ls-files --cached | grep -iE '\.env($|\.)' 2>/dev/null
-```
-
-**Insecure Code Patterns**
-```bash
-# eval(), exec(), dangerouslySetInnerHTML, innerHTML assignments, shell injection vectors
-rg --hidden -g '!{.git,node_modules,dist,build,.next,vendor,*.lock}' \
-  -e '\beval\s*\(' -e '\bexec\s*\(' -e 'dangerouslySetInnerHTML' \
-  -e '\.innerHTML\s*=' -e 'child_process' -e '\$\(.*\$\{' \
-  --type-not binary -l 2>/dev/null | head -20
-
-# Unparameterized SQL (string concatenation in queries)
-rg --hidden -g '!{.git,node_modules,dist,build,.next,vendor,*.lock}' \
-  -e 'query\s*\(\s*[`"'"'"'].*\$\{' -e 'execute\s*\(\s*[`"'"'"'].*\+' \
-  --type-not binary -l 2>/dev/null | head -20
-```
-
-**Suspicious Dependencies**
-```bash
-# Check for install/postinstall scripts in dependencies (supply chain risk)
-[ -f package.json ] && cat package.json | grep -E '"(pre|post)install"' 2>/dev/null
-
-# Look for wildcard or git dependencies (unpinned)
-[ -f package.json ] && rg '"[*]"|"git[+:]|"github:' package.json 2>/dev/null
-
-# Very outdated lock file vs package.json mismatch
-[ -f package-lock.json ] && [ package.json -nt package-lock.json ] && echo "WARN: package.json newer than lockfile"
-[ -f pnpm-lock.yaml ] && [ package.json -nt pnpm-lock.yaml ] && echo "WARN: package.json newer than lockfile"
-```
-
-**Overly Permissive Configurations**
-```bash
-# CORS wildcards, disabled security headers, permissive CSP
-rg --hidden -g '!{.git,node_modules,dist,build,.next,vendor,*.lock}' \
-  -e "origin:\s*['\"]?\*" -e 'Access-Control-Allow-Origin.*\*' \
-  -e "cors.*true" -e 'unsafe-inline' -e 'unsafe-eval' \
-  --type-not binary -l 2>/dev/null | head -10
-
-# Disabled TLS verification, insecure flags
-rg --hidden -g '!{.git,node_modules,dist,build,.next,vendor,*.lock}' \
-  -e 'NODE_TLS_REJECT_UNAUTHORIZED.*0' -e 'rejectUnauthorized.*false' \
-  -e 'verify.*false' -e 'insecure.*true' \
-  --type-not binary -l 2>/dev/null | head -10
-```
-
-**File Permissions & Sensitive Files**
-```bash
-# Private keys, certificates, or database files in repo
-git ls-files --cached 2>/dev/null | grep -iE '\.(pem|key|p12|pfx|jks|keystore|sqlite|db)$' | head -10
-
-# Check .gitignore exists and covers basics
-if [ -f .gitignore ]; then
-  for pattern in '.env' 'node_modules' '.DS_Store'; do
-    grep -q "$pattern" .gitignore || echo "WARN: .gitignore missing $pattern"
-  done
-else
-  echo "WARN: No .gitignore file found"
-fi
-```
-
-### How to Report
-
-Present findings in a dedicated section with severity tags. Be direct — no sugarcoating, but also no false alarms.
+Return a compact, path-cited summary:
 
 ```text
-## 🚩 Security & Code Smell Findings
-
-### [P0] Hardcoded API key in src/config.ts
-Line 42 has a Stripe secret key directly in source code.
-This should be in an environment variable, not committed.
-
-### [P1] .env file tracked by git
-`.env.production` is committed and contains database credentials.
-Add to `.gitignore` and rotate the exposed credentials.
-
-### [P2] eval() usage in src/utils/parser.ts
-Used to parse user-supplied expressions. Consider a safe parser
-like `JSON.parse()` or a sandboxed evaluator instead.
-
-### ✅ Nothing Concerning
-[If sweep is clean, say so explicitly — don't manufacture findings.]
+## Orientation
+- Rules: [applicable files and key constraints]
+- Code path: [entry point and relevant modules]
+- Conventions: [task-relevant patterns]
+- Validation: [targeted command]
+- Unknowns/risks: [only material gaps]
 ```
 
-**Severity guide (same as review rubric):**
-- **[P0]** — Actively dangerous. Exposed secrets, SQL injection, RCE vectors. Fix now.
-- **[P1]** — Genuine risk. Someone will get bitten by this. Should fix soon.
-- **[P2]** — Worth knowing about. Not urgent, but the user should be aware.
+If the user requested onboarding rather than a concrete task, broaden the summary to the main entry points, architecture, development commands, and validation workflow. Keep it factual and cite repository paths.
 
-**Do NOT flag:**
-- test files using eval/exec for testing purposes
-- known development-only insecure configs (like localhost CORS in dev servers)
-- theoretical issues with no concrete exploit path in this codebase
-- dependencies that are simply old (that's not a security finding without a known CVE)
+## Boundaries
 
-## Rules
-
-- Stay read-only unless the user explicitly asked for implementation.
-- Focus on actionable conventions and concrete risks.
-- Cite specific files or directories when summarizing conventions.
-- If the user asked about a concrete task, keep the summary scoped to the relevant parts of the repo.
-- Do not manufacture security findings just to fill the report.
+This skill is not a security audit, dependency audit, architecture review, skill-registration workflow, or implementation plan. Route those requests to their dedicated workflows. Do not modify project files while using this skill.

@@ -12,7 +12,8 @@ Use this file as the interface for the runtime. The JSON, TypeScript, and Markdo
 | Operating guide | `agent/AGENTS.md` | Global instructions loaded into agent sessions. |
 | Custom agents | `agent/agents/*.md` | Role-specific agents for scout, planning, implementation, review, and spec work. See `agent/agents/README.md`. |
 | Extensions | `agent/extensions/**` | Local Pi extensions that add tools, UI, safety, context, and workflow behavior. |
-| Sandbox policy | `agent/sandbox.settings.json`, `agent/extensions/sandbox/**` | Filesystem and network rules enforced before tool execution. |
+| Permission policy | `agent/extensions/pi-permission-system/config.json` | Allow, ask, and deny gates for tools, shell commands, paths, MCP, and subagents. |
+| Legacy sandbox | `agent/sandbox.settings.json`, `agent/extensions/sandbox/**` | Disabled during the permission-system trial; retained for rollback. |
 | Safety stack | `agent/extensions/SAFETY.md` | The modules that deny, prompt, or advise around risky tool use. |
 | Web tools | `agent/web-tools.json` | Web search/fetch configuration used by the web-tools package. |
 | Subagents | `agent/extensions/subagent/config.json`, `agent/agents/*.md` | Subagent package configuration plus local custom agent definitions. |
@@ -21,11 +22,14 @@ Use this file as the interface for the runtime. The JSON, TypeScript, and Markdo
 
 `agent/settings.json` loads these packages:
 
-- `npm:pi-interview`
 - `npm:pi-mcp-adapter`
 - `~/code/pi-code-previews`
 - `~/code/pi-web-tools`
 - `npm:@gotgenes/pi-subagents`
+- `npm:@juicesharp/rpiv-ask-user-question`
+- `npm:@juicesharp/rpiv-todo` for conversation-scoped plan items
+- `npm:pi-interactive-shell`
+- `npm:@gotgenes/pi-permission-system`
 
 Local path packages assume the corresponding checkout exists on the machine.
 
@@ -39,13 +43,11 @@ Local path packages assume the corresponding checkout exists on the machine.
 | `context.ts` | Context injection. |
 | `custom-footer.ts`, `custom-header.ts`, `usage-bar.ts` | TUI presentation. |
 | `diff.ts`, `review.ts`, `handoff.ts`, `session-breakdown.ts`, `session-search.ts` | Session and change-review workflow helpers. |
-| `docker-context.ts` | Docker Compose context detection. |
 | `markdown-preview.ts` | Project-local Markdown preview in the TUI. |
 | `go-to-bed.ts` | Late-night advisory/blocking guard. |
 | `pi-cloak/` | Secret/path cloaking behavior. |
-| `sandbox/` | Runtime filesystem/network sandbox. |
+| `sandbox/` | Disabled legacy filesystem/network sandbox retained for rollback. |
 | `subagent/` | Subagent integration. |
-| `todos/` | File-backed todo tool. |
 | `uv.ts` | Python tooling guardrails. |
 | `__lib/` | Shared implementation modules for extensions. |
 
@@ -57,7 +59,7 @@ Local path packages assume the corresponding checkout exists on the machine.
 2. Project: `<repo-root>/.agents/<name>.settings.json`
 3. Local: `<repo-root>/.agents/<name>.settings.local.json`
 
-Later tiers override earlier tiers through the extension's merge function. `sandbox` and `todos` use this interface. Static package files such as `agent/extensions/subagent/config.json` and `agent/web-tools.json` are package configuration, not tiered extension settings.
+Later tiers override earlier tiers through the extension's merge function. `sandbox` uses this interface. Static package files such as `agent/extensions/subagent/config.json` and `agent/web-tools.json` are package configuration, not tiered extension settings.
 
 For future local extensions, prefer `__lib/extension-settings.ts` when settings need global/project/local overrides. If a setting has only one adapter, keep it static until a real seam exists.
 

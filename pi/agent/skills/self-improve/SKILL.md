@@ -1,12 +1,12 @@
 ---
 name: self-improve
-description: End-of-session retrospective that identifies improvements to agent config, tests, docs, and code. Use when asked to "self-improve", "reflect on session", "what can we improve", "session retrospective", "end of session review". Creates actionable todos from findings.
+description: End-of-session retrospective that identifies improvements to agent config, tests, docs, and code. Use when asked to "self-improve", "reflect on session", "what can we improve", "session retrospective", "end of session review". Creates actionable same-session plan items from findings.
 disable-model-invocation: true
 ---
 
 # Self-Improve
 
-Reflect on the current session, identify concrete improvements, present them for approval, then create todos and execute.
+Reflect on the current session, identify concrete improvements, present them for approval, then create plan items and execute them in the same session.
 
 ## Step 1: Gather Context
 
@@ -60,29 +60,25 @@ After the table, ask:
 
 > Which of these should I work on? (all / numbers / none)
 
-## Step 5: Create Todos and Execute
+## Step 5: Create Plan Items and Execute
 
 For each approved suggestion:
 
-1. Create a todo with the `todo` tool:
-   - **title**: Short actionable summary
-   - **tags**: `["self-improve", "<scope>"]` where scope is `global` or `project`
-   - **body**: Full context — what to change, why, which files
-
-2. Work through each todo:
-   - Claim it
-   - Make the changes
-   - Verify the change works (run tests, validate config, etc.)
-   - Commit using the `commit` skill if changes touch version-controlled files
-   - Mark the todo as done
-
-3. After completing all todos, print a summary:
+1. Create a `pending` item with the `todo` tool. Use a short actionable `subject` and include the scope, reason, target files, and verification plan in its `description`.
+2. Work through the items in this session:
+   - Set the current item to `in_progress`.
+   - Make the changes and verify them.
+   - Commit using the `commit` skill if changes touch version-controlled files.
+   - Record the verification result and set the item to `completed`.
+3. After completing all items, print a summary:
 
 ```
 ## Completed Improvements
 
-| # | Todo | What Changed | Verified |
-|---|------|-------------|----------|
-| 1 | TODO-xxxx | Added test_x.py — passes ✓ | ✓ |
-| 2 | TODO-yyyy | Updated AGENTS.md worker section | ✓ |
+| # | Plan item | What changed | Verified |
+|---|-----------|--------------|----------|
+| 1 | Add test for X | Added test_x.py; check passes | Yes |
+| 2 | Clarify worker guidance | Updated AGENTS.md worker section | Yes |
 ```
+
+These plan items belong to the current conversation. Do not use them as a persistent backlog or transfer them to subagents.

@@ -71,19 +71,16 @@ Before non-trivial changes, check for local guidance in:
 - `.claude/rules/**`, `.claude/commands/**`, `.claude/skills/**`
 - `README.md`, `CONTRIBUTING.md`, and task-relevant docs
 
-Use the `learn-codebase` skill at the start of unfamiliar work, before changes that depend on repo conventions, and before touching build/run/security-sensitive areas. Stop once you know the relevant rules, entry points, commands, and validation path; do not turn orientation into a full audit unless asked.
+Use the `learn-codebase` skill only when the repository or affected code path is unfamiliar and the task depends on undiscovered conventions, entry points, or validation commands. Skip it for targeted edits, direct lookups, documentation-only work, and familiar code paths. For build/run/security-sensitive changes, load it only when those facts are not already known.
 
 ## Todos
 
-Use the `todo` tool for non-trivial or interruptible work:
+Use the `todo` tool to track a non-trivial task within the current conversation.
 
-- At task start, run `todo({ action: "list" })` and check for relevant assigned/open todos.
-- Create a todo when work will span multiple steps, sessions, agents, or meaningful follow-up.
-- Claim a todo before modifying it: `todo({ action: "claim", id })`.
-- Append concise progress notes, decisions, blockers, and verification evidence as work proceeds.
-- Mark completed todos `closed`; release claimed todos when handing off or abandoning work.
-- The parent orchestrator owns task todos by default. Subagents must not create, claim, update, or close them unless the launch prompt explicitly hands off a todo id and ownership.
-- Use `force: true` only for explicit handoff/override situations, and note why in the todo body.
+- Available actions are `create`, `update`, `list`, `get`, `delete`, and `clear`.
+- Item statuses are `pending`, `in_progress`, `completed`, and `deleted`.
+- Create plan items before implementation, update their status as work proceeds, and keep verification results in the relevant item.
+- Treat the plan as session-local. It is not a cross-session backlog and has no ownership or claim workflow.
 
 ## Subagents
 
@@ -106,7 +103,6 @@ When uncertain whether to use a subagent, prefer a small, read-only `scout` inst
 Operational rules:
 
 - Launch with explicit `prompt`, `description`, and `subagent_type`; omit `run_in_background` unless there is a concrete reason for asynchronous work.
-- Include a todo id in the launch prompt only when intentionally transferring todo ownership; otherwise tell the subagent not to use the todo tool.
 - Before launching a background subagent, write down the ownership split: what the subagent owns, what the parent will avoid duplicating, and when results will be retrieved.
 - Do not inspect, diagnose, or review the same files/behavior in parallel with a background subagent unless the work is intentionally partitioned and non-overlapping.
 - Retrieve background results with `get_subagent_result({ agent_id, wait })` before making decisions that depend on that scope; redirect running agents with `steer_subagent({ agent_id, message })`.
@@ -122,9 +118,9 @@ Load a skill's instructions with `read` when the task matches. Do not rely on me
 Common triggers:
 
 - MCP server setup → `add-mcp-server`
-- Repo agent instructions → `agents-md`
+- Creating or substantially rewriting project-level repo instructions → `agents-md`
 - Long-running terminals/browser workflows → `cmux`
-- Repo orientation/conventions/security sweep → `learn-codebase`
+- Unfamiliar repo or code path requiring convention, entry-point, or validation discovery → `learn-codebase`
 - Bug reports, debugging, or performance regressions → `diagnose`
 - TDD / test-first / regression-first implementation → `tdd`
 - Product/plan clarification with docs, domain language, or decision records → `grill-with-docs`
@@ -148,12 +144,13 @@ Use the right tool for the job and avoid tool calls that only add noise.
 - **File reads**: use `read` for specific files; use `rg`, `find`, or `ls` via shell for discovery.
 - **Edits**: use `edit` for precise replacements; use `write` only for new files or intentional full rewrites.
 - **Shell**: use targeted commands. Avoid broad, slow, or destructive commands unless the task requires them.
-- **Docker**: when a repo runs app commands in Docker Compose, call `docker_services` first, then use `docker_exec` for Rails/Python/Node/runtime commands and `docker_logs` for service failures. Use local shell only when the repo is not containerized or the command is purely file/git inspection.
+- **Docker**: inspect the repository's Compose files and use its documented service names. Use `bash` for short, non-interactive `docker compose exec` or `docker compose run --rm` commands. Use `interactive_shell` for container shells, REPLs, debuggers, prompts, followed logs, watchers, and long-running commands.
 - **Python**: prefer `uv` workflows (`uv run`, `uv add`, `uv sync`, `uv venv`) over raw Python, pip, or Poetry commands when practical.
 - **Web**: use `web_search`/`web_fetch` only for current or external facts, documentation, standards, and third-party APIs — not for repo-local questions.
 - **MCP**: prefer configured MCP tools for external systems they cover; do not scrape or manually work around an available MCP integration.
 - **Interview**: use `interview` when structured input is better than chat. Prefer it when there are 2+ independent decisions, options with meaningful tradeoffs, UX/product/scope/risk choices, or recommendations the user should review before answering. Ask directly in chat only for one short clarification or a yes/no decision.
-- **cmux**: use for long-running servers, test watchers, browser workflows, or multi-terminal coordination.
+- **Interactive shell**: use `interactive_shell` when a terminal process needs input, live observation, takeover, or background monitoring. Prefer its deferred loader when the tool is inactive.
+- **cmux**: use for workflows that need multiple terminals, an embedded browser, or workspace-level coordination beyond one PTY session.
 
 ## Safety Rails
 

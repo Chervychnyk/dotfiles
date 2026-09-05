@@ -1,11 +1,11 @@
 ---
 name: agents-md
-description: Create or update AGENTS.md for Rails, Node.js, or Python projects, especially docker-compose based repos. Use when asked to create AGENTS.md, CLAUDE.md, agent docs, repo instructions, or concise project-specific guidance for coding agents.
+description: Create or substantially overhaul a project-level AGENTS.md for a Rails, Node.js, or Python repository, especially one using Docker Compose. Use for new repository instructions or a full project-guidance rewrite. Do not use for small edits, global agent policy, Pi runtime guidance, or changes to an existing rule.
 ---
 
-# Maintaining AGENTS.md
+# Creating project AGENTS.md
 
-Create concise, high-signal agent instructions for the current repository.
+Create concise, high-signal instructions for the current repository. For a targeted edit to an existing agent document, read the file and edit it directly instead of using this workflow.
 
 ## Goal
 

@@ -8,13 +8,11 @@ This file is the routing interface. Each Markdown file is the role implementatio
 
 | Agent | Purpose | Tools | Can edit project files? | Context | Use when |
 | --- | --- | --- | --- | --- | --- |
-| `spec` | Clarify what should be built. | read/search/interview/todo | No | Fresh by default | Scope, intent, requirements, or success criteria are ambiguous. |
+| `spec` | Clarify what should be built. | read/search/interview | No | Fresh by default | Scope, intent, requirements, or success criteria are ambiguous. |
 | `scout` | Read-only reconnaissance. | read/search/list/bash | No | Fresh by default | The code path or repo conventions are unfamiliar. |
-| `planner` | Turn approved scope into an executable plan. | read/search/interview/todo | No | Inherits context | The objective is clear but sequencing, seams, or verification need design. |
-| `worker` | Implement a focused task. | read/edit/write/search/bash/todo | Yes | Inherits context | A plan is clear and one writer should modify the tree. |
-| `reviewer` | Review completed work. | read/search/bash/todo | No | Fresh by default | Changes need correctness, regression, scope, or verification review. |
-| `thermo-nuclear-review-subagent` | Thermo correctness/security branch audit. | read/search/bash | No | Fresh by default | `thermos` needs a diff-scoped bugs, breakages, security, devex, or feature-leak review. |
-| `thermo-nuclear-code-quality-review-subagent` | Thermo maintainability branch audit. | read/search/bash | No | Fresh by default | `thermos` needs a strict code-quality, structure, spaghetti, or code-judo review. |
+| `planner` | Turn approved scope into an executable plan. | read/search/interview | No | Inherits context | The objective is clear but sequencing, seams, or verification need design. |
+| `worker` | Implement a focused task. | read/edit/write/search/bash | Yes | Inherits context | A plan is clear and one writer should modify the tree. |
+| `reviewer` | Review completed work. | read/search/bash | No | Fresh by default | Changes need correctness, regression, scope, or verification review. |
 
 ## Routing rules
 

@@ -1,8 +1,8 @@
 ---
 description: Use for read-only implementation review, regression detection, and verification after a change is made.
-model: openai-codex/gpt-5.5
-thinking: low
-tools: read, bash, grep, find, ls, todo
+model: openai-codex/gpt-5.6-sol
+thinking: high
+tools: read, bash, grep, find, ls
 extensions: true
 ---
 
@@ -55,11 +55,6 @@ Severity guide:
 - **[P0]** — production-breaking, data-loss, or security issue with clear impact
 - **[P1]** — genuine foot gun or likely regression that should be fixed before merging
 - **[P2]** — worthwhile improvement or notable risk, but not a release blocker
-
-## Todo Usage
-
-- If reviewing work tied to a todo, read it and append concise review findings or verification results.
-- Do not claim implementation todos unless explicitly taking ownership.
 
 ## Workflow
 

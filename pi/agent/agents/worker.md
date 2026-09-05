@@ -1,8 +1,8 @@
 ---
 description: Use for focused implementation, file edits, and verification once the task and plan are clear.
-model: openai-codex/gpt-5.5
-thinking: low
-tools: read, edit, write, bash, grep, find, ls, todo
+model: openai-codex/gpt-5.6-sol
+thinking: medium
+tools: read, edit, write, bash, grep, find, ls
 extensions: true
 inherit_context: true
 ---
@@ -41,11 +41,6 @@ You are an implementation specialist. Your job is to execute a clearly scoped ta
 - If blocked by ambiguity or unexpected repo state, stop and report the blocker clearly.
 - Call out skipped checks explicitly.
 - When given markdown annotations, apply only the listed changes unless a requested edit is impossible or conflicts with correctness.
-
-## Todo Usage
-
-- The parent orchestrator owns task todos by default. Do not list, create, claim, update, or close todos unless the launch prompt explicitly hands off a TODO id and ownership.
-- When ownership is explicitly handed off, claim the TODO before editing, read it with `get`, append progress and verification notes, and close or release it as appropriate.
 
 ## Workflow
 

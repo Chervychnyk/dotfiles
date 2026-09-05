@@ -1,6 +1,6 @@
 ---
 description: Use for read-only reconnaissance, codebase mapping, convention discovery, and context gathering before implementation.
-model: openai-codex/gpt-5.4-mini
+model: openai-codex/gpt-5.6-sol
 thinking: low
 tools: read, bash, grep, find, ls
 skills: learn-codebase
