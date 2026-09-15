@@ -75,7 +75,7 @@ npx skills@latest update -g
 `mise.toml` owns tracked dotfile symlinks and scalar non-privileged macOS defaults. The `bootstrap` task runs `scripts/bootstrap-post.sh`, which preserves the custom setup that is not yet declarative:
 
 - installs formulae/casks from `Brewfile`
-- installs TagLib 1.13.1 from the `$USER/versions` Homebrew tap
+- installs OpenSSL 1.1 and TagLib 1.13.1 from the `$USER/versions` Homebrew tap
 - configures Git user name/email and the defensive global empty `core.hooksPath`
 - builds the `bat` theme cache when `bat` is installed
 - installs Zim if missing
@@ -122,6 +122,19 @@ mise bootstrap -C ~/dotfiles --force-dotfiles
 ```
 
 `setup.sh` does not pass `--force-dotfiles`; first runs should be reviewed rather than overwriting local files automatically.
+
+## Monthly Zim maintenance
+
+Check for updates once a month, then update modules and Zim itself:
+
+```bash
+zimfw check
+zimfw update
+zimfw upgrade
+zimfw uninstall
+```
+
+`zimfw uninstall` removes modules that are no longer listed in `.zimrc`.
 
 ## Migration checklist
 
@@ -183,7 +196,6 @@ These are intentionally **not** stored in this repo:
 
 ### UI tools
 - Ghostty opens with expected theme/font
-- WezTerm launches and project picker works
 - AeroSpace starts at login
 - SketchyBar items render correctly
 - k9s opens without cluster-specific junk in config
@@ -196,14 +208,9 @@ user config lives in `.config/worktrunk/config.toml` and is symlinked to
 `~/.config/worktrunk`.
 
 Shell integration (the `wt` function that can `cd`, plus completions) is
-installed once per machine:
-
-```bash
-wt config shell install
-```
-
-It appends a single line to `~/.zshrc`, which is symlinked here — so the line
-lands in this repo and travels with it.
+already initialized by the tracked line at the end of `.zshrc`. Do not run
+`wt config shell install`; it would append a duplicate initialization line to
+the symlinked file.
 
 ### Daily commands
 
@@ -222,7 +229,7 @@ wt remove                 # drop a worktree and its branch
 
 Worktrees are created at `<repo>/.worktrees/<branch>`. `.worktrees/` is ignored
 globally via `.config/git/ignore`, so no per-repo `.gitignore` edits are needed,
-and `$PROJECT_PATHS` / the `proj()` picker still show one entry per project.
+and `$PROJECT_PATHS` / the autoloaded `proj` picker still show one entry per project.
 
 ### Per-project config
 
@@ -343,13 +350,12 @@ _.fnox-env = { tools = true }
 
 ## Custom Homebrew formulae
 
-Legacy formulae are stored in this repo under `homebrew/Formula/` so they can be copied into a tap later or installed directly by `setup.sh`:
+Legacy formulae are stored in this repo for software that still needs them:
 
 - `homebrew/Formula/openssl@1.1.rb`
 - `homebrew/Formula/taglib.rb`
 
-`scripts/bootstrap-post.sh` copies these files into a local Homebrew tap named `$USER/versions`, installs from that tap, and pins `taglib@1.13.1` during `mise bootstrap`.
-`~/.zshrc` also prefers `TAGLIB_DIR` from `taglib@1.13.1` when available.
+`scripts/bootstrap-post.sh` copies them into a local Homebrew tap named `$USER/versions`, installs them during `mise bootstrap`, and pins TagLib 1.13.1. `~/.zshrc` sets `TAGLIB_DIR` to its Homebrew prefix when installed.
 
 ## Colima / Docker on the new machine
 

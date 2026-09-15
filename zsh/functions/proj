@@ -1,0 +1,8 @@
+# Find and enter an immediate project directory.
+local -a roots
+local dir
+roots=(${=PROJECT_PATHS})
+dir=$(find ${roots[@]} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf --height=60% --reverse --preview="ls -la {}")
+if [[ -n "$dir" ]]; then
+  cd "$dir"
+fi

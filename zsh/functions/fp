@@ -1,0 +1,2 @@
+# Pick and preview a file with syntax highlighting.
+fzf --preview="bat --style=numbers --color=always --line-range :500 {}"

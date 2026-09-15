@@ -1,0 +1,5 @@
+# Search for and check out a local or remote Git branch.
+local branches branch
+branches=$(git branch -a | grep -v HEAD) &&
+branch=$(echo "$branches" | fzf --height=60% --reverse +m) &&
+git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")

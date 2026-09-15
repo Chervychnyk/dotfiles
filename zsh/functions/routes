@@ -1,0 +1,6 @@
+# Search Rails routes.
+if [[ -f bin/rails ]]; then
+  bin/rails routes | fzf --header="Rails Routes" --preview="echo {}" --preview-window=up:3:wrap
+else
+  echo "Not in a Rails project"
+fi

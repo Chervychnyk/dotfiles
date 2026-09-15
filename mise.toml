@@ -7,6 +7,7 @@ dotfiles.root = "."
 "~/.aliases" = { source = ".aliases" }
 "~/.zimrc" = { source = ".zimrc" }
 "~/.fzf.zsh" = { source = ".fzf.zsh" }
+"~/.zsh/functions" = { source = "zsh/functions" }
 "~/.vimrc" = { source = ".vimrc" }
 "~/.config/nvim" = { source = ".config/nvim" }
 "~/.wezterm.lua" = { source = ".wezterm.lua" }

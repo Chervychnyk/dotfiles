@@ -10,15 +10,6 @@ if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
       https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
 fi
 
-# Load completion before Zim (required by omz plugins that use compdef)
-# Cache compinit — only regenerate once daily
-autoload -Uz compinit
-if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
-  compinit
-else
-  compinit -C
-fi
-
 # Install missing modules and update ${ZIM_HOME}/init.zsh if missing or outdated.
 if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZIM_CONFIG_FILE:-${ZDOTDIR:-${HOME}}/.zimrc} ]]; then
   source ${ZIM_HOME}/zimfw.zsh init
@@ -38,9 +29,12 @@ setopt HIST_IGNORE_SPACE      # Don't record commands starting with space
 setopt HIST_REDUCE_BLANKS     # Remove unnecessary blanks
 setopt INC_APPEND_HISTORY     # Write immediately, not on shell exit
 
+# Autoload shell helpers and interactive functions
+fpath=("$HOME/.zsh/functions" $fpath)
+autoload -Uz cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden
+
 # Prompt
-eval "$(starship init zsh)"
-setopt promptsubst
+cache_shell_init starship starship init zsh
 
 # Bat theme
 export BAT_THEME="Everforest Dark"
@@ -68,72 +62,12 @@ zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 # Load FZF themes
 [[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
 
-# FZF enhanced functions
-# Search Rails routes
-routes() {
-  if [[ -f "bin/rails" ]]; then
-    bin/rails routes | fzf --header="Rails Routes" --preview="echo {}" --preview-window=up:3:wrap
-  else
-    echo "Not in a Rails project"
-  fi
-}
-
 # Project roots can be overridden in ~/.zshrc.local
 : ${PROJECT_PATHS:="$HOME/projects $HOME/code $HOME/work"}
 
-# Find and cd into project directory (only immediate project folders)
-proj() {
-  local -a roots
-  local dir
-  roots=(${=PROJECT_PATHS})
-  dir=$(find ${roots[@]} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf --height=60% --reverse --preview="ls -la {}")
-  if [[ -n "$dir" ]]; then
-    cd "$dir"
-  fi
-}
-
-# Search command history with fzf (alternative to atuin)
-fh() {
-  print -z $(fc -ln 1 | fzf --tac --no-sort --height=60% --reverse)
-}
-
-# Search and kill process
-fkill() {
-  local pid
-  pid=$(ps -ef | sed 1d | fzf -m | awk '{print $2}')
-  if [[ -n "$pid" ]]; then
-    echo "$pid" | xargs kill -${1:-9}
-  fi
-}
-
-# Search and checkout git branch (local and remote)
-fbr() {
-  local branches branch
-  branches=$(git branch -a | grep -v HEAD) &&
-  branch=$(echo "$branches" | fzf --height=60% --reverse +m) &&
-  git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
-}
-
-# Preview file with syntax highlighting
-fp() {
-  fzf --preview="bat --style=numbers --color=always --line-range :500 {}"
-}
-
-# Find in files with ripgrep and fzf
-rga() {
-  rg --color=always --line-number --no-heading --smart-case "${*:-}" |
-    fzf --ansi \
-        --delimiter : \
-        --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
-        --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
-        --bind 'enter:become(nvim {1} +{2})'
-}
-
 # Atuin - magical shell history with fzf integration
 if command -v atuin >/dev/null 2>&1; then
-  eval "$(atuin init zsh --disable-up-arrow)"
-  # Use Ctrl+R for atuin search with fzf-style interface
-  bindkey '^r' atuin-search
+  cache_shell_init atuin atuin init zsh --disable-up-arrow
 fi
 
 # Keybindings
@@ -155,7 +89,7 @@ else
 fi
 
 # Mise (runtime version manager — replaces asdf)
-eval "$(mise activate zsh)"
+cache_shell_init mise mise activate zsh
 
 # Erlang/Elixir build options
 export ERL_AFLAGS="-kernel shell_history enabled"
@@ -188,7 +122,7 @@ if command -v brew >/dev/null 2>&1; then
     export PKG_CONFIG_PATH="$HOMEBREW_PREFIX/opt/libffi/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
   fi
 
-  # Taglib 1.x
+  # TagLib
   if [[ -d "$HOMEBREW_PREFIX/opt/taglib" ]]; then
     export TAGLIB_DIR="$HOMEBREW_PREFIX/opt/taglib"
   fi
@@ -220,10 +154,6 @@ export K9S_FOLDER="$HOME/Library/Application Support/k9s"
 # Bitwarden
 export BITWARDENCLI_APPDATA_DIR=~/.bw/
 
-# Load custom functions
-fpath=(~/.zsh/functions $fpath)
-autoload -Uz unlock_bitwarden
-
 # Consolidated PATH additions (add to end for proper precedence)
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.yarn/bin:$PATH"
@@ -235,4 +165,6 @@ unset _f
 
 # zprof  # Uncomment to show profiling results
 
-if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+if command -v wt >/dev/null 2>&1; then
+  cache_shell_init worktrunk wt config shell init zsh
+fi

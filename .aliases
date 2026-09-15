@@ -35,9 +35,6 @@ alias pgtest='pgcli postgresql://localhost/$(basename $(pwd))_test'
 # Quick file operations
 alias fv='nvim $(fzf --preview="bat --color=always {}")'
 
-# Project navigation (only immediate project folders)
-alias cdp='cd $(find ${=PROJECT_PATHS:-$HOME/projects $HOME/code $HOME/work} -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)'
-
 # Docker utilities
 alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
 alias dclean='docker system prune -af --volumes'

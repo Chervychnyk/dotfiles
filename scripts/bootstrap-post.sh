@@ -22,19 +22,29 @@ info "Installing custom versioned formulae from dotfiles..."
 LOCAL_TAP="$(brew --repository)/Library/Taps/$USER/homebrew-versions"
 mkdir -p "$LOCAL_TAP/Formula"
 install_pinned() {
-  local formula="$1" label="${2:-$1}"
+  local formula="$1" label="${2:-$1}" expected_version="${3:-}"
 
   cp "$DOTFILES/homebrew/Formula/$formula.rb" "$LOCAL_TAP/Formula/$formula.rb"
-  if brew list --versions "$formula" >/dev/null 2>&1; then
+  if brew list --versions "$formula" >/dev/null 2>&1 &&
+      brew info --json=v2 "$formula" | jq -e \
+        --arg tap "$USER/versions" \
+        --arg version "$expected_version" \
+        '.formulae[0].tap == $tap and ($version == "" or any(.formulae[0].installed[]; .version == $version))' \
+        >/dev/null; then
     success "$label already installed"
-  else
-    brew install "$USER/versions/$formula"
-    success "Installed $label"
+    return
   fi
+
+  if brew list --versions "$formula" >/dev/null 2>&1; then
+    info "Replacing $formula with $USER/versions/$formula..."
+    brew uninstall --ignore-dependencies "$formula"
+  fi
+  brew install "$USER/versions/$formula"
+  success "Installed $label"
 }
 
 install_pinned "openssl@1.1"
-install_pinned taglib "taglib@1.13.1"
+install_pinned taglib "taglib@1.13.1" "1.13.1"
 brew pin taglib >/dev/null 2>&1 || true
 
 brew cleanup
@@ -66,20 +76,23 @@ if command -v bat &>/dev/null; then
   success "bat theme cache built"
 fi
 
-if [[ ! -d "$HOME/.zim" ]]; then
-  info "Installing Zim..."
-  curl -fsSL --create-dirs -o "$HOME/.zim/zimfw.zsh" \
+ZIM_HOME="$HOME/.zim"
+ZIMFW="$ZIM_HOME/zimfw.zsh"
+if [[ ! -s "$ZIMFW" ]] || ! zsh -n "$ZIMFW" >/dev/null 2>&1; then
+  info "Downloading Zim framework..."
+  curl -fsSL --create-dirs -o "$ZIMFW" \
     https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
-  zsh -c "source $HOME/.zim/zimfw.zsh init && zimfw install"
-  success "Zim installed"
-else
-  success "Zim already installed"
 fi
+zsh -n "$ZIMFW"
+
+info "Installing missing Zim modules and rebuilding init.zsh..."
+ZIM_HOME="$ZIM_HOME" ZIM_CONFIG_FILE="$HOME/.zimrc" zsh "$ZIMFW" install
+success "Zim installed"
 
 mkdir -p "$HOME/projects" "$HOME/code" "$HOME/work"
 success "Project directories ready"
 
-mkdir -p "$HOME/.zsh/functions" "$HOME/.config/k9s" "$HOME/.claude"
+mkdir -p "$HOME/.zsh" "$HOME/.config/k9s" "$HOME/.claude"
 touch "$HOME/.zshrc.local" "$HOME/.aliases.local" "$HOME/.env.secrets"
 chmod 600 "$HOME/.env.secrets"
 success "Local override files ensured"

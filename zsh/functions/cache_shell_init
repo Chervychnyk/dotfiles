@@ -1,0 +1,59 @@
+# Cache generated shell initialization and source it atomically.
+if (( $# < 2 )); then
+  print -u2 'usage: cache_shell_init <cache-name> <command> [arguments ...]'
+  return 2
+fi
+
+local cache_name=$1
+local command_name=$2
+shift 2
+
+if [[ -z $cache_name || $cache_name == *[^A-Za-z0-9_.-]* ]]; then
+  print -u2 "cache_shell_init: invalid cache name: $cache_name"
+  return 2
+fi
+
+local executable=${commands[$command_name]:-}
+if [[ -z $executable ]]; then
+  print -u2 "cache_shell_init: command not found: $command_name"
+  return 127
+fi
+executable=${executable:A}
+
+local cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/init
+local cache_file=$cache_dir/$cache_name.zsh
+local cached_signature=''
+local signature="# cache_shell_init: path=${(q)PATH} command=${(q)executable}"
+local argument
+for argument in "$@"; do
+  signature+=" ${(q)argument}"
+done
+
+if [[ -r $cache_file ]]; then
+  IFS= read -r cached_signature < "$cache_file"
+fi
+
+if [[ ! -s $cache_file || $cached_signature != $signature || $executable -nt $cache_file ]]; then
+  mkdir -p -- "$cache_dir" || return
+
+  local temporary_file=$cache_file.tmp.$$.${RANDOM}
+  if ! {
+    print -r -- "$signature"
+    command "$executable" "$@"
+  } >| "$temporary_file"; then
+    rm -f -- "$temporary_file"
+    return 1
+  fi
+
+  if ! /bin/zsh -n "$temporary_file"; then
+    rm -f -- "$temporary_file"
+    return 1
+  fi
+
+  if ! mv -f -- "$temporary_file" "$cache_file"; then
+    rm -f -- "$temporary_file"
+    return 1
+  fi
+fi
+
+source "$cache_file"
