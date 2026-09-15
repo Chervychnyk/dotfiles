@@ -10,20 +10,20 @@ $line_break\
 $character"""
 
 [directory]
-style = "#7e9cd8"
+style = "#7fbbb3"
 
 [character]
-success_symbol = "[>](bold #98bb6c)"
-error_symbol = "[x](bold #e82424)"
-vimcmd_symbol = "[<](bold #7e9cd8)"
+success_symbol = "[>](bold #a7c080)"
+error_symbol = "[x](bold #e67e80)"
+vimcmd_symbol = "[<](bold #7fbbb3)"
 
 [git_branch]
 format = "[$branch]($style)"
-style = "#727169"
+style = "#859289"
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](#e6c384) ($ahead_behind$stashed)]($style)"
-style = "#7e9cd8"
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](#dbbc7f) ($ahead_behind$stashed)]($style)"
+style = "#7fbbb3"
 conflicted = "​"
 untracked = "​"
 modified = "​"
@@ -34,8 +34,8 @@ stashed = "≡"
 
 [git_state]
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
+style = "#859289"
 
 [cmd_duration]
 format = "[$duration]($style) "
-style = "#e6c384"
+style = "#dbbc7f"
