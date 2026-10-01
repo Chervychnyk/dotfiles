@@ -1,8 +1,4 @@
-tap "meltylabs/tap"
-tap "sst/tap"
-tap "stripe/stripe-cli"
-tap "tw93/tap"
-tap "manaflow-ai/cmux"
+tap "stablyai/orca"
 
 # -----------------------------------------------------------------------------
 # CLI tools
@@ -19,6 +15,7 @@ brew "git"
 brew "git-delta"      # Syntax-highlighting pager for git/diff
 brew "gnupg"
 brew "herdr"          # Terminal workspace manager / agent multiplexer
+brew "hunk"           # Diff viewer for agent-authored changes (herdr hunk plugin)
 brew "jq"             # JSON processor
 brew "libpng"
 brew "mise"           # Runtime version manager / env/task control plane
@@ -58,15 +55,18 @@ brew "zlib"           # Needed for some native builds
 # -----------------------------------------------------------------------------
 # Containers / infra / cloud
 # -----------------------------------------------------------------------------
+brew "awscli"
 brew "colima"         # Docker Desktop alternative
 brew "docker"         # Docker CLI
+brew "docker-buildx"
 brew "docker-compose"
 brew "k9s"
 brew "kubectx"
 brew "kubernetes-cli"
 brew "lazydocker"     # Docker TUI
+brew "ollama", restart_service: :changed
 brew "rtk"
-brew "sst/tap/opencode"
+brew "opencode"
 brew "syncthing", restart_service: :changed
 brew "teleport"
 
@@ -85,6 +85,7 @@ brew "tree-sitter-cli"
 # -----------------------------------------------------------------------------
 # GUI apps
 # -----------------------------------------------------------------------------
+cask "android-studio"
 cask "anytype"
 cask "arc"
 cask "blockblock"
@@ -96,6 +97,8 @@ cask "figma"
 cask "firefox"
 cask "fork"
 cask "gcloud-cli"
+cask "ghostty"
+cask "handy"
 cask "keepassxc"
 cask "keka"
 cask "localsend"
@@ -104,8 +107,10 @@ cask "lulu"
 cask "mullvad-vpn"
 cask "notion-calendar"
 cask "obsidian"
+cask "omniwm"
 cask "openmtp"
 cask "optimage"
+cask "stablyai/orca/orca"
 cask "postman"
 cask "qlcolorcode"
 cask "raycast"
@@ -134,9 +139,10 @@ cask "font-source-code-pro"
 mas "Amphetamine", id: 937984704
 mas "Bitwarden", id: 1352778147
 mas "Flow", id: 1423210932
+mas "Kofe Flow", id: 6762003285
 mas "Monosnap", id: 540348655
 mas "Numbers", id: 361304891
 mas "Pages", id: 361309726
 mas "Telegram", id: 747648890
 mas "WeChat", id: 836500024
-mas "WireGuard", id: 1451685025  
+mas "WireGuard", id: 1451685025
