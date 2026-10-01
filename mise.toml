@@ -23,6 +23,7 @@ dotfiles.root = "."
 "~/.config/yazi" = { source = ".config/yazi" }
 "~/.config/zed" = { source = ".config/zed" }
 "~/.config/worktrunk" = { source = ".config/worktrunk" }
+"~/.config/hunk/config.toml" = { source = ".config/hunk/config.toml" }
 "~/.config/git/ignore" = { source = ".config/git/ignore" }
 "~/.config/opensessions" = { source = ".config/opensessions" }
 "~/.config/k9s" = { source = "k9s" }

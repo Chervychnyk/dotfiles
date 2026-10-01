@@ -1,0 +1,66 @@
+theme = "everforest-dark-hard"
+mode = "auto"
+line_numbers = true
+wrap_lines = true
+hunk_headers = false
+menu_bar = false
+agent_notes = false
+copy_decorations = false
+cursor_line = "row"
+
+# Everforest Dark Hard, matching herdr's [theme.custom] and the yazi flavor.
+# `everforest-*` ids are reserved by hunk's bundled syntax themes, hence the suffix.
+[themes.everforest-dark-hard]
+base = "everforest-dark"
+label = "Everforest Dark Hard"
+background = "#1e2326"          # bg_dim
+panel = "#272e33"               # bg0
+panelAlt = "#2e383c"            # bg1
+border = "#414b50"              # bg3
+accent = "#83c092"              # aqua
+accentMuted = "#374145"         # bg2
+text = "#d3c6aa"                # fg
+muted = "#859289"               # grey1
+contextBg = "#1e2326"
+contextContentBg = "#1e2326"
+addedBg = "#3c4841"             # bg_green
+removedBg = "#493b40"           # bg_red
+addedContentBg = "#576651"      # bg_green + 25% green
+removedContentBg = "#704c50"    # bg_red + 25% red
+movedAddedBg = "#384b55"        # bg_blue
+movedRemovedBg = "#384b55"
+addedSignColor = "#a7c080"
+removedSignColor = "#e67e80"
+lineNumberBg = "#1e2326"
+lineNumberFg = "#7a8478"        # grey0
+selectedHunk = "#2e383c"
+badgeAdded = "#a7c080"
+badgeRemoved = "#e67e80"
+badgeNeutral = "#859289"
+fileNew = "#a7c080"
+fileDeleted = "#e67e80"
+fileRenamed = "#d699b6"         # purple
+fileModified = "#dbbc7f"        # yellow
+fileUntracked = "#83c092"
+noteBorder = "#83c092"
+noteBackground = "#272e33"
+noteTitleBackground = "#2e383c"
+noteTitleText = "#d3c6aa"
+
+# Pinned so highlighting stays Everforest even if the base syntax theme changes.
+[themes.everforest-dark-hard.syntax_scopes]
+"comment" = "#859289"
+"keyword" = "#e67e80"
+"storage" = "#e67e80"
+"string" = "#a7c080"
+"constant" = "#d699b6"
+"entity.name.function" = "#a7c080"
+"support.function" = "#a7c080"
+"entity.name.type" = "#dbbc7f"
+"support.type" = "#dbbc7f"
+"variable" = "#d3c6aa"
+"variable.parameter" = "#d3c6aa"
+"entity.name.tag" = "#e69875"
+"entity.other.attribute-name" = "#dbbc7f"
+"punctuation" = "#859289"
+"keyword.operator" = "#e69875"
