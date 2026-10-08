@@ -83,7 +83,11 @@ return {
       },
 
       sources = {
-        default = { "lsp", "path", "snippets", "buffer", "codecompanion" },
+        -- codecompanion is configured but deliberately not a default source: it
+        -- is an LLM round-trip against OpenRouter, and leaving it in made every
+        -- completion request in every buffer network-bound. Enable it per
+        -- buffer with vim.b.completion, or add it back to a per_filetype list.
+        default = { "lsp", "path", "snippets", "buffer" },
         per_filetype = {
           markdown = { "buffer", "path" },
         },

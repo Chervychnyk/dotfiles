@@ -61,8 +61,11 @@ vim.opt.foldenable = false
 vim.opt.splitbelow = true
 -- Open vertical splits to the right of the current window.
 vim.opt.splitright = true
--- Disable swap files.
-vim.opt.swapfile = false
+-- Keep swap files. Neovim does not create them for buffers without a file
+-- (terminals, quickfix, plugin buffers), so this costs nothing in normal use
+-- but leaves a recovery file to inspect after a crash. With 'backup' and
+-- 'writebackup' off there was previously nothing to recover from.
+vim.opt.swapfile = true
 -- Disable backup files.
 vim.opt.backup = false
 -- Disable writebackup files.

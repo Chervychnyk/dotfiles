@@ -22,7 +22,7 @@ return {
       preview_position = "right",
     },
     preview = {
-      max_size = 100 * 1024,
+      max_size = vim.g.max_file.size,
     },
   },
   keys = {

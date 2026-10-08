@@ -8,5 +8,10 @@ return {
     require("everforest").setup({
       background = "hard",
     })
+    -- setup() only merges config; it does not load the palette. colors/
+    -- everforest.lua calls require("everforest").load(), which is what
+    -- actually applies it. Applying it here rather than from a separate
+    -- config.colorscheme module keeps the colorscheme in one place.
+    vim.cmd.colorscheme("everforest")
   end,
 }

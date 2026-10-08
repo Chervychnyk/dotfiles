@@ -28,8 +28,11 @@ autocmd("FileType", {
   end,
 })
 
--- Reload externally changed files
-autocmd({ "FocusGained", "TermClose", "TermLeave", "BufEnter" }, {
+-- Reload externally changed files.
+-- BufEnter is deliberately absent: it made every buffer switch stat() the file,
+-- and FocusGained already covers the case that matters -- a file changed while
+-- you were in another application. TermClose/TermLeave cover leaving a pane.
+autocmd({ "FocusGained", "TermClose", "TermLeave" }, {
   group = augroup("checktime"),
   desc = "Check for file changes on disk",
   callback = function()
