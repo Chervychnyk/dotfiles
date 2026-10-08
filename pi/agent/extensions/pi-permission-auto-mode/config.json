@@ -1,0 +1,13 @@
+{
+  "$schema": "./schemas/config.schema.json",
+  "enabled": false,
+  "backend": {
+    "type": "jev",
+    "endpoint": "http://127.0.0.1:11434/v1/systemone",
+    "model": "tev1"
+  },
+  "timeoutMs": 5000,
+  "maxCommandBytes": 8192,
+  "allowThreshold": 0.85,
+  "denyThreshold": 0.98
+}

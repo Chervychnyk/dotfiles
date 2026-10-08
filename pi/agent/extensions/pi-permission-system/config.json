@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/gotgenes/pi-packages/main/packages/pi-permission-system/schemas/permissions.schema.json",
   "doublePressToConfirm": true,
   "permissionReviewLog": true,
+  "authorizerChain": ["auto-mode"],
   "shellTools": {
     "interactive_shell": {
       "commandArgument": "command",
@@ -19,11 +20,7 @@
       "~/.aws/*": "deny",
       "~/.gnupg/*": "deny",
       "*.pem": "deny",
-      "*.key": "deny",
-      "~/.pi/agent/extensions/pi-permission-system/config.json": "deny",
-      "~/dotfiles/pi/agent/extensions/pi-permission-system/config.json": "deny",
-      "~/.pi/agent/sandbox.settings.json": "deny",
-      "~/dotfiles/pi/agent/sandbox.settings.json": "deny"
+      "*.key": "deny"
     },
     "external_directory": {
       "*": "ask",

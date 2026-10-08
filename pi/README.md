@@ -46,6 +46,7 @@ Local path packages assume the corresponding checkout exists on the machine.
 | `markdown-preview.ts` | Project-local Markdown preview in the TUI. |
 | `go-to-bed.ts` | Late-night advisory/blocking guard. |
 | `pi-cloak/` | Secret/path cloaking behavior. |
+| `pi-permission-auto-mode/` | Disabled-by-default model decisions for permission-system asks; `/auto-mode on` enables it per session. |
 | `sandbox/` | Disabled legacy filesystem/network sandbox retained for rollback. |
 | `subagent/` | Subagent integration. |
 | `uv.ts` | Python tooling guardrails. |

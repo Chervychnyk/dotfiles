@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.pi/schemas/pi-permission-auto-mode.json",
+  "title": "Pi permission auto-mode configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "enabled": { "type": "boolean" },
+    "backend": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "endpoint", "model"],
+          "properties": {
+            "type": { "const": "jev" },
+            "endpoint": { "type": "string", "format": "uri" },
+            "model": { "type": "string", "pattern": "\\S" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "provider", "model"],
+          "properties": {
+            "type": { "const": "llm" },
+            "provider": { "type": "string", "pattern": "\\S" },
+            "model": { "type": "string", "pattern": "\\S" }
+          }
+        }
+      ]
+    },
+    "timeoutMs": { "type": "integer", "minimum": 100 },
+    "maxCommandBytes": { "type": "integer", "minimum": 0 },
+    "allowThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "denyThreshold": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "required": [
+    "enabled",
+    "backend",
+    "timeoutMs",
+    "maxCommandBytes",
+    "allowThreshold",
+    "denyThreshold"
+  ],
+  "allOf": [
+    {
+      "if": { "required": ["allowThreshold", "denyThreshold"] },
+      "then": {
+        "description": "denyThreshold must be greater than allowThreshold; runtime validation enforces this relation"
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@ This file is the interface for understanding safety behavior. Individual extensi
 | Sandbox policy | `sandbox/`, `../sandbox.settings.json` | Filesystem reads/writes, network domains, Unix sockets, local binding. | Deny or prompt through the sandbox runtime before tool execution. | Global/project/local sandbox settings plus prompt-persisted grants. |
 | Late-night guard | `go-to-bed.ts` | Tool execution during quiet hours. | Advisory pushback, then temporary blocking until explicit continuation. | In-memory per night/session. |
 | Cloaking | `pi-cloak/` | Secret/path redaction and exposure reduction. | Hide sensitive values from display or model context. | Extension implementation. |
+| Permission auto mode | `pi-permission-auto-mode/` | Permission-system `ask` decisions after deterministic policy. | High-confidence allow/deny, otherwise defer to the human prompt; disabled by default. | Config default plus session-only `/auto-mode on|off`. |
 | Operating rules | `../AGENTS.md` | Agent behavior around permission errors, secrets, destructive commands, and verification. | Instruction-level policy; stop or ask rather than work around. | Markdown instructions in this repo. |
 
 ## Expected precedence
@@ -18,9 +19,10 @@ This file is the interface for understanding safety behavior. Individual extensi
 Treat the stack as defense in depth, not as one replaceable module.
 
 1. **Sandbox policy** owns OS/runtime capability: filesystem and network access.
-2. **Late-night guard** owns time-based interruption and confirmation.
-3. **Cloaking** owns reducing sensitive content exposure.
-4. **Operating rules** own what the agent should do when any safety module blocks or warns.
+2. **Permission auto mode** may resolve only permission-system asks; protected path surfaces and uncertain or failed reviews still reach the human prompt.
+3. **Late-night guard** owns time-based interruption and confirmation.
+4. **Cloaking** owns reducing sensitive content exposure.
+5. **Operating rules** own what the agent should do when any safety module blocks or warns.
 
 If more than one module can block the same action, any block is authoritative. Do not add workarounds that try another path after a denial, permission error, sandbox error, or operation-not-permitted result.
 
@@ -44,6 +46,7 @@ Use the narrowest check for the module being changed:
 ```bash
 node --check pi/agent/extensions/go-to-bed.ts
 node pi/agent/extensions/sandbox/tests/check.mjs
+npm --prefix pi/agent/extensions/pi-permission-auto-mode test
 ```
 
 For documentation or config-only edits, also inspect the effective files linked by setup:
