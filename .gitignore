@@ -6,6 +6,7 @@
 pi/agent/auth.json
 pi/agent/trust.json
 pi/agent/mcp.json
+pi/agent/mcp-auth.json
 pi/agent/mcp-cache.json
 pi/agent/mcp-npx-cache.json
 pi/agent/run-history.jsonl
@@ -34,6 +35,7 @@ pi/interview-snapshots/
 .config/herdr/plugins.json
 .config/herdr/.plugins.lock
 .config/herdr/session.json
+.config/herdr/release-notes.json
 .config/herdr/*.log
 .config/herdr/*.sock
 # herdr-managed; regenerate with `herdr integration install pi`
