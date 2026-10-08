@@ -13,7 +13,7 @@ return {
       javascript = { "string", "template_string" },
       java = false,
     },
-    disable_filetype = { "TelescopePrompt", "spectre_panel", "snacks_picker_input" },
+    disable_filetype = { "snacks_picker_input" },
     ignored_next_char = string.gsub([[ [%w%%%'%[%"%.] ]], "%s+", ""),
     enable_moveright = true,
     disable_in_macro = false,

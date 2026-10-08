@@ -100,17 +100,11 @@ return {
       diff = {
         layout = "side-by-side",
       },
-      keymaps = {
-        view = {
-          toggle_stage = "s",
-          stage_hunk = "s",
-          unstage_hunk = "u",
-        },
-        explorer = {
-          stage_all = "S",
-          unstage_all = "U",
-        },
-      },
+      -- view keymaps are left at their defaults: <leader>hs / <leader>hu /
+      -- <leader>hr for stage / unstage / discard hunk, "-" to toggle the current
+      -- file. The previous override mapped both toggle_stage and stage_hunk to
+      -- "s", so one of the two silently never fired. The explorer block was
+      -- identical to the defaults and did nothing.
     },
     config = function(_, opts)
       require("codediff").setup(opts)
@@ -154,8 +148,9 @@ return {
         disable_context_highlighting = false,
         disable_commit_confirmation = true,
         disable_insert_on_commit = "auto",
-        -- Neogit refreshes its internal state after specific events, which can be expensive depending on the repository size.
-        -- Disabling `auto_refresh` will make it so you have to manually refresh the status after you open it.
+        -- Neogit refreshes its internal state after specific events, which can
+        -- be expensive on large repositories. Setting auto_refresh = false means
+        -- refreshing the status by hand after opening it.
         auto_refresh = true,
         disable_builtin_notifications = false,
         use_magit_keybindings = false,

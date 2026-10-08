@@ -22,7 +22,6 @@ return {
       "snacks_picker",   -- Snacks picker filetype
       "snacks_input",    -- Snacks input filetype
       "snacks_win",      -- General snacks window
-      "TelescopePrompt", -- If you also use telescope
       "neo-tree",
       "Outline",
       "help",

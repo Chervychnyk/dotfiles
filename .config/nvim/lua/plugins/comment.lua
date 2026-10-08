@@ -12,12 +12,9 @@ return {
       },
     },
     opts = {
-      hooks = {
-        pre = function()
-          require('ts_context_commentstring.internal').update_commentstring({})
-        end
-      },
       options = {
+        -- custom_commentstring already computes the string on demand, so no
+        -- `hooks.pre` update_commentstring call is needed on top of it.
         custom_commentstring = function()
           return require('ts_context_commentstring').calculate_commentstring() or vim.bo.commentstring
         end,

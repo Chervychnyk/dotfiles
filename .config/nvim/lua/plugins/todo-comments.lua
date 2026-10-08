@@ -3,7 +3,19 @@ return {
   event = { "BufReadPre", "BufNewFile" },
   dependencies = { "nvim-lua/plenary.nvim" },
   keys = {
-    { "<leader>fT", function() Snacks.picker.todo_comments({ keywords = { "TODO", "FIX", "FIXME" } }) end, desc = "Todo/Fix/Fixme" },
+    {
+      "<leader>fT",
+      function()
+        -- Search exactly what jump_next/jump_prev will jump to. The plugin's
+        -- own keyword config is the source of truth; a hardcoded list here
+        -- drifted from it, so the picker could find comments that jumping
+        -- skipped and vice versa.
+        Snacks.picker.todo_comments({
+          keywords = vim.tbl_keys(require("todo-comments.config").keywords),
+        })
+      end,
+      desc = "Todo/Fix/Fixme",
+    },
   },
   config = function()
     local todo_comments = require("todo-comments")
