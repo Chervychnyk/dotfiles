@@ -15,9 +15,7 @@ return {
       },
 
       enabled = function()
-        return not vim.tbl_contains(
-              { "DressingInput", "DressingSelect", "neo-tree", "TelescopePrompt", "snacks_picker_input" },
-              vim.bo.filetype)
+        return not vim.tbl_contains({ "neo-tree", "snacks_picker_input" }, vim.bo.filetype)
             and vim.bo.buftype ~= "prompt"
             and vim.b.completion ~= false
       end,
@@ -88,10 +86,8 @@ return {
         default = { "lsp", "path", "snippets", "buffer", "codecompanion" },
         per_filetype = {
           markdown = { "buffer", "path" },
-          sql = { 'snippets', 'dadbod', 'buffer' }
         },
         providers = {
-          dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
           lsp = {
             min_keyword_length = 2, -- Number of characters required before LSP completion starts.
             score_offset = 0, -- Adjust LSP item ranking relative to other sources.

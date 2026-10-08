@@ -49,31 +49,5 @@ return {
   },
   config = function(_, opts)
     require("neo-tree").setup(opts)
-
-    local function open_tree_on_setup()
-      vim.schedule(function()
-        local file = vim.fn.argv(0)
-        local buf_name = vim.api.nvim_buf_get_name(0)
-        local is_no_name_buffer = buf_name == ""
-            and vim.bo.filetype == ""
-            and vim.bo.buftype == ""
-        local is_directory = file ~= "" and vim.fn.isdirectory(file) == 1
-
-        if not is_no_name_buffer and not is_directory then
-          return
-        end
-
-        if is_directory then
-          vim.cmd.cd(file)
-        end
-
-        vim.cmd("Neotree show position=left")
-      end)
-    end
-
-    vim.api.nvim_create_autocmd("VimEnter", {
-      group = vim.api.nvim_create_augroup("NeoTree", { clear = true }),
-      callback = open_tree_on_setup,
-    })
   end,
 }

@@ -62,8 +62,11 @@ zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 # Load FZF themes
 [[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh
 
-# Project roots can be overridden in ~/.zshrc.local
+# Project roots can be overridden in ~/.zshrc.local. Exported so the Neovim
+# projects picker (lua/plugins/snacks.lua) reads the same list instead of
+# keeping its own copy that drifts.
 : ${PROJECT_PATHS:="$HOME/projects $HOME/code $HOME/work"}
+export PROJECT_PATHS
 
 # Atuin - magical shell history with fzf integration
 if command -v atuin >/dev/null 2>&1; then

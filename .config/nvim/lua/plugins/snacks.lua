@@ -25,16 +25,20 @@ return {
           },
         },
         sources = {
+          -- Layout keys belong directly on `layout`. Snacks reads backdrop, box
+          -- and position from the outer table and only treats the nested
+          -- `layout` key as the window list, so nesting everything one level
+          -- deeper silently dropped all but the window list.
           explorer = {
             layout = {
+              backdrop = false,
+              width = 40,
+              min_width = 40,
+              height = 0,
+              position = "left",
+              border = "rounded",
+              box = "vertical",
               layout = {
-                backdrop = false,
-                width = 40,
-                min_width = 40,
-                height = 0,
-                position = "left",
-                border = "rounded",
-                box = "vertical",
                 { win = "list", border = "none" },
                 {
                   win = "input",
@@ -54,9 +58,8 @@ return {
       },
       dashboard = {
         preset = {
-          -- Defaults to a picker that supports `fzf-lua`, `telescope.nvim` and `mini.pick`
-          ---@type fun(cmd:string, opts:table)|nil
-          pick = nil,
+          -- No `pick`: find/live-grep are wired to fff below rather than
+          -- snacks' default picker, so there is nothing for it to launch.
           keys = {
             {
               icon = " ",
@@ -128,13 +131,17 @@ return {
     { "<leader>cR", function() Snacks.rename.rename_file() end,    desc = "Rename File" },
     { "<leader>un", function() Snacks.notifier.hide() end,         desc = "Dismiss All Notifications" },
     { "<leader>bl", function() Snacks.picker.buffers() end,        desc = "Buffers" },
-    -- { "<leader>e",  function() Snacks.explorer({ hidden = true, ignored = true, exclude = { ".git" } }) end, desc = "File Explorer" },
+    -- <leader>e belongs to neo-tree, so snacks.explorer is not a duplicate.
     { "<leader>f",  group = "Find", nowait = true, remap = false },
     {
       "<leader>fp",
       function()
+        -- PROJECT_PATHS is exported by .zshrc so the shell and the picker agree
+        -- on where projects live. Hardcoding a second list here had drifted:
+        -- it pointed at ~/Developer, which does not exist, and omitted ~/code
+        -- and ~/work.
         Snacks.picker.projects({
-          dev = { "~/Projects", "~/Developer" },
+          dev = vim.split(vim.env.PROJECT_PATHS or "", " ", { trimempty = true }),
         })
       end,
       desc = "Projects"
