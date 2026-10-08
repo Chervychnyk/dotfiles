@@ -134,6 +134,37 @@ description = "file manager"
 width = "85%"
 height = "85%"
 
+# smart-splits.nvim (github.com/smart-splits-nvim/smart-splits.nvim, linked from
+# the lazy.nvim checkout): makes ctrl+h/j/k/l behave identically inside and
+# outside Neovim, the same way the tmux integration in .tmux.conf does. Each
+# action asks herdr whether the focused pane runs Vim; if so it forwards the key
+# so Neovim handles its own splits first and only crosses the pane boundary when
+# it hits an edge. Needs jq on PATH. The Neovim half lives in
+# .config/nvim/lua/plugins/smart-splits.lua.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "smart-splits.nvim.left"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "smart-splits.nvim.down"
+description = "navigate down (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "smart-splits.nvim.up"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "smart-splits.nvim.right"
+description = "navigate right (vim/herdr)"
+
 # herdr-hunk-diff (github.com/jhochenbaum/herdr-hunk-diff): review diffs in hunk,
 # send inline comments back to the agent. d = diff. Bound by hand instead of
 # `setup-keys`: its defaults take shift+c (worktrunk) and shift+a (previous_agent).

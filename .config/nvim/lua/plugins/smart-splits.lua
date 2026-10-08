@@ -1,5 +1,9 @@
 return {
-  'mrjones2014/smart-splits.nvim',
+  -- Upstream moved to the smart-splits-nvim org; herdr support (and the
+  -- matching herdr plugin) only exists on the new repo.
+  'smart-splits-nvim/smart-splits.nvim',
+  -- Not lazy-loaded: the plugin must be loaded before it can detect the herdr
+  -- mux backend, otherwise the first navigation inside a pane stays Neovim-only.
   lazy = false,
   opts = {
     -- Ignored buffer types (only while resizing)
@@ -25,11 +29,13 @@ return {
     },
     float_win_behavior = 'previous',
     cursor_follows_swapped_bufs = true,
+    -- Keep the cursor on the same screen row when hopping left/right, so the
+    -- cursor stays put across panes instead of jumping to each buffer's line 1.
+    move_cursor_same_row = true,
     -- Default number of lines/columns to resize by at a time
     default_amount = 3,
     -- Disable multiplexer navigation in certain contexts
     disable_multiplexer_nav_when_zoomed = true,
-    zellij_move_focus_or_tab = true,
     -- Log level for debugging
     log_level = "info",
   },
