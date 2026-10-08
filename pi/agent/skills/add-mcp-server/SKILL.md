@@ -1,96 +1,51 @@
 ---
 name: add-mcp-server
-description: Add an MCP server to pi. Use when asked to "add mcp server", "configure mcp", "add mcp", "new mcp server", "setup mcp", "connect mcp server", or "register mcp server". Handles both global and project-local configurations.
+description: Add or configure a global or project-local MCP server in Pi. Use for MCP setup, connection, or registration requests.
 ---
 
 # Add an MCP Server
 
-Add an MCP server configuration to `pi-mcp-adapter`. Determine scope and server type, write the config, and verify the connection.
+Use Pi's built-in MCP support. Read the installed Pi version's `docs/mcp.md` before changing configuration when available.
 
-## Step 1: Determine Scope
+## 1. Choose scope and transport
 
-Ask the user if not obvious from context:
+Infer the scope when context makes it clear; otherwise ask.
 
-| Scope | Config File | When to Use |
-|-------|-------------|-------------|
-| **Global** | `~/.pi/agent/mcp.json` | Server used across all projects |
-| **Project** | `.pi/mcp.json` (project root) | Server specific to one project |
+- Global: `~/.pi/agent/mcp.json`
+- Project: `.pi/mcp.json` in the project root; requires project trust and overrides a global server with the same name
 
-Project-local configs override global ones. Both files use the same format.
+Choose one transport:
 
-## Step 2: Determine Server Type
+- stdio: one executable in `command`, with optional `args`, `env`, and `cwd`
+- streamable HTTP: `url`, with optional `headers` and `oauth`
 
-MCP servers connect via **stdio** (local process) or **HTTP** (remote URL).
+Server names may contain only letters, digits, `_`, and `-`.
 
-**Stdio server** — runs a local command:
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "package-name@latest"],
-      "env": { "KEY": "value" }
-    }
-  }
-}
+## 2. Add the server
+
+Prefer Pi's CLI because it safely merges the entry:
+
+```bash
+pi mcp add NAME -- COMMAND ARG...
+pi mcp add NAME --url URL
 ```
 
-**HTTP server** — connects to a URL:
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "url": "http://localhost:8080/mcp",
-      "headers": { "Authorization": "Bearer token" }
-    }
-  }
-}
+Add `--local` for project scope. Use `--env`, `--cwd`, `--header`, `--bearer-token-env-var`, `--oauth-client-id`, `--oauth-client-secret`, `--oauth-callback-port`, and `--exposure` as required. Run `pi mcp add --help` when the exact installed interface matters.
+
+Edit the target `mcp.json` only for fields the CLI does not support, preserving every existing entry. Ask before replacing an existing server unless replacement is explicit.
+
+Keep secrets out of configuration. Reference environment variables as `${NAME}` or use a whole-value `!command`. For bearer authentication, prefer `--bearer-token-env-var NAME`.
+
+Do not add adapter-only fields such as `auth`, `bearerToken`, `bearerTokenEnv`, `lifecycle`, `idleTimeout`, or `debug`. Built-in Pi infers transport from `command` or `url`; optional `type` must be `stdio`, `http`, or `streamable-http`.
+
+## 3. Verify
+
+Run:
+
+```bash
+pi mcp list
 ```
 
-## Step 3: Gather Configuration
+Success requires exit status 0 and the new server reported as connected. If OAuth is required, run `pi mcp login NAME`, ask the user to approve the browser flow, then rerun `pi mcp list`.
 
-Collect only what's needed. All fields except `command`/`url` are optional.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `command` | string | Executable to run (stdio) |
-| `args` | string[] | Command arguments (stdio) |
-| `env` | object | Environment variables (stdio) |
-| `cwd` | string | Working directory (stdio) |
-| `url` | string | Server URL (HTTP) |
-| `headers` | object | HTTP headers (HTTP) |
-| `auth` | `"oauth"` or `"bearer"` | Auth method (HTTP) |
-| `bearerToken` | string | Static bearer token |
-| `bearerTokenEnv` | string | Env var name for bearer token |
-| `lifecycle` | `"lazy"` / `"eager"` / `"keep-alive"` | Connection strategy (default: `lazy`) |
-| `idleTimeout` | number | Minutes before idle disconnect |
-| `debug` | boolean | Show server stderr |
-
-Lifecycle modes:
-- **lazy** (default) — connects on first tool call, disconnects after idle timeout
-- **eager** — connects at session start, no auto-disconnect
-- **keep-alive** — connects at start, auto-reconnects if dropped
-
-## Step 4: Write the Config
-
-1. Read the target config file if it exists
-2. Merge the new server into the existing `mcpServers` object
-3. Write the updated JSON
-
-If the file doesn't exist, create it with the full structure:
-```json
-{
-  "mcpServers": {
-    "server-name": { ... }
-  }
-}
-```
-
-Warn if a server with the same name already exists and confirm before overwriting.
-
-## Step 5: Verify
-
-1. Run `/reload` to pick up the new config
-2. Use `mcp({ connect: "server-name" })` to test the connection
-3. Use `mcp({ server: "server-name" })` to list available tools
-4. Report success or troubleshoot connection errors
+Tell the user to run `/reload` or start a new session so an already-running Pi session loads the changed server. Report the scope, server name, transport, verification result, and any remaining sign-in or environment-variable requirement.

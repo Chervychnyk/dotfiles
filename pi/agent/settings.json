@@ -1,16 +1,15 @@
 {
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "1.0.2",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "packages": [
-    "npm:pi-mcp-adapter",
     "~/code/pi-code-previews",
     "~/code/pi-web-tools",
     "npm:@gotgenes/pi-subagents",
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:@juicesharp/rpiv-todo",
-    "npm:pi-interactive-shell",
-    "npm:@gotgenes/pi-permission-system"
+    "npm:@gotgenes/pi-permission-system",
+    "npm:@ff-labs/pi-fff"
   ],
   "theme": "everforest-dark-hard",
   "defaultThinkingLevel": "low",
@@ -41,5 +40,6 @@
       "find",
       "ls"
     ]
-  }
+  },
+  "deviceId": "05ab931d-b47e-49dd-b2ba-f3bc838f9d52"
 }
