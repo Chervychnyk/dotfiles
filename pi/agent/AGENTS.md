@@ -23,7 +23,9 @@ Find the root cause. Don't apply shotgun patches or cargo-cult fixes. If a test 
 Provide evidence — actual command output, test results, or a verified behavior trace. Treat "should work now" as a red flag; run the check instead.
 
 ### Stop on Permission Errors
-If a command or tool fails with a permission, approval, sandbox, or operation-not-permitted error, stop immediately. Report the blocker and wait for the user to decide whether to retry, adjust permissions, or skip that step. Do not attempt alternative workarounds, different paths, environment overrides, or follow-up commands unless the user explicitly asks.
+Permission failures are scoped to the agent and operation that receives them. If your own command or tool call is denied because of permissions, approval, sandboxing, or an operation-not-permitted error, stop that operation immediately, report the blocker, and wait for the user. Do not retry, bypass, or work around your own denial unless the user explicitly asks.
+
+A denial received by a subagent is not inherited by its parent. The subagent must stop and report the denied operation, but the parent may continue independent work and may perform the operation through its own normal tool path. The parent must stop only if its own operation is denied. Never direct a denied subagent to circumvent its denial.
 
 ### Clean Up After Yourself
 Remove debug prints, commented-out code, scratch files, and temporary artifacts before finishing. The diff should contain only the intended change.
@@ -36,7 +38,7 @@ Short answers, grouped questions, no running commentary. Surface blockers early.
 
 ## Engineering Loop
 
-For non-trivial work, prefer several focused prompts or subagent steps over one large implementation request:
+For non-trivial work, use focused steps rather than one large implementation pass. Keep the work in the main agent unless a subagent removes a specific uncertainty or isolates genuinely independent work:
 
 1. Inspect the existing design and affected files.
 2. Identify weak cohesion, unclear boundaries, and risky dependencies.
@@ -84,31 +86,29 @@ Use the `todo` tool to track a non-trivial task within the current conversation.
 
 ## Subagents
 
-Use subagents proactively for non-trivial work while keeping the main agent as orchestrator and final decision-maker. This setup uses `@gotgenes/pi-subagents`, whose primary tools are `subagent`, `get_subagent_result`, and `steer_subagent`.
+Use a subagent only when it removes a named uncertainty, isolates independent work, or supplies an independent high-risk review. The main agent remains the default implementer and decision-maker.
 
-Default routing:
+Routing:
 
-- trivial lookup, one-line edit, or direct answer → handle directly
-- unclear scope or product intent → use the `spec` agent
-- unfamiliar repo, unfamiliar code path, or request that depends on conventions → launch the `scout` agent (read-only) before planning or editing
-- change touching more than one file, public API, runtime config, persistence, auth, payments, concurrency, or test infrastructure → use `scout` for context and `reviewer` before finalizing
-- bug report, failing test, regression, or performance issue → use `scout`/diagnosis first; use `planner` when the fix is not obvious after reconnaissance
-- feature, behavior change, or behavior-preserving cleanup beyond a tiny local edit → `scout` for context, `planner` for the plan, one `worker` to implement, `reviewer` to verify
-- multi-step work or work likely to exceed ~15 minutes → `scout`/`spec` first, then `planner`, then one `worker`, then `reviewer`
-- external/current facts plus local code context → run a researcher-style agent and `scout` in parallel when a researcher is available
-- drift or assumption check against current session history → use `inherit_context: true` with `reviewer`
+- Known files, concrete findings, or an existing implementation plan → handle directly.
+- Unclear product intent → use `spec`.
+- Unfamiliar architecture or entry points → use one read-only `scout`.
+- A fix remains non-obvious after inspection → use `planner`; otherwise plan directly.
+- Large, well-bounded implementation that benefits from context isolation → use one `worker`.
+- Security, data integrity, concurrency, auth, payments, migrations, or public APIs → use one fresh-context `reviewer` after implementation.
+- Independent research and local reconnaissance may run in parallel when their ownership does not overlap.
 
-When uncertain whether to use a subagent, prefer a small, read-only `scout` instead of skipping subagents. Run subagents in the foreground by default so the main agent can use their findings before doing overlapping work. Use background subagents only when their scope is clearly independent, long-running, or the parent will intentionally wait/retrieve results before touching the same area. Avoid subagents only when the task is clearly local, low-risk, and faster to complete directly than to delegate.
+A completed review with file-level findings counts as reconnaissance and planning. Implement those findings directly unless one is technically ambiguous. Do not chain `scout → planner → worker → reviewer` by default.
+
+Budget: default to at most one implementation-side subagent and one review subagent per task. Exceed this only for explicitly independent parallel work or when the user requests deeper delegation. When uncertain, continue in the main agent.
 
 Operational rules:
 
-- Launch with explicit `prompt`, `description`, and `subagent_type`; omit `run_in_background` unless there is a concrete reason for asynchronous work.
-- Before launching a background subagent, write down the ownership split: what the subagent owns, what the parent will avoid duplicating, and when results will be retrieved.
-- Do not inspect, diagnose, or review the same files/behavior in parallel with a background subagent unless the work is intentionally partitioned and non-overlapping.
-- Retrieve background results with `get_subagent_result({ agent_id, wait })` before making decisions that depend on that scope; redirect running agents with `steer_subagent({ agent_id, message })`.
-- Use one writer by default in the shared tree. Use `isolation: "worktree"` only when the installed subagent/worktree support is verified for the current Pi package set.
-- Prefer fresh context for adversarial review; set `inherit_context: true` only when the child needs parent conversation history.
-- Use a reviewer-style agent before finalizing risky changes: security, data integrity, concurrency, auth, payments, migrations, or public APIs.
+- State the uncertainty or isolated deliverable in the prompt; set a turn limit proportionate to it.
+- Run in the foreground unless scopes are independent and the parent will retrieve results before using them.
+- For background work, state the ownership split and avoid duplicating that scope.
+- Use one writer in the shared tree.
+- Prefer fresh context for adversarial review; use inherited context only for session-drift checks.
 - Ask the user only for decisions that materially affect scope, product behavior, or risk.
 
 ## Skills
@@ -131,7 +131,7 @@ Common triggers:
 - Starting work on a new branch or Jira issue → `create-branch`
 - Reviewing a branch, PR, or work-in-progress changes → `review`
 - Sentry stack traces, production exceptions, or "fix this Sentry issue" → `sentry-fix-issues`
-- Implementing UI from a Figma URL or design spec → `implement-design`
+- Figma implementation or visual alignment → `figma-design-to-code`
 - Searching, creating, or organizing Obsidian notes → `obsidian-vault`
 - Authoring a new agent skill → `write-a-skill`
 
@@ -147,6 +147,7 @@ Use the right tool for the job and avoid tool calls that only add noise.
 - **Docker**: inspect the repository's Compose files and use its documented service names. Use `bash` for short, non-interactive `docker compose exec` or `docker compose run --rm` commands. Use `interactive_shell` for container shells, REPLs, debuggers, prompts, followed logs, watchers, and long-running commands.
 - **Python**: prefer `uv` workflows (`uv run`, `uv add`, `uv sync`, `uv venv`) over raw Python, pip, or Poetry commands when practical.
 - **Web**: use `web_search`/`web_fetch` only for current or external facts, documentation, standards, and third-party APIs — not for repo-local questions.
+- **Visual UI changes**: prefer one direct browser or screenshot check after the smallest implementation over another planning subagent. Verify the affected state at relevant viewport sizes before redesigning adjacent controls.
 - **MCP**: prefer configured MCP tools for external systems they cover; do not scrape or manually work around an available MCP integration.
 - **Interview**: use `interview` when structured input is better than chat. Prefer it when there are 2+ independent decisions, options with meaningful tradeoffs, UX/product/scope/risk choices, or recommendations the user should review before answering. Ask directly in chat only for one short clarification or a yes/no decision.
 - **Interactive shell**: use `interactive_shell` when a terminal process needs input, live observation, takeover, or background monitoring. Prefer its deferred loader when the tool is inactive.
