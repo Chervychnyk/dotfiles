@@ -1,5 +1,12 @@
 local docker = require("util.docker")
 
+-- Root markers identifying a project, most specific first. Anything past ".git"
+-- is only a fallback so that a repo without a compose file still resolves.
+local function project_root(bufnr)
+  return vim.fs.root(bufnr, { "docker-compose.yml", "docker-compose.yaml", "Dockerfile", ".git" })
+    or vim.fn.getcwd()
+end
+
 return {
   "stevearc/conform.nvim",
   event = { "BufReadPre", "BufNewFile" },
@@ -12,14 +19,9 @@ return {
       desc = "Format buffer",
     },
   },
-  opts = {},
   config = function()
     local conform = require("conform")
     local util = require("conform.util")
-
-    local root = vim.fs.root(0, { "docker-compose.yml", "docker-compose.yaml", "Dockerfile", ".git" })
-      or vim.fn.getcwd()
-    local has_docker, service = docker.detect(root)
 
     conform.setup({
       formatters_by_ft = {
@@ -29,9 +31,15 @@ return {
         typescriptreact = { "eslint", "prettier" },
         vue = { "eslint", "prettier" },
         python = { "black" },
-        ruby = has_docker and { "docked_rubocop" } or { "rubocop" },
         eruby = { "erb_lint" },
         elixir = { "mix" },
+        -- Resolved per buffer, not per session. Deciding once at config time
+        -- meant whichever project happened to be open first decided the
+        -- formatter for every other project in the session.
+        ruby = function(bufnr)
+          local has_docker = docker.detect(project_root(bufnr))
+          return has_docker and { "docked_rubocop" } or { "rubocop" }
+        end,
       },
       formatters = {
         eslint = {
@@ -46,22 +54,27 @@ return {
         },
         docked_rubocop = {
           command = "docker",
-          args = {
-            "compose",
-            "run",
-            "--rm",
-            service,
-            "bundle",
-            "exec",
-            "rubocop",
-            "--server",
-            "-a",
-            "-f",
-            "quiet",
-            "--stderr",
-            "--stdin",
-            "$RELATIVE_FILEPATH",
-          },
+          -- The service name belongs to the buffer's own project, so it has to
+          -- be resolved per run rather than captured at startup.
+          args = function(_, ctx)
+            local _, service = docker.detect(project_root(ctx.bufnr))
+            return {
+              "compose",
+              "run",
+              "--rm",
+              service,
+              "bundle",
+              "exec",
+              "rubocop",
+              "--server",
+              "-a",
+              "-f",
+              "quiet",
+              "--stderr",
+              "--stdin",
+              "$RELATIVE_FILEPATH",
+            }
+          end,
           cwd = util.root_file({
             "Dockerfile",
             "docker-compose.yml",

@@ -8,24 +8,22 @@ return {
 
     local rubocop = lint.linters.rubocop
 
-    -- Run RuboCop either on the host or through docker compose, depending on project layout.
+    -- Run RuboCop either on the host or through docker compose, depending on
+    -- project layout. This linter runs on BufReadPost/BufWritePost/InsertLeave,
+    -- so docker.detect() must stay memoised (see util/docker.lua) -- it shells
+    -- out to `docker compose config --services`.
     lint.linters.rubocop = function()
       local current_file = vim.api.nvim_buf_get_name(0)
       local root = vim.fs.root(current_file, { "Gemfile", ".git", "docker-compose.yml", "docker-compose.yaml" })
-          or vim.fn.getcwd()
+        or vim.fn.getcwd()
 
       local has_docker, service = docker.detect(root)
 
       local cmd = "bundle"
-      local args = {
-        "exec",
-        "rubocop",
-        "--format",
-        "json",
-        current_file,
-      }
-
+      local args
       if has_docker then
+        -- The container mounts the project root, so it wants a path relative to
+        -- that root rather than the host's absolute path.
         cmd = "docker"
         args = {
           "compose",
@@ -42,6 +40,8 @@ return {
             return vim.fs.relpath(root, current_file) or current_file
           end,
         }
+      else
+        args = { "exec", "rubocop", "--format", "json", current_file }
       end
 
       return {
