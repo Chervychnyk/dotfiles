@@ -71,7 +71,14 @@ if command -v atuin >/dev/null 2>&1; then
 fi
 
 # Keybindings
-bindkey '^l' autosuggest-accept
+# Ctrl-h/j/k/l belong to smart-splits.nvim + herdr: they move between Neovim
+# splits and then between herdr panes (see .config/nvim/lua/plugins/smart-splits.lua
+# and .config/herdr/config.toml). They only reach the shell when the focused pane
+# has no neighbor that way, so Ctrl-L falls back to clear-screen and the other
+# three keep their vi-mode meanings (backspace, accept-line, literal k).
+# autosuggest-accept therefore moves to Option-Y, which is free in both vi-mode
+# zsh and OmniWM.
+bindkey "^[[y" autosuggest-accept
 bindkey '^p' history-search-backward
 bindkey '^n' history-search-forward
 bindkey "^[a" beginning-of-line
