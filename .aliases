@@ -16,6 +16,8 @@ alias cleanup-sync-conflicts="find . -type f -name '*sync-conflict-*' -ls -delet
 # Reload the shell (i.e. invoke as a login shell)
 alias reload="exec ${SHELL} -l"
 
+alias claude-backup='CLAUDE_CONFIG_DIR="$HOME/.claude-backup" claude'
+
 # Docker Compose Rails commands
 alias drc='docker compose run --rm app bin/rails console'
 alias drs='docker compose up'
