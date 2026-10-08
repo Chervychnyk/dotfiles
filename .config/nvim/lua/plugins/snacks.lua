@@ -81,6 +81,19 @@ return {
               end,
             },
             { icon = " ", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
+            {
+              -- Sessions are saved on exit but never restored automatically, so
+              -- this is one of three ways to bring the layout back (the others
+              -- are <leader>rs and :SessionRestore). Gated on `available()` so
+              -- the dashboard does not advertise a no-op.
+              icon = icons.ui.History,
+              key = "s",
+              desc = "Restore Session",
+              action = function()
+                require("util.session").restore()
+              end,
+              enabled = require("util.session").available(),
+            },
             { icon = icons.ui.Note, key = "o", desc = "Obsidian", action = ":ObsidianQuickSwitch" },
             {
               icon = " ",

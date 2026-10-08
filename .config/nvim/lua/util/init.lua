@@ -1,5 +1,6 @@
 local utils = {
   "marks",
+  "session",
 }
 
 for _, util in ipairs(utils) do
