@@ -27,6 +27,7 @@ return {
       "ruby_lsp",
       "ruff",
       -- "solargraph",
+      "tailwindcss",
       "vtsls",
       "vue_ls",
       "yamlls",
@@ -178,8 +179,7 @@ return {
       ensure_installed = {
         "prettier", -- prettier formatter
         "stylua", -- lua formatter
-        "black", -- python formatter
-        "ruff", -- python formatter
+        "ruff", -- python formatter and linter (replaces black)
         "eslint_d",
       },
     })

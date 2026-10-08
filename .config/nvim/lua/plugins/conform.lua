@@ -30,7 +30,7 @@ return {
         javascriptreact = { "eslint", "prettier" },
         typescriptreact = { "eslint", "prettier" },
         vue = { "eslint", "prettier" },
-        python = { "black" },
+        python = { "ruff_format" },
         eruby = { "erb_lint" },
         elixir = { "mix" },
         -- Resolved per buffer, not per session. Deciding once at config time
