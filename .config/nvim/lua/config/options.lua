@@ -51,7 +51,10 @@ vim.opt.wrap = false
 vim.opt.breakindent = true
 -- Hide end-of-buffer tildes for a cleaner look.
 vim.opt.fillchars = { eob = " " }
--- Start with folds disabled globally.
+-- Folds stay off. Tree-sitter still sets foldmethod/foldexpr per buffer, so
+-- `setlocal foldenable` is all it takes to use them in a specific buffer. This
+-- used to be guarded by a FileType autocmd that disabled folds on dashboard
+-- buffers, which was redundant given the global default.
 vim.opt.foldenable = false
 
 -- Open horizontal splits below the current window.

@@ -12,13 +12,9 @@ autocmd("FileType", {
     "help",
     "man",
     "lspinfo",
-    "DressingSelect",
     "query",
     "checkhealth",
-    "spectre_panel",
     "startuptime",
-    "neotest-output",
-    "neotest-summary",
   },
   desc = "Make helper windows easy to close",
   callback = function(args)
@@ -60,16 +56,6 @@ autocmd("TextYankPost", {
   desc = "Highlight yanked text",
   callback = function()
     vim.hl.on_yank()
-  end,
-})
-
--- Disable folds on dashboards/startup screens
-autocmd("FileType", {
-  group = augroup("startup_no_folds"),
-  pattern = { "alpha", "snacks_dashboard" },
-  desc = "Disable folds on startup buffers",
-  callback = function()
-    vim.opt_local.foldenable = false
   end,
 })
 

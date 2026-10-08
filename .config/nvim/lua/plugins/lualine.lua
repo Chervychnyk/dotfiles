@@ -4,14 +4,6 @@ local conditions = {
   buffer_not_empty = function()
     return vim.fn.empty(vim.fn.expand('%:t')) ~= 1
   end,
-  hide_in_width = function()
-    return vim.fn.winwidth(0) > 80
-  end,
-  check_git_workspace = function()
-    local filepath = vim.fn.expand('%:p:h')
-    local gitdir = vim.fn.finddir('.git', filepath .. ';')
-    return gitdir and #gitdir > 0 and #gitdir < #filepath
-  end,
 }
 
 local branch = { 'b:gitsigns_head', icon = icons.git.Branch }
@@ -58,17 +50,19 @@ local function lsp_status()
   return status
 end
 
-local has_nvim_10 = vim.fn.has('nvim-0.10.0') > 0
-
-if has_nvim_10 then
-  vim.api.nvim_create_autocmd({ 'LspProgress' }, {
-    command = 'redrawstatus'
-  })
-end
-
 return {
   "nvim-lualine/lualine.nvim",
   config = function()
+    -- LspProgress fires on every server progress tick; redrawing the statusline
+    -- on each one keeps the spinner animation moving. This lives inside
+    -- `config` in a named augroup: at module scope it registered once per
+    -- reload and stacked duplicates, since nothing ever cleared it.
+    vim.api.nvim_create_autocmd({ "LspProgress" }, {
+      group = vim.api.nvim_create_augroup("config_lualine", { clear = true }),
+      desc = "Redraw statusline while an LSP reports progress",
+      command = "redrawstatus",
+    })
+
     require("lualine").setup({
       options = {
         icons_enabled = true,
@@ -76,7 +70,7 @@ return {
         globalstatus = true,
         component_separators = { left = "", right = "" },
         section_separators = { left = "", right = "" },
-        disabled_filetypes = { "alpha", "codecompanion", "qf", "lazy", "NeogitStatus", "neo-tree", "Outline", "snacks_picker_input", "snacks_picker_list", "TelescopePrompt", "TelescopeResults" },
+        disabled_filetypes = { "alpha", "codecompanion", "qf", "lazy", "NeogitStatus", "neo-tree", "Outline", "snacks_picker_input", "snacks_picker_list" },
         always_divide_middle = true,
       },
       sections = {

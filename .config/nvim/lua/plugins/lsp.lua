@@ -76,11 +76,14 @@ return {
       end
 
       map("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
-      map("n", "K", vim.lsp.buf.hover)
+      map("n", "K", vim.lsp.buf.hover, { desc = "Hover documentation" })
       map("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
+      -- Both `gr` and the conventional `grr` reach references so the mnemonic
+      -- and the muscle memory agree; `gro` stays native for goto-definition.
       map("n", "gr", function()
         Snacks.picker.lsp_references()
       end, { desc = "Show references" })
+      map("n", "grr", vim.lsp.buf.references, { desc = "Show references (buffer)" })
       map("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
       map("n", "gD", vim.lsp.buf.type_definition, { desc = "Go to type definition" })
       map("n", "[d", function()
@@ -101,6 +104,13 @@ return {
     -- LSP on_attach
     -- ========================================
     local function on_attach(client, bufnr)
+      -- A buffer commonly gets two servers (ts_ls + eslint, jsonls + cssls).
+      -- Keymaps are buffer-local, so setting them once is enough.
+      if vim.b[bufnr].lsp_keymaps_set then
+        return
+      end
+      vim.b[bufnr].lsp_keymaps_set = true
+
       lsp_keymaps(bufnr)
 
       if client:supports_method("textDocument/inlayHint") then
@@ -126,9 +136,9 @@ return {
         lineFoldingOnly = true,
       }
 
-      caps.workspace.didChangeWatchedFiles = {
-        dynamicRegistration = false,
-      }
+      -- didChangeWatchedFiles is left at its default (dynamic registration on).
+      -- Disabling it stopped servers from noticing edits to files they depend
+      -- on, which showed up as stale diagnostics after a change on disk.
 
       -- Integrate with blink.cmp if available
       local status_ok, blink_cmp = pcall(require, "blink.cmp")
