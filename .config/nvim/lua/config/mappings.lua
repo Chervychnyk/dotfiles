@@ -28,17 +28,9 @@ map("n", "<leader>tn", "<cmd>tabn<CR>", { desc = "Go to next tab" })            
 map("n", "<leader>tp", "<cmd>tabp<CR>", { desc = "Go to previous tab" })                 --  go to previous tab
 map("n", "<leader>tf", "<cmd>tabnew %<CR>", { desc = "Open current buffer in new tab" }) --  move current buffer to new tab
 
--- Switch between windows
--- map("n", "<C-h>", "<C-w>h", { desc = "Move window left" })
--- map("n", "<C-l>", "<C-w>l", { desc = "Move window right" })
--- map("n", "<C-j>", "<C-w>j", { desc = "Move window down" })
--- map("n", "<C-k>", "<C-w>k", { desc = "Move window up" })
-
--- Resize with vim navigation
--- map("n", "<C-A-k>", ":resize -2<CR>", { silent = true })
--- map("n", "<C-A-j>", ":resize +2<CR>", { silent = true })
--- map("n", "<C-A-l>", ":vertical resize -2<CR>", { silent = true })
--- map("n", "<C-A-h>", ":vertical resize +2<CR>", { silent = true })
+-- Pane movement and resizing are not mapped here: <C-h/j/k/l> and
+-- <C-A-h/j/k/l> belong to smart-splits.nvim, which crosses from Neovim splits
+-- into herdr panes. See lua/plugins/smart-splits.lua.
 
 map("t", "<leader><Esc>", "<C-\\><C-n>")
 

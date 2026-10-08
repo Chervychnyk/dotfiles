@@ -42,13 +42,22 @@ return {
   config = function(_, opts)
     require("smart-splits").setup(opts)
 
-    -- resizing splits
-    -- these keymaps will also accept a range,
-    -- for example `10<A-h>` will `resize_left` by `(10 * config.default_amount)`
-    vim.keymap.set('n', '<A-h>', require('smart-splits').resize_left)
-    vim.keymap.set('n', '<A-j>', require('smart-splits').resize_down)
-    vim.keymap.set('n', '<A-k>', require('smart-splits').resize_up)
-    vim.keymap.set('n', '<A-l>', require('smart-splits').resize_right)
+    -- Resizing splits. Plain <A-h/j/k/l> is the obvious chord, but OmniWM binds
+    -- Option+H/J/K/L to window focus and wins them. ctrl+alt is the one
+    -- modifier family Herdr's docs single out as left free by terminals, and it
+    -- is immune to the macOS option-key composing that mangles plain alt chords.
+    -- It also mirrors the <C-h/j/k/l> navigation chord one modifier across.
+    -- These accept a range: `10<C-A-h>` resizes left by `(10 * default_amount)`.
+    --
+    -- Known gap: resizing at a split edge that touches the pane border reaches
+    -- herdr through `herdr pane resize --amount`, which reads its argument as a
+    -- fraction of the pane area while smart-splits passes `default_amount` in
+    -- cells. The pane therefore snaps to its minimum or maximum rather than
+    -- stepping once. Resizing inside Neovim is unaffected.
+    vim.keymap.set('n', '<C-A-h>', require('smart-splits').resize_left)
+    vim.keymap.set('n', '<C-A-j>', require('smart-splits').resize_down)
+    vim.keymap.set('n', '<C-A-k>', require('smart-splits').resize_up)
+    vim.keymap.set('n', '<C-A-l>', require('smart-splits').resize_right)
     -- moving between splits
     vim.keymap.set('n', '<C-h>', require('smart-splits').move_cursor_left)
     vim.keymap.set('n', '<C-j>', require('smart-splits').move_cursor_down)
