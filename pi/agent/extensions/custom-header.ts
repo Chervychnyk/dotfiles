@@ -20,18 +20,33 @@ function center(text: string, width: number) {
   return truncateToWidth(`${' '.repeat(padding)}${text}`, width)
 }
 
-function renderLogo(theme: Theme) {
-  const body = (text: string) => theme.fg('success', text)
-  const bulb = (text: string) => theme.fg('accent', text)
-  const eye = (text: string) => theme.fg('warning', text)
+// Braille-art Bender eyes from Futurama. Rows are verbatim from the original
+// 56-row piece (rows 30-42), cropped to the eyes so the silhouette fits a
+// pinned header. 60 columns wide; pi measures braille as one cell per codepoint
+// (verified against pi-tui `visibleWidth`), so `center()` aligns it.
+const LOGO_ART = [
+  '⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀',
+  '⠀⠀⠀⠀⢀⣴⣾⣿⠿⠟⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠻⠿⣿⣷⣦⡀⠀⠀⠀⠀',
+  '⠀⠀⢀⣾⣿⠟⠉⠀⠀⠀⣠⣶⣶⣦⣤⣄⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣠⣤⣴⣶⣶⣄⠀⠀⠀⠈⠻⣿⣷⡀⠀⠀',
+  '⠀⣰⣿⡟⠁⠀⠀⠀⢀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣤⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣤⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⡀⠀⠀⠀⠈⢻⣿⣆⠀',
+  '⢰⣿⡏⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⡆⠀⠀⢰⣶⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⢹⣿⡆',
+  '⣾⣿⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⣿⣷',
+  '⣿⣿⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠉⠉⠉⠉⣿⣿⣿⣿⣿⣿⣿⠀⠀⣿⣿⣿⣿⣿⣿⣿⠉⠉⠉⠉⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀⣿⣿',
+  '⢻⣿⡀⠀⠀⠀⠀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⠀⠀⢿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠀⠀⠀⢀⣿⡿',
+  '⠘⣿⣧⠀⠀⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣧⣤⣤⣤⣤⣿⣿⣿⣿⣿⣿⠃⠀⠀⠘⣿⣿⣿⣿⣿⣿⣤⣤⣤⣤⣼⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⣼⣿⠃',
+  '⠀⠘⢿⣷⡀⠀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠃⠀⠀⠀⠀⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠀⠀⠀⠀⢀⣾⡿⠃⠀',
+  '⠀⠀⠈⠻⣿⣶⣄⡀⠀⠀⠈⠻⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠿⠟⠁⠀⠀⢀⣠⣶⣿⠟⠁⠀⠀',
+  '⠀⠀⠀⠀⠀⠙⠻⢿⣿⣶⣶⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣶⣶⣿⡿⠟⠋⠁⠀⠀⠀⠀',
+  '⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀',
+]
 
-  return [
-    `   ${bulb('▄██▄')}`,
-    ` ${bulb('▄██████▄')}`,
-    ` ${body('██')} ${eye('●')}${body('██')}${eye('●')} ${body('██')}`,
-    ` ${body('███▄▄▄▄███')}`,
-    ` ${body('▀██  ██▀')}`,
-  ]
+function renderLogo(theme: Theme) {
+  // Solid blue, as requested. `borderAccent` maps to blue in both local themes
+  // (everforest-dark-hard -> #7fbbb3, kanagawa -> #7AA2C8), so the art follows
+  // /settings theme changes instead of hardcoding an RGB value.
+  const blue = theme.colors.borderAccent
+
+  return LOGO_ART.map((line) => theme.style(line, { fg: blue }))
 }
 
 function renderSubtitle(
@@ -51,17 +66,23 @@ function renderSubtitle(
   ].join(' ')
 }
 
+// An action disabled in keybindings.json renders as a bare label with no key,
+// which reads as a broken gap in the hint row. Detect that and drop the hint.
+function hasKey(hint: string): boolean {
+  const plain = hint.replace(/\u001b\[[0-9;]*m/g, '').trim()
+  return plain.split(/\s+/).length > 1
+}
+
 function renderKeyHints(theme: Theme) {
-  return theme.fg(
-    'dim',
-    [
-      keyHint('app.interrupt', 'interrupt'),
-      keyHint('app.thinking.cycle', 'thinking'),
-      keyHint('app.model.cycleForward', 'model'),
-      keyHint('app.tools.expand', 'tools'),
-      keyHint('app.editor.external', 'editor'),
-    ].join('  '),
-  )
+  const hints = [
+    keyHint('app.interrupt', 'interrupt'),
+    keyHint('app.thinking.cycle', 'thinking'),
+    keyHint('app.model.cycleForward', 'model'),
+    keyHint('app.tools.expand', 'tools'),
+    keyHint('app.editor.external', 'editor'),
+  ].filter(hasKey)
+
+  return theme.fg('dim', hints.join('  '))
 }
 
 function renderHeader(
