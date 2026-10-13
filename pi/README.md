@@ -22,14 +22,13 @@ Use this file as the interface for the runtime. The JSON, TypeScript, and Markdo
 
 `agent/settings.json` loads these packages:
 
-- `npm:pi-mcp-adapter`
 - `~/code/pi-code-previews`
 - `~/code/pi-web-tools`
 - `npm:@gotgenes/pi-subagents`
 - `npm:@juicesharp/rpiv-ask-user-question`
 - `npm:@juicesharp/rpiv-todo` for conversation-scoped plan items
-- `npm:pi-interactive-shell`
 - `npm:@gotgenes/pi-permission-system`
+- `npm:@ff-labs/pi-fff`
 
 Local path packages assume the corresponding checkout exists on the machine.
 
@@ -43,6 +42,7 @@ Local path packages assume the corresponding checkout exists on the machine.
 | `context.ts` | Context injection. |
 | `custom-footer.ts`, `custom-header.ts`, `usage-bar.ts` | TUI presentation. |
 | `diff.ts`, `review.ts`, `handoff.ts`, `session-breakdown.ts`, `session-search.ts` | Session and change-review workflow helpers. |
+| `herdr-agent-state.ts` | Herdr-managed state bridge. Installed and overwritten by `herdr`; add custom hooks beside it instead of editing it. |
 | `markdown-preview.ts` | Project-local Markdown preview in the TUI. |
 | `go-to-bed.ts` | Late-night advisory/blocking guard. |
 | `pi-cloak/` | Secret/path cloaking behavior. |

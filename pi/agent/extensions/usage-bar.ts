@@ -33,8 +33,10 @@ interface ProviderStatus {
 /**
  * The slice of pi's ModelRegistry this extension touches.
  *
- * pi ships no type declarations for it, so this is hand-derived and checked
- * against pi 0.84.3 (docs/extensions.md:997 plus the bundled runtime).
+ * pi exports `ModelRegistry`, but `getProviderAuth` resolves to the runtime's
+ * concrete `AuthResult`, whose `auth` union is not assignable to this slice. The
+ * shape below is hand-derived and structural, so it keeps working across pi
+ * versions; verified against pi 1.1.0's `ModelRegistry.getProviderAuth`.
  *
  * `getProviderAuth` forwards to `runtime.getAuth(provider)`, which resolves
  * the stored credential: an OAuth credential goes through pi's refresh path
