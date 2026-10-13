@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "1.0.2",
+  "lastChangelogVersion": "1.1.0",
   "defaultProvider": "openai-codex",
   "defaultModel": "gpt-5.6-sol",
   "packages": [
@@ -12,8 +12,10 @@
     "npm:@ff-labs/pi-fff"
   ],
   "theme": "everforest-dark-hard",
+  "tuiMode": "fullscreen",
+  "fullscreenExitOutput": "resume-hint",
   "defaultThinkingLevel": "low",
-  "quietStartup": false,
+  "quietStartup": "header",
   "collapseChangelog": true,
   "hideThinkingBlock": false,
   "steeringMode": "all",
@@ -41,5 +43,6 @@
       "ls"
     ]
   },
-  "deviceId": "05ab931d-b47e-49dd-b2ba-f3bc838f9d52"
+  "deviceId": "05ab931d-b47e-49dd-b2ba-f3bc838f9d52",
+  "defaultProjectTrust": "always"
 }
