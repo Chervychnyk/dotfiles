@@ -91,7 +91,7 @@ for file in "$zsh_config_dir/.zprofile" "$zsh_config_dir/.zshrc" "$zim_config"; 
 done
 
 zsh_functions="$HOME/.zsh/functions"
-for function_name in cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden; do
+for function_name in cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden zim_lock; do
   function_file="$zsh_functions/$function_name"
   if [[ -e "$function_file" ]] && zsh -n "$function_file"; then
     ok "$function_file syntax"
@@ -160,7 +160,7 @@ else
   [[ -n "$startup_output" ]] && printf '%s\n' "$startup_output"
 fi
 
-required_functions='compdef _git git_current_branch cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden'
+required_functions='compdef _git git_current_branch cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden zim_lock zim_unlock'
 function_sentinel=__DOTFILES_FUNCTIONS_OK__
 function_probe='for fn in ${(z)REQUIRED_FUNCTIONS}; do (( $+functions[$fn] )) || { print -r -- "missing function: $fn"; exit 1; }; done; print -r -- '$function_sentinel
 if function_probe_output=$(REQUIRED_FUNCTIONS="$required_functions" run_zsh_pty "$function_probe" 2>&1 | normalize_pty_output) &&

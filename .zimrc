@@ -15,7 +15,9 @@ zmodule ohmyzsh/ohmyzsh --root plugins/git
 zmodule ohmyzsh/ohmyzsh --root plugins/sudo
 
 # Load widget wrappers in this order, with syntax highlighting last.
+# Zoxide is initialized from .zshrc via cache_shell_init rather than as a
+# module: kiesman99/zim-zoxide regenerated a shared zoxide.zsh on every startup
+# with an unguarded truncate-then-write and then sourced it.
 zmodule Aloxaf/fzf-tab
-zmodule kiesman99/zim-zoxide
 zmodule zsh-users/zsh-autosuggestions
 zmodule zdharma-continuum/fast-syntax-highlighting

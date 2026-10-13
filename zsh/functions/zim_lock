@@ -1,0 +1,76 @@
+# Serialize the parts of Zim's bootstrap that mutate shared state.
+#
+# Two things a fresh shell does before it is usable are unsafe to run twice at
+# the same time:
+#
+#   * `zimfw.zsh init` rewrites $ZIM_HOME/init.zsh in place, so a second shell
+#     can go on to source a half-written file.
+#   * The completion module maintains ~/.zcompdump as check, then unlink, then
+#     compinit, with no locking anywhere. Interleaved, the loser prints
+#         (anon):zcompile:29: can't write zwc file: ~/.zcompdump.zwc
+#         (anon):15: no such file or directory: ~/.zcompdump.dat
+#     and those are not independent: the `|| return 1` guarding that sysread
+#     bails out before compinit ever runs, so compdef is left undefined and
+#     every compdef call in oh-my-zsh's git plugin reports "command not found".
+#
+# Contention is the normal case in a terminal multiplexer rather than a rare
+# one: opening a few herdr tabs at once, an nvim :terminal, or a second login
+# shell all reach this point within milliseconds of each other.
+#
+# mkdir is atomic on every filesystem this runs on, so the lock directory is
+# the lock. A holder that dies without cleaning up — SIGKILL, a panic, a
+# closed laptop lid — leaves the directory behind, and the age check treats
+# one older than the wait budget as abandoned. If the lock still cannot be
+# taken when the budget runs out we carry on unlocked rather than hang: a
+# shell that starts slowly beats a shell that never appears.
+#
+# Usage:
+#   zim_lock   [<dir>] [<wait-seconds>]   default $ZIM_HOME/.init.lock, 30
+#   zim_unlock [<dir>]                   defaults to the last zim_lock
+#
+# Either function returning non-zero means the caller is running unserialized.
+zim_lock() {
+  emulate -L zsh
+  zmodload zsh/datetime zsh/stat 2>/dev/null
+
+  local lockdir=$1
+  [[ -n $lockdir ]] || lockdir=${ZIM_HOME:+$ZIM_HOME/.init.lock}
+
+  # Nothing to lock onto. Bail now rather than spin out the whole budget
+  # failing a mkdir against a path we got wrong.
+  [[ -n $lockdir ]] || return 1
+
+  local -i budget=${2:-30} deadline=$((EPOCHSECONDS + ${2:-30})) mtime
+
+  while ! mkdir -- "$lockdir" 2>/dev/null; do
+    (( EPOCHSECONDS < deadline )) || {
+      print -u2 "zim_lock: $lockdir is still held after ${budget}s; continuing unlocked"
+      return 1
+    }
+
+    # Nothing writes inside the lock directory, so its mtime is its creation
+    # time: older than the budget means the holder went away without cleaning
+    # up. Never rm -rf, so a directory that is unexpectedly not empty is left
+    # for a human to look at rather than deleted.
+    if zstat -A mtime +mtime -- "$lockdir" 2>/dev/null &&
+        (( EPOCHSECONDS - mtime > budget )); then
+      command rmdir -- "$lockdir" 2>/dev/null ||
+        command rm -f -- "$lockdir" 2>/dev/null
+      continue
+    fi
+
+    sleep 0.05
+  done
+
+  ZIM_LOCK_DIR=$lockdir
+  return 0
+}
+
+zim_unlock() {
+  emulate -L zsh
+
+  local lockdir=${1:-${ZIM_LOCK_DIR:-}}
+  [[ -n $lockdir ]] && command rmdir -- "$lockdir" 2>/dev/null
+  ZIM_LOCK_DIR=
+  return 0
+}

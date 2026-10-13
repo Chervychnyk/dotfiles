@@ -1,6 +1,21 @@
 # Enable profiling for performance monitoring
 # zmodload zsh/zprof
 
+# zsh exports PATH and FPATH, so every nested shell — an nvim :terminal, a login
+# shell herdr spawns, a subshell — inherits them and the prepends below stack on
+# top of that instead of replacing it. Left alone the duplicates compound with
+# nesting depth: each command lookup walks a longer PATH, and cache_shell_init's
+# PATH-keyed signature never settles. First occurrence wins, so lookup priority
+# is exactly what it was. Both spellings need marking — path and PATH are tied
+# but carry the flag separately, and PATH= is what the prepends further down
+# actually use.
+typeset -U PATH path fpath
+
+# Autoload shell helpers and interactive functions.
+# fpath is extended here, before Zim, so that zim_lock below is loadable.
+fpath=("$HOME/.zsh/functions" $fpath)
+autoload -Uz cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden
+
 # Zim setup
 ZIM_HOME=${ZDOTDIR:-${HOME}}/.zim
 
@@ -10,6 +25,12 @@ if [[ ! -e ${ZIM_HOME}/zimfw.zsh ]]; then
       https://github.com/zimfw/zimfw/releases/latest/download/zimfw.zsh
 fi
 
+# Bootstrap and init while holding a lock. Everything in the next few lines
+# mutates state shared by every other starting shell, and none of it is
+# internally synchronized. See zsh/functions/zim_lock for what goes wrong.
+source "$HOME/.zsh/functions/zim_lock"
+zim_lock "${ZIM_HOME}/.init.lock"
+
 # Install missing modules and update ${ZIM_HOME}/init.zsh if missing or outdated.
 if [[ ! ${ZIM_HOME}/init.zsh -nt ${ZIM_CONFIG_FILE:-${ZDOTDIR:-${HOME}}/.zimrc} ]]; then
   source ${ZIM_HOME}/zimfw.zsh init
@@ -17,6 +38,8 @@ fi
 
 # Initialize Zim
 source ${ZIM_HOME}/init.zsh
+
+zim_unlock "${ZIM_HOME}/.init.lock"
 
 # History configuration
 HISTFILE=~/.zsh_history
@@ -29,10 +52,6 @@ setopt HIST_IGNORE_SPACE      # Don't record commands starting with space
 setopt HIST_REDUCE_BLANKS     # Remove unnecessary blanks
 setopt INC_APPEND_HISTORY     # Write immediately, not on shell exit
 
-# Autoload shell helpers and interactive functions
-fpath=("$HOME/.zsh/functions" $fpath)
-autoload -Uz cache_shell_init routes proj fkill fbr fp rga unlock_bitwarden
-
 # Prompt
 cache_shell_init starship starship init zsh
 
@@ -42,7 +61,10 @@ export BAT_THEME="Everforest Dark"
 # Completion and enhancement plugins are now handled by Zim
 # Configure styles after Zim init
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+# LS_COLORS is unset by default on macOS, and splitting an unset value yields a
+# single empty element — which would replace the completion module's own
+# list-colors default with nothing and drop completion colours entirely.
+[[ -n $LS_COLORS ]] && zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
 zstyle ':fzf-tab:*' use-fzf-default-opts yes
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
@@ -71,6 +93,18 @@ export PROJECT_PATHS
 # Atuin - magical shell history with fzf integration
 if command -v atuin >/dev/null 2>&1; then
   cache_shell_init atuin atuin init zsh --disable-up-arrow
+fi
+
+# Zoxide - directory jumper.
+# This was the kiesman99/zim-zoxide module, which ran `zoxide init zsh --cmd cd`
+# into ~/.zim/modules/zim-zoxide/zoxide.zsh with a bare >| on every startup and
+# then sourced that file. The truncate-then-write is unguarded, so two shells
+# starting together could source a half-written script and emit errors like
+# "zim-zoxide/zoxide.zsh:NN: command too long". Generating straight into eval
+# leaves no shared file to race on, and caching it skips the process spawn on
+# every later startup.
+if command -v zoxide >/dev/null 2>&1; then
+  cache_shell_init zoxide zoxide init zsh --cmd cd
 fi
 
 # Keybindings
