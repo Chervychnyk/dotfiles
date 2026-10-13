@@ -38,6 +38,10 @@ pi/interview-snapshots/
 .config/herdr/release-notes.json
 .config/herdr/*.log
 .config/herdr/*.sock
+# `herdr.sock.agent` is a launchd listener symlink rather than a socket, so the
+# *.sock rule above does not match it.
+.config/herdr/*.sock.agent
+.config/herdr/session-snapshots/
 # herdr-managed; regenerate with `herdr integration install pi`
 pi/agent/extensions/herdr-agent-state.ts
 
