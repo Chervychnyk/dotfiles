@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "kanagawa",
   "vars": {
     "waveBlue": "#7AA2C8",
@@ -75,7 +75,12 @@
     "thinkingMedium": "#7AA2C8",
     "thinkingHigh": "#957FB8",
     "thinkingXhigh": "#D27E99",
-    "bashMode": "springGreen"
+    "thinkingMax": "sunsetOrange",
+    "bashMode": "springGreen",
+    "scrollbarTrack": "nightBlack",
+    "scrollbarThumb": "shadowGray",
+    "searchMatchBg": "userMsgBg",
+    "searchMatchText": "creamPaper"
   },
   "export": {
     "pageBg": "#1F1F28",

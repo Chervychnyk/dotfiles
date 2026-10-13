@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+  "$schema": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
   "name": "everforest-dark-hard",
   "vars": {
     "bgDim": "#1e2326",
@@ -36,7 +36,7 @@
     "error": "red",
     "warning": "yellow",
     "muted": "grey1",
-    "dim": "grey1",
+    "dim": "grey0",
     "text": "",
     "thinkingText": "grey1",
     "selectedBg": "bg1",
@@ -78,7 +78,12 @@
     "thinkingMedium": "aqua",
     "thinkingHigh": "purple",
     "thinkingXhigh": "orange",
-    "bashMode": "green"
+    "thinkingMax": "orange",
+    "bashMode": "green",
+    "scrollbarTrack": "bgDim",
+    "scrollbarThumb": "bg3",
+    "searchMatchBg": "bgYellow",
+    "searchMatchText": "yellow"
   },
   "export": {
     "pageBg": "#1e2326",
